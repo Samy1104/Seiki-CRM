@@ -1,0 +1,17 @@
+{
+  "version": "1.0",
+  "project": "Seiki CRM",
+  "workspace": "D:/Stage/SEIKI/Projet",
+  "language": "fr",
+  "stack": "React + TypeScript + Vite + Supabase",
+  "workflow": {
+    "commit_after_phase": true,
+    "require_plan_approval": true,
+    "use_subagents": true,
+    "auto_research": false,
+    "ui_spec_on_frontend_phases": true
+  },
+  "model_profile": "quality",
+  "phases_naming": "numbered",
+  "created_at": "2026-07-03"
+}
