@@ -1,32 +1,41 @@
-# React + TypeScript + Vite
+# Seiki CRM
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Un client CRM moderne développé en React, TypeScript et Vite, connecté à Supabase.
 
-Currently, two official plugins are available:
+## Prérequis
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- [Node.js](https://nodejs.org/) (version 18 ou supérieure recommandée)
+- Un projet [Supabase](https://supabase.com/) configuré
 
-## React Compiler
+## Démarrage rapide
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+### 1. Cloner le projet
+```bash
+git clone https://github.com/Samy1104/Seiki-CRM.git
+cd Seiki-CRM
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+### 2. Installer les dépendances
+```bash
+npm install
+```
+
+### 3. Configurer l'environnement
+Créez un fichier `.env.local` à la racine du projet et ajoutez vos identifiants Supabase :
+```env
+VITE_SUPABASE_URL=votre_url_supabase
+VITE_SUPABASE_ANON_KEY=votre_cle_publique_ou_service_role
+```
+
+### 4. Lancer le serveur de développement
+```bash
+npm run dev
+```
+L'application sera accessible par défaut sur `http://localhost:5173`.
+
+## Commandes disponibles
+
+- `npm run dev` : Démarre le serveur de développement local avec HMR.
+- `npm run build` : Compile le projet pour la production dans le dossier `dist/`.
+- `npm run lint` : Analyse et valide le code avec Oxlint.
+- `npm run preview` : Lance un serveur local pour prévisualiser la version de production.
