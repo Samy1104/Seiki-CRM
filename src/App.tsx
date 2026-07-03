@@ -1,0 +1,63 @@
+import React, { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { ToastProvider } from './context/ToastContext';
+import { SideBar } from './components/SideBar';
+import { Login } from './views/Login';
+import { Pipeline } from './views/Pipeline';
+import { Leads } from './views/Leads';
+import { AddLead } from './views/AddLead';
+import { Tasks } from './views/Tasks';
+import { Agenda } from './views/Agenda';
+import { Stats } from './views/Stats';
+import { Codir } from './views/Codir';
+import { Settings } from './views/Settings';
+import './App.css';
+
+const AppContent: React.FC = () => {
+  const { isAuthenticated, loading } = useAuth();
+  const [currentView, setView] = useState<string>('pipeline');
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Démarrage de Seiki CRM...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  return (
+    <div className="app-container">
+      {/* Sidebar navigation */}
+      <SideBar currentView={currentView} setView={setView} />
+
+      {/* Main workspace area */}
+      <main className="main-content">
+        {currentView === 'pipeline' && <Pipeline setView={setView} />}
+        {currentView === 'leads' && <Leads setView={setView} />}
+        {currentView === 'add' && <AddLead setView={setView} />}
+        {currentView === 'tasks' && <Tasks />}
+        {currentView === 'agenda' && <Agenda />}
+        {currentView === 'stats' && <Stats />}
+        {currentView === 'codir' && <Codir />}
+        {currentView === 'settings' && <Settings />}
+      </main>
+    </div>
+  );
+};
+
+const App: React.FC = () => {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </AuthProvider>
+  );
+};
+
+export default App;
