@@ -4,6 +4,7 @@ import { settingsService } from '../services/settingsService';
 import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { FileText, Award } from 'lucide-react';
+import { EmailGenerator } from '../components/EmailGenerator';
 
 const CRITERIA = [
   {
@@ -382,6 +383,13 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
               </button>
             </div>
           </form>
+
+          {/* Email Generator — below the form */}
+          <EmailGenerator
+            contactName={form.contact_name}
+            website={form.website}
+            onSelectEmail={email => setForm(prev => ({ ...prev, email }))}
+          />
         </div>
 
         {/* Right Column: Scoring ICP */}
