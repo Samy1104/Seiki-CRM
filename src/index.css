@@ -170,9 +170,7 @@ body {
 }
 
 .logo-mark-wrap {
-  width: 46px;
   height: 32px;
-  overflow: hidden;
   display: flex;
   align-items: center;
 }
