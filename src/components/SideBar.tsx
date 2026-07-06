@@ -71,7 +71,9 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
   return (
     <aside className="sidebar">
       <div className="logo">
-        <div className="logo-wordmark">seiki</div>
+        <div className="logo-mark-wrap">
+          <img src="/grand_logo.png" alt="Seiki" className="logo-mark" />
+        </div>
         <div className="logo-sub">CRM — Mobilité intelligente</div>
       </div>
       

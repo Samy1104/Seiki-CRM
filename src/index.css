@@ -169,15 +169,18 @@ body {
   border-bottom: 0.5px solid var(--border-subtle);
 }
 
-.logo-wordmark {
-  font-family: var(--font-heading);
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.8px;
-  background: linear-gradient(135deg, var(--purple) 0%, var(--gold) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-transform: lowercase;
+.logo-mark-wrap {
+  width: 46px;
+  height: 32px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+.logo-mark {
+  height: 32px;
+  width: auto;
+  display: block;
 }
 
 .logo-sub {
