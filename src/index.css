@@ -4,41 +4,80 @@
    Aesthetic: Premium Dark Tech, Glassmorphism, Neon glows
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Manrope:wght@300;400;500;600;700;800&family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap');
+
+@font-face {
+  font-family: 'Codan';
+  src: url('./assets/fonts/codan/Codan-Regular.woff2') format('woff2'),
+       url('./assets/fonts/codan/Codan-Regular.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Museo Sans';
+  src: url('./assets/fonts/museo-sans/MuseoSans-300.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Museo Sans';
+  src: url('./assets/fonts/museo-sans/MuseoSans-500.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Museo Sans';
+  src: url('./assets/fonts/museo-sans/MuseoSans-700.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
-  /* Color Palette */
-  --bg-deep: #05050A;
-  --bg-main: #0A0A14;
-  --bg-panel: rgba(20, 20, 35, 0.55);
-  
+  /* Color Palette — exact seiki.co brand tokens */
+  --bg-deep: #000010;
+  --bg-main: #08080f;
+  --bg-panel: rgba(31, 31, 45, 0.55);
+
   --text-primary: #F3F4F6;
   --text-secondary: #9CA3AF;
   --text-muted: #6B7280;
-  
+
   --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(107, 95, 230, 0.4);
-  
-  --purple: #6B5FE6;
-  --purple-glow: rgba(107, 95, 230, 0.25);
-  
-  --gold: #F5B731;
-  --gold-glow: rgba(245, 183, 49, 0.25);
-  
+  --border-active: rgba(143, 55, 255, 0.4);
+
+  --purple: #8f37ff;
+  --purple-deep: #431a80;
+  --purple-light: #a7aefc;
+  --purple-glow: rgba(143, 55, 255, 0.25);
+
+  --gold: #f7b700;
+  --gold-glow: rgba(247, 183, 0, 0.25);
+
   --green: #4ADE80;
   --green-glow: rgba(74, 222, 128, 0.25);
-  
+
   --red: #F87171;
   --red-glow: rgba(248, 113, 113, 0.25);
-  
+
   --instit: #8B5CF6;
   --instit-glow: rgba(139, 92, 246, 0.25);
   --instit-tc: #A78BFA;
-  
+
   /* Fonts */
-  --font-heading: 'Outfit', system-ui, sans-serif;
-  --font-body: 'DM Sans', system-ui, sans-serif;
-  
+  --font-heading: 'Codan', 'Sora', system-ui, sans-serif;
+  --font-body: 'Museo Sans', 'Manrope', system-ui, sans-serif;
+
+  /* Radii */
+  --radius-btn: 10px;
+  --radius-card: 16px;
+
   /* Layout constraints */
   box-sizing: border-box;
 }
