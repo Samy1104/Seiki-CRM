@@ -220,17 +220,17 @@ body {
 }
 
 .nav-item.on {
-  background: rgba(107, 95, 230, 0.12);
+  background: rgba(143, 55, 255, 0.12);
   color: #fff;
-  border-color: rgba(107, 95, 230, 0.25);
-  box-shadow: 0 0 10px rgba(107, 95, 230, 0.1);
+  border-color: rgba(143, 55, 255, 0.25);
+  box-shadow: 0 0 10px rgba(143, 55, 255, 0.1);
 }
 
 .nav-item-codir.on {
-  background: rgba(245, 183, 49, 0.1);
+  background: rgba(247, 183, 0, 0.1);
   color: #fff;
-  border-color: rgba(245, 183, 49, 0.25);
-  box-shadow: 0 0 10px rgba(245, 183, 49, 0.1);
+  border-color: rgba(247, 183, 0, 0.25);
+  box-shadow: 0 0 10px rgba(247, 183, 0, 0.1);
 }
 
 .nav-badge {
@@ -265,7 +265,7 @@ body {
   background: transparent;
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  border-radius: 6px;
+  border-radius: var(--radius-btn);
   padding: 6px;
   cursor: pointer;
   font-size: 11px;
