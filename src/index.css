@@ -2024,14 +2024,14 @@ input:checked + .toggle-slider:before {
   justify-content: center;
   width: 100vw;
   height: 100vh;
-  background-color: #05050a;
-  background-image: 
-    radial-gradient(circle at 50% 30%, rgba(139, 92, 246, 0.15) 0%, transparent 50%),
-    radial-gradient(circle at 30% 70%, rgba(107, 95, 230, 0.08) 0%, transparent 45%),
+  background-color: #000010;
+  background-image:
+    radial-gradient(circle at 50% 30%, rgba(143, 55, 255, 0.15) 0%, transparent 50%),
+    radial-gradient(circle at 30% 70%, rgba(247, 183, 0, 0.06) 0%, transparent 45%),
     linear-gradient(to right, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
   background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-body);
   color: #ffffff;
   overflow: hidden;
 }
@@ -2050,7 +2050,7 @@ input:checked + .toggle-slider:before {
 }
 
 .lock-screen-hero h1 {
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-heading);
   font-size: 36px;
   font-weight: 600;
   line-height: 1.25;
@@ -2062,7 +2062,7 @@ input:checked + .toggle-slider:before {
 }
 
 .lock-screen-hero p {
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-body);
   font-size: 15px;
   color: rgba(255, 255, 255, 0.6);
   margin: 0;
@@ -2100,9 +2100,9 @@ input:checked + .toggle-slider:before {
   font-size: 15px;
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  border-radius: var(--radius-btn);
   color: #ffffff;
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-body);
   box-sizing: border-box;
   text-align: center;
   transition: all 0.3s ease;
@@ -2111,8 +2111,8 @@ input:checked + .toggle-slider:before {
 
 .lock-input:focus {
   outline: none;
-  border-color: rgba(139, 92, 246, 0.6);
-  box-shadow: 0 0 15px rgba(139, 92, 246, 0.25);
+  border-color: rgba(143, 55, 255, 0.6);
+  box-shadow: 0 0 15px rgba(143, 55, 255, 0.25);
   background: rgba(0, 0, 0, 0.6);
 }
 
