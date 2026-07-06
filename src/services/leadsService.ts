@@ -89,43 +89,30 @@ export const leadsService = {
   },
 
   async getLeadById(id: string): Promise<Lead> {
-    // Fetch lead details
-    const { data: lead, error: leadError } = await supabase
+    // Single round-trip: lead + scores + history embedded via FK joins
+    // (was 3 sequential queries; each modal open now costs 1 request instead of 3)
+    const { data, error } = await supabase
       .from('leads')
       .select(`
         *,
         owner:team_members!owner_id(*),
-        stage:pipeline_stages!stage_id(*)
+        stage:pipeline_stages!stage_id(*),
+        scores:lead_scores(*),
+        history(
+          *,
+          user:team_members!user_id(full_name, initials, color)
+        )
       `)
       .eq('id', id)
+      .order('created_at', { foreignTable: 'history', ascending: false })
       .single();
 
-    if (leadError) throw leadError;
-
-    // Fetch scores details
-    const { data: scores, error: scoresError } = await supabase
-      .from('lead_scores')
-      .select('*')
-      .eq('lead_id', id);
-
-    if (scoresError) throw scoresError;
-
-    // Fetch history logs
-    const { data: history, error: historyError } = await supabase
-      .from('history')
-      .select(`
-        *,
-        user:team_members!user_id(full_name, initials, color)
-      `)
-      .eq('lead_id', id)
-      .order('created_at', { ascending: false });
-
-    if (historyError) throw historyError;
+    if (error) throw error;
 
     return {
-      ...lead,
-      scores: scores || [],
-      history: history || []
+      ...data,
+      scores: data.scores || [],
+      history: data.history || []
     };
   },
 

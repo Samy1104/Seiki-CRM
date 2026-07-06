@@ -67,7 +67,7 @@ function buildIcalContent(events: EventItem[]): string {
 }
 
 // Edge Function URL for live calendar subscription
-const ICAL_FEED_URL = 'https://cvhrcbzglhvdesiepupk.supabase.co/functions/v1/calendar';
+const ICAL_FEED_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/calendar`;
 
 
 export const Agenda: React.FC = () => {

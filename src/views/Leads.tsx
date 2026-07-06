@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead, MergeProposal } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
@@ -85,7 +85,7 @@ export const Leads: React.FC<LeadsProps> = () => {
   };
 
   // Filter Logic
-  const filteredLeads = leads.filter(l => {
+  const filteredLeads = useMemo(() => leads.filter(l => {
     // Search query
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
@@ -107,7 +107,7 @@ export const Leads: React.FC<LeadsProps> = () => {
     const matchesOwner = !ownerFilter || l.owner_id === ownerFilter;
 
     return matchesSearch && matchesSegment && matchesScore && matchesOwner;
-  });
+  }), [leads, searchQuery, segmentFilter, scoreFilter, ownerFilter]);
 
   if (loading) {
     return (
