@@ -88,9 +88,9 @@ export const Leads: React.FC<LeadsProps> = () => {
   const filteredLeads = leads.filter(l => {
     // Search query
     const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = 
-      l.company_name.toLowerCase().includes(searchLower) ||
-      l.contact_name.toLowerCase().includes(searchLower) ||
+    const matchesSearch =
+      (l.company_name || '').toLowerCase().includes(searchLower) ||
+      (l.contact_name || '').toLowerCase().includes(searchLower) ||
       (l.email && l.email.toLowerCase().includes(searchLower)) ||
       (l.note && l.note.toLowerCase().includes(searchLower));
 

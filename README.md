@@ -21,11 +21,13 @@ npm install
 ```
 
 ### 3. Configurer l'environnement
-Créez un fichier `.env.local` à la racine du projet et ajoutez vos identifiants Supabase :
+Créez un fichier `.env.local` à la racine du projet et ajoutez vos identifiants Supabase (Project Settings > API dans le dashboard Supabase) :
 ```env
 VITE_SUPABASE_URL=votre_url_supabase
-VITE_SUPABASE_ANON_KEY=votre_cle_publique_ou_service_role
+VITE_SUPABASE_ANON_KEY=votre_cle_anon_publique
 ```
+
+⚠️ **N'utilisez jamais la clé `service_role` ici.** Cette variable est injectée dans le bundle JS servi au navigateur — donc publique. Seule la clé `anon`/`public` (protégée par Row Level Security) doit y figurer. La clé `service_role` ne doit exister que côté serveur (secrets des Edge Functions Supabase).
 
 ### 4. Lancer le serveur de développement
 ```bash

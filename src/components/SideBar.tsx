@@ -11,7 +11,8 @@ import {
   BarChart3, 
   Target, 
   Settings, 
-  LogOut 
+  LogOut,
+  Sparkles
 } from 'lucide-react';
 
 interface SideBarProps {
@@ -62,6 +63,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
     { id: 'tasks', label: 'Tâches', icon: CheckSquare, badge: stats.pendingTasks },
     { id: 'agenda', label: 'Agenda', icon: Calendar },
     { id: 'stats', label: 'Statistiques', icon: BarChart3 },
+    { id: 'prospection', label: 'Prospection IA', icon: Sparkles, isAI: true },
     { id: 'codir', label: 'Dashboard CODIR', icon: Target, isCodir: true },
     { id: 'settings', label: 'Paramètres', icon: Settings }
   ];
@@ -84,6 +86,9 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
           }
           if (item.isCodir) {
             btnClass += ' nav-item-codir';
+          }
+          if ((item as any).isAI) {
+            btnClass += ' nav-item-ai';
           }
 
           return (

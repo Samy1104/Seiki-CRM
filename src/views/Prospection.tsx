@@ -1,0 +1,761 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Sparkles, Plus, Play, Pause, BarChart3, Mail,
+  RefreshCw, Check, X, Edit3, Send, ChevronDown, ChevronUp,
+  AlertCircle, Loader, Eye, Trash2, Users, Zap
+} from 'lucide-react';
+import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEmail } from '../services/campaignsService';
+import { prospectionService, type ProspectionLead } from '../services/prospectionService';
+import { useToast } from '../context/ToastContext';
+
+// ── Onglets de la vue ──────────────────────────────────────────────────────────
+type Tab = 'campaigns' | 'generation' | 'followup';
+
+// ── Composant principal ────────────────────────────────────────────────────────
+export const Prospection: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<Tab>('campaigns');
+  const { showToast } = useToast();
+
+  return (
+    <div className="prospection-view">
+      {/* Header */}
+      <div className="prospection-header">
+        <div className="prospection-title">
+          <Sparkles size={20} style={{ color: 'var(--purple)' }} />
+          <h1>Prospection IA</h1>
+          <span className="prospection-badge">Gemini 2.5 Flash</span>
+        </div>
+        <p className="prospection-subtitle">
+          Générez et envoyez des emails ultra-personnalisés en quelques clics.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="prospection-tabs">
+        <button
+          className={`pros-tab ${activeTab === 'campaigns' ? 'active' : ''}`}
+          onClick={() => setActiveTab('campaigns')}
+        >
+          <BarChart3 size={14} /> Campagnes
+        </button>
+        <button
+          className={`pros-tab ${activeTab === 'generation' ? 'active' : ''}`}
+          onClick={() => setActiveTab('generation')}
+        >
+          <Sparkles size={14} /> Génération IA
+        </button>
+        <button
+          className={`pros-tab ${activeTab === 'followup' ? 'active' : ''}`}
+          onClick={() => setActiveTab('followup')}
+        >
+          <RefreshCw size={14} /> Relances
+        </button>
+      </div>
+
+      {/* Contenu selon l'onglet actif */}
+      <div className="prospection-body">
+        {activeTab === 'campaigns' && <CampaignsTab showToast={showToast} />}
+        {activeTab === 'generation' && <GenerationTab showToast={showToast} />}
+        {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
+      </div>
+    </div>
+  );
+};
+
+// ── Tab Campagnes ──────────────────────────────────────────────────────────────
+
+const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
+  const [campaigns, setCampaigns] = useState<CampaignMetrics[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const loadCampaigns = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await campaignsService.getCampaigns();
+      setCampaigns(data);
+    } catch (err) {
+      showToast('Erreur chargement des campagnes', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  const handleStatusToggle = async (campaign: CampaignMetrics) => {
+    const newStatus = campaign.status === 'active' ? 'paused' : 'active';
+    try {
+      await campaignsService.updateCampaign(campaign.id, { status: newStatus });
+      showToast(`Campagne ${newStatus === 'active' ? 'activée' : 'mise en pause'}`, 'success');
+      loadCampaigns();
+    } catch {
+      showToast('Erreur mise à jour statut', 'error');
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Supprimer cette campagne ? Les emails générés seront également supprimés.')) return;
+    try {
+      await campaignsService.deleteCampaign(id);
+      showToast('Campagne supprimée', 'success');
+      loadCampaigns();
+    } catch {
+      showToast('Erreur suppression', 'error');
+    }
+  };
+
+  return (
+    <div>
+      <div className="pros-section-header">
+        <h2>Campagnes actives</h2>
+        <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
+          <Plus size={13} /> Nouvelle campagne
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>
+      ) : campaigns.length === 0 ? (
+        <div className="pros-empty">
+          <Sparkles size={32} style={{ color: 'var(--purple)', opacity: 0.5 }} />
+          <p>Aucune campagne. Créez votre première campagne de prospection IA.</p>
+          <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
+            <Plus size={13} /> Créer une campagne
+          </button>
+        </div>
+      ) : (
+        <div className="campaigns-grid">
+          {campaigns.map((c) => (
+            <CampaignCard
+              key={c.id}
+              campaign={c}
+              onToggle={() => handleStatusToggle(c)}
+              onDelete={() => handleDelete(c.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {showCreateModal && (
+        <CreateCampaignModal
+          onClose={() => setShowCreateModal(false)}
+          onCreated={() => { setShowCreateModal(false); loadCampaigns(); showToast('Campagne créée !', 'success'); }}
+        />
+      )}
+    </div>
+  );
+};
+
+// ── Tab Génération IA ──────────────────────────────────────────────────────────
+
+const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
+  const [campaigns, setCampaigns] = useState<Campaign[]>([]);
+  const [leads, setLeads] = useState<ProspectionLead[]>([]);
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('');
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set());
+  const [generatedEmails, setGeneratedEmails] = useState<GeneratedEmail[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'select' | 'review'>('select');
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      try {
+        const [camps, prLeads] = await Promise.all([
+          campaignsService.getCampaigns(),
+          prospectionService.getLeadsReadyForProspection(),
+        ]);
+        setCampaigns(camps);
+        setLeads(prLeads);
+      } catch (err) {
+        showToast('Erreur chargement des données', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [showToast]);
+
+  const toggleLead = (id: string) => {
+    setSelectedLeads((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedLeads(new Set(leads.map((l) => l.id)));
+  };
+
+  const clearAll = () => setSelectedLeads(new Set());
+
+  const handleGenerate = async () => {
+    if (!selectedCampaign) { showToast('Sélectionne une campagne', 'error'); return; }
+    if (selectedLeads.size === 0) { showToast('Sélectionne au moins un lead', 'error'); return; }
+
+    setIsGenerating(true);
+    setProgress({ current: 0, total: selectedLeads.size });
+    const leadIds = Array.from(selectedLeads);
+
+    try {
+      const { success, failed } = await campaignsService.bulkGenerateEmails(
+        leadIds,
+        selectedCampaign,
+        (current, total) => setProgress({ current, total })
+      );
+
+      setGeneratedEmails(success);
+      if (failed.length > 0) {
+        showToast(`${success.length} emails générés, ${failed.length} échecs`, 'info');
+      } else {
+        showToast(`${success.length} emails générés avec succès !`, 'success');
+      }
+      setViewMode('review');
+    } catch (err) {
+      showToast('Erreur lors de la génération', 'error');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleReload = async () => {
+    if (!selectedCampaign) return;
+    const emails = await campaignsService.getGeneratedEmails(selectedCampaign, 'draft');
+    setGeneratedEmails(emails);
+    setViewMode('review');
+  };
+
+  if (loading) return <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>;
+
+  return (
+    <div>
+      <div className="pros-section-header">
+        <h2>{viewMode === 'select' ? 'Sélection & Génération' : `${generatedEmails.length} emails générés`}</h2>
+        {viewMode === 'review' && (
+          <button className="btn-secondary-sm" onClick={() => setViewMode('select')}>
+            ← Retour à la sélection
+          </button>
+        )}
+      </div>
+
+      {viewMode === 'select' && (
+        <>
+          {/* Sélection campagne */}
+          <div className="gen-field-group">
+            <label className="gen-label">Campagne *</label>
+            <select
+              className="gen-select"
+              value={selectedCampaign}
+              onChange={(e) => setSelectedCampaign(e.target.value)}
+            >
+              <option value="">-- Choisir une campagne --</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name} ({c.objective})</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Liste des leads */}
+          <div className="gen-leads-section">
+            <div className="gen-leads-header">
+              <span>{leads.length} leads éligibles</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-ghost-sm" onClick={selectAll}>Tout sélectionner</button>
+                <button className="btn-ghost-sm" onClick={clearAll}>Désélectionner</button>
+              </div>
+            </div>
+
+            <div className="gen-leads-list">
+              {leads.length === 0 ? (
+                <div className="pros-empty">
+                  <Users size={28} style={{ opacity: 0.4 }} />
+                  <p>Aucun lead éligible (email manquant ou déjà en séquence complétée).</p>
+                </div>
+              ) : (
+                leads.map((lead) => (
+                  <label key={lead.id} className={`gen-lead-row ${selectedLeads.has(lead.id) ? 'selected' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={selectedLeads.has(lead.id)}
+                      onChange={() => toggleLead(lead.id)}
+                    />
+                    <div className="gen-lead-info">
+                      <span className="gen-lead-name">{lead.contact_name}</span>
+                      <span className="gen-lead-company">{lead.company_name}</span>
+                      {lead.poste && <span className="gen-lead-poste">{lead.poste}</span>}
+                    </div>
+                    <div className="gen-lead-meta">
+                      <span className={`tag-segment seg-${lead.segment.toLowerCase()}`}>{lead.segment}</span>
+                      {lead.enrichi_contexte && (
+                        <span title="Contexte enrichi disponible" style={{ color: 'var(--green)', fontSize: '10px' }}>✦ enrichi</span>
+                      )}
+                    </div>
+                  </label>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="gen-actions-bar">
+            <span className="gen-count">{selectedLeads.size} sélectionné(s)</span>
+            {isGenerating ? (
+              <div className="gen-progress">
+                <Loader size={14} className="spin" />
+                <span>Génération {progress.current}/{progress.total}...</span>
+                <div className="gen-progress-bar">
+                  <div className="gen-progress-fill" style={{ width: `${(progress.current / progress.total) * 100}%` }} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-ghost-sm" onClick={handleReload}>
+                  <Eye size={13} /> Voir les drafts existants
+                </button>
+                <button
+                  className="btn-primary-sm"
+                  onClick={handleGenerate}
+                  disabled={selectedLeads.size === 0 || !selectedCampaign}
+                >
+                  <Sparkles size={13} />
+                  Générer {selectedLeads.size > 0 ? `${selectedLeads.size} email(s)` : ''}
+                </button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {viewMode === 'review' && (
+        <div className="gen-review-list">
+          {generatedEmails.length === 0 ? (
+            <div className="pros-empty">
+              <Mail size={28} style={{ opacity: 0.4 }} />
+              <p>Aucun email en draft pour cette campagne.</p>
+            </div>
+          ) : (
+            generatedEmails.map((email) => (
+              <EmailPreviewCard
+                key={email.id}
+                email={email}
+                showToast={showToast}
+                onUpdate={() => {
+                  setGeneratedEmails((prev) =>
+                    prev.filter((e) => e.id !== email.id)
+                  );
+                }}
+              />
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Tab Relances ──────────────────────────────────────────────────────────────
+
+const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
+  const [candidates, setCandidates] = useState<Awaited<ReturnType<typeof prospectionService.getFollowUpCandidates>>>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    prospectionService.getFollowUpCandidates(5)
+      .then((data) => { if (!cancelled) setCandidates(data); })
+      .catch(() => { if (!cancelled) showToast('Erreur chargement relances', 'error'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [showToast]);
+
+  if (loading) return <div className="pros-loading"><Loader size={20} className="spin" /> Analyse des relances...</div>;
+
+  const actionLabels = {
+    follow_up_1: { label: '1ère relance', color: 'var(--gold)' },
+    follow_up_2: { label: '2ème relance', color: 'var(--purple)' },
+    archive: { label: 'À archiver', color: 'var(--text-muted)' },
+    wait: { label: 'Attente', color: 'var(--text-secondary)' },
+  };
+
+  return (
+    <div>
+      <div className="pros-section-header">
+        <h2>Relances intelligentes</h2>
+        <span className="pros-info-badge">
+          <AlertCircle size={12} /> Calculé sur les 30 derniers jours
+        </span>
+      </div>
+
+      {candidates.length === 0 ? (
+        <div className="pros-empty">
+          <Check size={32} style={{ color: 'var(--green)', opacity: 0.6 }} />
+          <p>Aucune relance nécessaire — tous les leads sont à jour !</p>
+        </div>
+      ) : (
+        <div className="followup-list">
+          {candidates.map(({ lead, daysSinceLastEmail, hasOpened, followUpCount, recommendedAction }) => {
+            const action = actionLabels[recommendedAction];
+            return (
+              <div key={lead.id} className="followup-row">
+                <div className="followup-info">
+                  <strong>{lead.contact_name}</strong>
+                  <span className="followup-company">{lead.company_name}</span>
+                </div>
+                <div className="followup-stats">
+                  <span className="followup-days">{daysSinceLastEmail}j sans réponse</span>
+                  {hasOpened && <span className="followup-opened">✓ A ouvert</span>}
+                  {followUpCount > 0 && <span className="followup-count">{followUpCount} relance(s)</span>}
+                </div>
+                <span
+                  className="followup-action-badge"
+                  style={{ color: action.color, borderColor: action.color }}
+                >
+                  {action.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Composant CampaignCard ────────────────────────────────────────────────────
+
+const CampaignCard: React.FC<{
+  campaign: CampaignMetrics;
+  onToggle: () => void;
+  onDelete: () => void;
+}> = ({ campaign, onToggle, onDelete }) => {
+  const statusConfig = {
+    draft: { label: 'Brouillon', color: 'var(--text-muted)' },
+    active: { label: 'Active', color: 'var(--green)' },
+    paused: { label: 'En pause', color: 'var(--gold)' },
+    completed: { label: 'Terminée', color: 'var(--purple)' },
+  };
+
+  const s = statusConfig[campaign.status];
+
+  return (
+    <div className="campaign-card">
+      <div className="campaign-card-header">
+        <div className="campaign-card-title">
+          <span className="campaign-status-dot" style={{ background: s.color }} />
+          <h3>{campaign.name}</h3>
+        </div>
+        <div className="campaign-card-actions">
+          {campaign.status !== 'completed' && (
+            <button
+              className="btn-icon"
+              onClick={onToggle}
+              title={campaign.status === 'active' ? 'Mettre en pause' : 'Activer'}
+            >
+              {campaign.status === 'active' ? <Pause size={14} /> : <Play size={14} />}
+            </button>
+          )}
+          <button className="btn-icon danger" onClick={onDelete} title="Supprimer">
+            <Trash2 size={14} />
+          </button>
+        </div>
+      </div>
+
+      <div className="campaign-card-meta">
+        <span className="campaign-objective">{campaign.objective}</span>
+        {campaign.target_segment && (
+          <span className={`tag-segment seg-${campaign.target_segment.toLowerCase()}`}>
+            {campaign.target_segment}
+          </span>
+        )}
+        <span className="campaign-tone">Ton : {campaign.tone}</span>
+      </div>
+
+      <div className="campaign-metrics">
+        <div className="metric-item">
+          <span className="metric-value">{campaign.total_sent || 0}</span>
+          <span className="metric-label">Envoyés</span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-value" style={{ color: 'var(--gold)' }}>
+            {campaign.open_rate != null ? `${campaign.open_rate}%` : '—'}
+          </span>
+          <span className="metric-label">Ouvertures</span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-value" style={{ color: 'var(--green)' }}>
+            {campaign.reply_rate != null ? `${campaign.reply_rate}%` : '—'}
+          </span>
+          <span className="metric-label">Réponses</span>
+        </div>
+        <div className="metric-item">
+          <span className="metric-value" style={{ color: 'var(--purple)' }}>
+            {campaign.total_draft || 0}
+          </span>
+          <span className="metric-label">En draft</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Composant EmailPreviewCard ────────────────────────────────────────────────
+
+const EmailPreviewCard: React.FC<{
+  email: GeneratedEmail;
+  showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
+  onUpdate: () => void;
+}> = ({ email, showToast, onUpdate }) => {
+  const [expanded, setExpanded] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedCorps, setEditedCorps] = useState(email.corps_du_mail);
+  const [editedSujet, setEditedSujet] = useState(email.sujet);
+
+  const handleApproveAndSend = async () => {
+    setIsSending(true);
+    try {
+      await campaignsService.approveEmail(email.id);
+      try {
+        await campaignsService.sendEmail(email.id);
+        showToast(`Email envoyé à ${email.lead?.contact_name || 'le prospect'} !`, 'success');
+        onUpdate();
+      } catch (sendErr) {
+        // approveEmail succeeded but sendEmail failed (network error, Resend
+        // down, etc). Roll back to 'draft' so the email stays visible and
+        // retryable in the review list instead of silently disappearing
+        // (getGeneratedEmails only fetches statut_envoi === 'draft').
+        await campaignsService.updateGeneratedEmail(email.id, { statut_envoi: 'draft' }).catch(() => {});
+        throw sendErr;
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur envoi', 'error');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      await campaignsService.updateGeneratedEmail(email.id, {
+        sujet: editedSujet,
+        corps_du_mail: editedCorps,
+      });
+      showToast('Email modifié', 'success');
+      setIsEditing(false);
+    } catch {
+      showToast('Erreur sauvegarde', 'error');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm('Supprimer cet email généré ?')) return;
+    try {
+      await campaignsService.deleteGeneratedEmail(email.id);
+      onUpdate();
+    } catch {
+      showToast('Erreur suppression', 'error');
+    }
+  };
+
+  return (
+    <div className={`email-preview-card ${expanded ? 'expanded' : ''}`}>
+      {/* Header */}
+      <div className="epc-header" onClick={() => setExpanded((v) => !v)}>
+        <div className="epc-prospect">
+          <strong>{email.lead?.contact_name || '—'}</strong>
+          <span className="epc-company">{email.lead?.company_name}</span>
+          {email.lead?.poste && <span className="epc-poste">{email.lead.poste}</span>}
+        </div>
+        <div className="epc-subject">
+          <Mail size={12} style={{ color: 'var(--purple)', flexShrink: 0 }} />
+          <span>{email.sujet}</span>
+        </div>
+        <div className="epc-chevron">
+          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
+      </div>
+
+      {/* Body expandé */}
+      {expanded && (
+        <div className="epc-body">
+          {/* Icebreaker */}
+          {email.icebreaker && (
+            <div className="epc-icebreaker">
+              <Zap size={12} style={{ color: 'var(--gold)' }} />
+              <span><strong>Icebreaker :</strong> {email.icebreaker}</span>
+            </div>
+          )}
+
+          {isEditing ? (
+            <div className="epc-edit-form">
+              <div>
+                <label className="gen-label">Sujet</label>
+                <input
+                  className="epc-input"
+                  value={editedSujet}
+                  onChange={(e) => setEditedSujet(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="gen-label">Corps</label>
+                <textarea
+                  className="epc-textarea"
+                  rows={10}
+                  value={editedCorps}
+                  onChange={(e) => setEditedCorps(e.target.value)}
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button className="btn-primary-sm" onClick={handleSaveEdit}>
+                  <Check size={12} /> Sauvegarder
+                </button>
+                <button className="btn-ghost-sm" onClick={() => setIsEditing(false)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="epc-corps">
+              {email.corps_du_mail.split('\n').map((line, i) => (
+                <p key={i}>{line}</p>
+              ))}
+            </div>
+          )}
+
+          {/* Actions */}
+          {!isEditing && (
+            <div className="epc-actions">
+              <button
+                className="btn-primary-sm"
+                onClick={handleApproveAndSend}
+                disabled={isSending}
+              >
+                {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
+                {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
+              </button>
+              <button className="btn-ghost-sm" onClick={() => setIsEditing(true)}>
+                <Edit3 size={12} /> Modifier
+              </button>
+              <button className="btn-ghost-sm danger" onClick={handleDelete}>
+                <Trash2 size={12} /> Supprimer
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Modal Création Campagne ───────────────────────────────────────────────────
+
+const CreateCampaignModal: React.FC<{
+  onClose: () => void;
+  onCreated: () => void;
+}> = ({ onClose, onCreated }) => {
+  const [form, setForm] = useState({
+    name: '',
+    objective: 'Prise de RDV',
+    target_segment: 'All' as Campaign['target_segment'],
+    tone: 'professionnel' as Campaign['tone'],
+    description: '',
+    system_prompt: '',
+    status: 'draft' as Campaign['status'],
+  });
+  const [saving, setSaving] = useState(false);
+
+  const update = (field: string, value: string) =>
+    setForm((prev) => ({ ...prev, [field]: value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim()) return;
+    setSaving(true);
+    try {
+      await campaignsService.createCampaign({
+        ...form,
+        created_by: null,
+        sequence_id: null,
+      });
+      onCreated();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Nouvelle campagne IA</h2>
+          <button className="btn-icon" onClick={onClose}><X size={16} /></button>
+        </div>
+        <form onSubmit={handleSubmit} className="modal-form">
+          <div className="gen-field-group">
+            <label className="gen-label">Nom de la campagne *</label>
+            <input
+              className="gen-input"
+              placeholder="ex: Prospection Directeurs Marketing — Q3 2026"
+              value={form.name}
+              onChange={(e) => update('name', e.target.value)}
+              required
+            />
+          </div>
+          <div className="gen-field-group">
+            <label className="gen-label">Objectif</label>
+            <input
+              className="gen-input"
+              placeholder="ex: Prise de RDV démo, Présentation offre..."
+              value={form.objective}
+              onChange={(e) => update('objective', e.target.value)}
+            />
+          </div>
+          <div className="gen-field-row">
+            <div className="gen-field-group">
+              <label className="gen-label">Segment cible</label>
+              <select className="gen-select" value={form.target_segment || 'All'} onChange={(e) => update('target_segment', e.target.value)}>
+                <option value="All">Tous</option>
+                <option value="Media">Media</option>
+                <option value="Retail">Retail</option>
+                <option value="Instit">Instit</option>
+              </select>
+            </div>
+            <div className="gen-field-group">
+              <label className="gen-label">Ton</label>
+              <select className="gen-select" value={form.tone} onChange={(e) => update('tone', e.target.value)}>
+                <option value="professionnel">Professionnel</option>
+                <option value="décontracté">Décontracté</option>
+                <option value="direct">Direct</option>
+                <option value="consultatif">Consultatif</option>
+              </select>
+            </div>
+          </div>
+          <div className="gen-field-group">
+            <label className="gen-label">Prompt personnalisé (optionnel)</label>
+            <textarea
+              className="gen-textarea"
+              rows={4}
+              placeholder="Laisse vide pour utiliser le prompt Seiki par défaut. Sinon, décris ici comment le LLM doit rédiger les emails pour cette campagne..."
+              value={form.system_prompt}
+              onChange={(e) => update('system_prompt', e.target.value)}
+            />
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-ghost-sm" onClick={onClose}>Annuler</button>
+            <button type="submit" className="btn-primary-sm" disabled={saving || !form.name.trim()}>
+              {saving ? <Loader size={13} className="spin" /> : <Plus size={13} />}
+              Créer la campagne
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default Prospection;

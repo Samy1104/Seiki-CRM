@@ -179,13 +179,18 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
       return;
     }
 
+    if (stages.length === 0) {
+      showToast('Impossible de déterminer l\'étape du pipeline (aucune étape chargée). Réessayez.', 'error');
+      return;
+    }
+
     try {
       // Determine initial stage
       let initialStageId = form.stage_id;
       if (initialStageId === 'auto') {
         const stageName = totalScore >= 60 ? 'Qualification' : 'Prospect';
         const matched = stages.find(s => s.name === stageName);
-        initialStageId = matched ? matched.id : stages[0]?.id;
+        initialStageId = matched ? matched.id : stages[0].id;
       }
 
       const leadPayload = {

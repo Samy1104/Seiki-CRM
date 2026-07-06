@@ -1,9 +1,18 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { corsHeaders } from "../_shared/cors.ts";
 
 // Format a date string (YYYY-MM-DD) to iCal DATE format (YYYYMMDD)
 function toIcalDate(dateStr: string): string {
   return dateStr.replace(/-/g, "");
+}
+
+// Adds `days` calendar days to a YYYY-MM-DD string using UTC arithmetic only,
+// so the result never shifts by timezone/DST (avoids off-by-one-day bugs).
+function addDaysIcal(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const shifted = new Date(Date.UTC(y, m - 1, d + days));
+  return shifted.toISOString().slice(0, 10).replace(/-/g, "");
 }
 
 // Escape special characters for iCal text fields
@@ -29,15 +38,10 @@ function foldLine(line: string): string {
 }
 
 serve(async (_req) => {
-  // CORS headers
-  const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, OPTIONS",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey",
-  };
+  const headers = corsHeaders(_req);
 
   if (_req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers });
   }
 
   try {
@@ -73,16 +77,9 @@ serve(async (_req) => {
       const dtstart = toIcalDate(event.event_date);
       
       // End date: if provided use it + 1 day (iCal end is exclusive); otherwise same day + 1
-      let dtend: string;
-      if (event.end_date) {
-        const endDate = new Date(event.end_date);
-        endDate.setDate(endDate.getDate() + 1);
-        dtend = endDate.toISOString().slice(0, 10).replace(/-/g, "");
-      } else {
-        const startDate = new Date(event.event_date);
-        startDate.setDate(startDate.getDate() + 1);
-        dtend = startDate.toISOString().slice(0, 10).replace(/-/g, "");
-      }
+      const dtend = event.end_date
+        ? addDaysIcal(event.end_date, 1)
+        : addDaysIcal(event.event_date, 1);
 
       const summary = escapeIcal(event.name);
       const location = event.location ? escapeIcal(event.location) : null;
@@ -113,7 +110,7 @@ serve(async (_req) => {
 
     return new Response(icalContent, {
       headers: {
-        ...corsHeaders,
+        ...headers,
         "Content-Type": "text/calendar; charset=utf-8",
         "Content-Disposition": 'attachment; filename="seiki-agenda.ics"',
         "Cache-Control": "no-cache, no-store",
@@ -123,7 +120,7 @@ serve(async (_req) => {
     console.error("Error generating iCal:", err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...headers, "Content-Type": "application/json" },
     });
   }
 });

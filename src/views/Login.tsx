@@ -3,54 +3,71 @@ import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!password) {
-      setError('Veuillez entrer le mot de passe');
+    if (!email || !password) {
+      setError('Veuillez entrer votre email et votre mot de passe');
       return;
     }
     setIsSubmitting(true);
     setError('');
 
-    const success = await login(password);
+    const { success, error: loginError } = await login(email, password);
     setIsSubmitting(false);
 
     if (!success) {
-      setError('Mot de passe incorrect');
+      setError(loginError === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : (loginError || 'Erreur de connexion'));
       setPassword('');
     }
   };
 
   return (
     <div className="lock-screen-container">
+      {/* Hero Section styled exactly like Seiki.co */}
+      <div className="lock-screen-hero">
+        <img src="/grand_logo.png" className="lock-logo-large" alt="Seiki Logo" />
+        <h1>Sharper decisions <br />with mobility data</h1>
+        <p>CRM interne à Seiki</p>
+      </div>
+
+      {/* Glassmorphic Credentials Card */}
       <div className="lock-screen-card">
-        {/* Large Logo */}
-        <div className="lock-screen-logo">
-          <img src="/seiki_logo.png" className="lock-logo-img" alt="Seiki Logo" />
-          <span className="lock-logo-name">seiki</span>
-        </div>
-        <div className="lock-screen-title">CRM — Accès sécurisé</div>
-        
         <form onSubmit={handleSubmit} className="lock-screen-form">
-          <input 
-            type="password" 
-            id="pwd-input" 
-            placeholder="Mot de passe" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={isSubmitting}
-            autoFocus
-            className="lock-input"
-          />
-          
+          <div className="lock-input-wrapper">
+            <input
+              type="email"
+              id="email-input"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={isSubmitting}
+              autoFocus
+              autoComplete="username"
+              className="lock-input"
+            />
+          </div>
+          <div className="lock-input-wrapper">
+            <input
+              type="password"
+              id="pwd-input"
+              placeholder="Mot de passe"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={isSubmitting}
+              autoComplete="current-password"
+              className="lock-input"
+            />
+          </div>
+
           {error && <div className="lock-error">{error}</div>}
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             disabled={isSubmitting}
             className="lock-btn"
           >

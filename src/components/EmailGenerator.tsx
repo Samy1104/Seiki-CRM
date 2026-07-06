@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Copy, Check, Mail, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { Copy, Check, Mail, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface EmailGeneratorProps {
   /** Pre-fill from form context */

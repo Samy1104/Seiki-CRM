@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
 
 interface ToastContextType {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -7,12 +7,16 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ id: number; message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const nextId = useRef(0);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ message, type });
+    const id = ++nextId.current;
+    setToast({ id, message, type });
     setTimeout(() => {
-      setToast(null);
+      // Only dismiss if this is still the toast we scheduled — an older
+      // timer must not clear a newer toast that replaced it in the meantime.
+      setToast((current) => (current?.id === id ? null : current));
     }, 3000);
   };
 

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { SideBar } from './components/SideBar';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './views/Login';
 import { Pipeline } from './views/Pipeline';
 import { Leads } from './views/Leads';
@@ -11,6 +12,7 @@ import { Agenda } from './views/Agenda';
 import { Stats } from './views/Stats';
 import { Codir } from './views/Codir';
 import { Settings } from './views/Settings';
+import { Prospection } from './views/Prospection';
 import './App.css';
 
 const AppContent: React.FC = () => {
@@ -37,14 +39,17 @@ const AppContent: React.FC = () => {
 
       {/* Main workspace area */}
       <main className="main-content">
-        {currentView === 'pipeline' && <Pipeline setView={setView} />}
-        {currentView === 'leads' && <Leads setView={setView} />}
-        {currentView === 'add' && <AddLead setView={setView} />}
-        {currentView === 'tasks' && <Tasks />}
-        {currentView === 'agenda' && <Agenda />}
-        {currentView === 'stats' && <Stats />}
-        {currentView === 'codir' && <Codir />}
-        {currentView === 'settings' && <Settings />}
+        <ErrorBoundary key={currentView}>
+          {currentView === 'pipeline' && <Pipeline setView={setView} />}
+          {currentView === 'leads' && <Leads setView={setView} />}
+          {currentView === 'add' && <AddLead setView={setView} />}
+          {currentView === 'tasks' && <Tasks />}
+          {currentView === 'agenda' && <Agenda />}
+          {currentView === 'stats' && <Stats />}
+          {currentView === 'codir' && <Codir />}
+          {currentView === 'settings' && <Settings />}
+          {currentView === 'prospection' && <Prospection />}
+        </ErrorBoundary>
       </main>
     </div>
   );
