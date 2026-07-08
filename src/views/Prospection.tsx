@@ -28,11 +28,13 @@ export const Prospection: React.FC = () => {
   }, []);
 
   const handleModeChange = async (newMode: 'manual' | 'auto') => {
+    const previousMode = mode;
     setMode(newMode);
     try {
       await settingsService.updateProspectionSettings({ prospection_mode: newMode });
       showToast(`Mode ${newMode === 'auto' ? 'automatique' : 'vérification humaine'} activé`, 'success');
     } catch {
+      setMode(previousMode);
       showToast('Erreur changement de mode', 'error');
     }
   };
