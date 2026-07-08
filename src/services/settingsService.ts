@@ -7,9 +7,19 @@ export interface AppSetting {
     days?: number;
     name?: string;
     enabled?: boolean;
+    count?: number;
+    mode?: string;
   };
   label: string;
   category: string;
+}
+
+export interface ProspectionSettings {
+  prospection_mode: 'manual' | 'auto';
+  daily_send_quota: number;
+  followup_1_days: number;
+  followup_2_days: number;
+  archive_after_followups: number;
 }
 
 export interface TeamMember {
@@ -39,6 +49,28 @@ export const settingsService = {
       .order('key');
     if (error) throw error;
     return data || [];
+  },
+
+  async getProspectionSettings(): Promise<ProspectionSettings> {
+    const all = await this.getSettings();
+    const find = (key: string) => all.find((s) => s.key === key)?.value as Record<string, unknown> | undefined;
+    return {
+      prospection_mode: (find('prospection_mode')?.mode as 'manual' | 'auto') ?? 'manual',
+      daily_send_quota: (find('daily_send_quota')?.count as number) ?? 100,
+      followup_1_days: (find('followup_1_days')?.days as number) ?? 5,
+      followup_2_days: (find('followup_2_days')?.days as number) ?? 10,
+      archive_after_followups: (find('archive_after_followups')?.count as number) ?? 2,
+    };
+  },
+
+  async updateProspectionSettings(updates: Partial<ProspectionSettings>): Promise<void> {
+    const jobs: Promise<void>[] = [];
+    if (updates.prospection_mode !== undefined) jobs.push(this.updateSetting('prospection_mode', { mode: updates.prospection_mode }));
+    if (updates.daily_send_quota !== undefined) jobs.push(this.updateSetting('daily_send_quota', { count: updates.daily_send_quota }));
+    if (updates.followup_1_days !== undefined) jobs.push(this.updateSetting('followup_1_days', { days: updates.followup_1_days }));
+    if (updates.followup_2_days !== undefined) jobs.push(this.updateSetting('followup_2_days', { days: updates.followup_2_days }));
+    if (updates.archive_after_followups !== undefined) jobs.push(this.updateSetting('archive_after_followups', { count: updates.archive_after_followups }));
+    await Promise.all(jobs);
   },
 
   async updateSetting(key: string, value: Record<string, any>): Promise<void> {
