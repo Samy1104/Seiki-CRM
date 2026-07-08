@@ -7,6 +7,7 @@ import {
 import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEmail } from '../services/campaignsService';
 import { prospectionService, type ProspectionLead } from '../services/prospectionService';
 import { useToast } from '../context/ToastContext';
+import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
 type Tab = 'campaigns' | 'generation' | 'followup';
