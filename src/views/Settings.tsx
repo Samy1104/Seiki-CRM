@@ -8,7 +8,7 @@ const AVATAR_COLORS = ['#6B5FE6', '#F5B731', '#4ADE80', '#EC4899', '#3B82F6', '#
 
 export const Settings: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla' | 'prospection'>('members');
   const [loading, setLoading] = useState(true);
 
   // Data lists
@@ -32,6 +32,12 @@ export const Settings: React.FC = () => {
   const [slaInstit, setSlaInstit] = useState(14);
   const [aiScoring, setAiScoring] = useState(false);
 
+  // Form states - Prospection
+  const [dailyQuota, setDailyQuota] = useState(100);
+  const [followup1Days, setFollowup1Days] = useState(5);
+  const [followup2Days, setFollowup2Days] = useState(10);
+  const [archiveAfter, setArchiveAfter] = useState(2);
+
   const loadSettingsData = async () => {
     try {
       const fetchedMembers = await settingsService.getTeamMembers();
@@ -47,6 +53,10 @@ export const Settings: React.FC = () => {
         if (s.key === 'sla_retail' && s.value.days !== undefined) setSlaRetail(s.value.days);
         if (s.key === 'sla_instit' && s.value.days !== undefined) setSlaInstit(s.value.days);
         if (s.key === 'scoring_auto' && s.value.enabled !== undefined) setAiScoring(s.value.enabled);
+        if (s.key === 'daily_send_quota' && s.value.count !== undefined) setDailyQuota(s.value.count);
+        if (s.key === 'followup_1_days' && s.value.days !== undefined) setFollowup1Days(s.value.days);
+        if (s.key === 'followup_2_days' && s.value.days !== undefined) setFollowup2Days(s.value.days);
+        if (s.key === 'archive_after_followups' && s.value.count !== undefined) setArchiveAfter(s.value.count);
       });
     } catch (err) {
       console.error('Error loading settings data:', err);
@@ -204,6 +214,23 @@ export const Settings: React.FC = () => {
     }
   };
 
+  const handleSaveProspectionSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await settingsService.updateProspectionSettings({
+        daily_send_quota: dailyQuota,
+        followup_1_days: followup1Days,
+        followup_2_days: followup2Days,
+        archive_after_followups: archiveAfter,
+      });
+      showToast('Paramètres de prospection sauvegardés ✓');
+      loadSettingsData();
+    } catch (err) {
+      console.error('Error saving prospection settings:', err);
+      showToast('Erreur de sauvegarde des paramètres', 'error');
+    }
+  };
+
   if (loading) {
     return (
       <div className="loading-container">
@@ -239,12 +266,19 @@ export const Settings: React.FC = () => {
           <Target size={14} style={{ marginRight: '6px' }} />
           Étapes du Pipeline
         </button>
-        <button 
+        <button
           className={`mtab ${activeTab === 'sla' ? 'on' : ''}`}
           onClick={() => setActiveTab('sla')}
         >
           <Sliders size={14} style={{ marginRight: '6px' }} />
           Règles & SLA Globaux
+        </button>
+        <button
+          className={`mtab ${activeTab === 'prospection' ? 'on' : ''}`}
+          onClick={() => setActiveTab('prospection')}
+        >
+          <Sliders size={14} style={{ marginRight: '6px' }} />
+          Prospection
         </button>
       </div>
 
@@ -553,6 +587,43 @@ export const Settings: React.FC = () => {
             <button type="submit" className="btn btn-grad">
               Enregistrer les paramètres
             </button>
+          </form>
+        </div>
+      )}
+
+      {activeTab === 'prospection' && (
+        <div className="card" style={{ padding: '20px' }}>
+          <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '14px' }}>
+            Quota d'envoi et relances
+          </div>
+
+          <form onSubmit={handleSaveProspectionSettings}>
+            <div className="form-grid" style={{ marginBottom: '24px' }}>
+              <div className="form-field">
+                <div className="field-label">Quota d'envoi quotidien</div>
+                <input type="number" value={dailyQuota} onChange={(e) => setDailyQuota(parseInt(e.target.value) || 1)} min={1} />
+                <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                  Limite Resend : ne pas dépasser {dailyQuota} emails envoyés par jour.
+                </span>
+              </div>
+
+              <div className="form-field">
+                <div className="field-label">Délai avant 1ère relance (jours)</div>
+                <input type="number" value={followup1Days} onChange={(e) => setFollowup1Days(parseInt(e.target.value) || 1)} min={1} />
+              </div>
+
+              <div className="form-field">
+                <div className="field-label">Délai avant 2ème relance (jours)</div>
+                <input type="number" value={followup2Days} onChange={(e) => setFollowup2Days(parseInt(e.target.value) || 1)} min={1} />
+              </div>
+
+              <div className="form-field">
+                <div className="field-label">Relances avant archivage</div>
+                <input type="number" value={archiveAfter} onChange={(e) => setArchiveAfter(parseInt(e.target.value) || 1)} min={1} />
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-grad">Enregistrer les paramètres</button>
           </form>
         </div>
       )}

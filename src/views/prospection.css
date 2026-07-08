@@ -1,0 +1,24 @@
+/* ============================================================
+   Tailwind v4, scoped to the Prospection page only.
+   No preflight import on purpose — importing only theme+utilities
+   means Tailwind can't reset styles used by the rest of the app,
+   which is plain CSS (index.css / App.css).
+   ============================================================ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --color-brand-purple: var(--purple);
+  --color-brand-purple-glow: var(--purple-glow);
+  --color-brand-gold: var(--gold);
+  --color-brand-gold-glow: var(--gold-glow);
+  --color-brand-green: var(--green);
+  --color-brand-red: var(--red);
+  --color-brand-bg-panel: var(--bg-panel);
+  --color-brand-border: var(--border-subtle);
+  --color-brand-text: var(--text-primary);
+  --color-brand-text-secondary: var(--text-secondary);
+  --color-brand-text-muted: var(--text-muted);
+  --font-brand-heading: var(--font-heading);
+  --font-brand-body: var(--font-body);
+}

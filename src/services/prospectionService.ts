@@ -7,6 +7,8 @@
 
 import { supabase } from './supabaseClient';
 import type { Lead } from './leadsService';
+import { settingsService } from './settingsService';
+import { templatesService } from './templatesService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -77,13 +79,10 @@ export const prospectionService = {
     return (data || []) as ProspectionLead[];
   },
 
-  /**
-   * Récupère les leads qui ont reçu un email mais n'ont pas répondu.
-   * Utile pour planifier les relances intelligentes.
-   * @param daysThreshold - Nombre de jours sans réponse avant relance (défaut: 5)
-   */
-  async getFollowUpCandidates(daysThreshold = 5): Promise<FollowUpCandidate[]> {
-    // 1. Récupérer les leads avec des emails envoyés dans les 30 derniers jours
+  async getFollowUpCandidates(): Promise<FollowUpCandidate[]> {
+    const { followup_1_days, followup_2_days, archive_after_followups } = await settingsService.getProspectionSettings();
+    const daysThreshold = followup_1_days;
+
     const { data: sentEmails, error } = await supabase
       .from('generated_emails')
       .select(`
@@ -92,7 +91,7 @@ export const prospectionService = {
         campaign_id,
         lead:leads!lead_id(
           id, contact_name, company_name, email, segment, sequence_status,
-          is_archived, merged_into_id, poste, enrichi_contexte,
+          is_archived, merged_into_id, poste, enrichi_contexte, custom_fields,
           score, stage_id, owner_id, created_at, updated_at,
           note, email_verified, phone, linkedin_url, website, domain,
           deal_value, source, days_in_stage, stage_changed_at
@@ -104,9 +103,7 @@ export const prospectionService = {
 
     if (error) throw error;
 
-    // 2. Récupérer les logs d'ouvertures et réponses
     const leadIds = [...new Set((sentEmails || []).map((e) => e.lead_id as string))];
-
     if (leadIds.length === 0) return [];
 
     const { data: logs } = await supabase
@@ -115,7 +112,6 @@ export const prospectionService = {
       .in('lead_id', leadIds)
       .eq('direction', 'outbound');
 
-    // 3. Agréger par lead
     const now = Date.now();
     const candidates: FollowUpCandidate[] = [];
     const processedLeads = new Set<string>();
@@ -133,44 +129,65 @@ export const prospectionService = {
       const hasOpened = leadLogs.some((l) => l.status === 'opened');
       const hasReplied = leadLogs.some((l) => l.status === 'replied');
 
-      if (hasReplied) continue; // Pas de relance si déjà répondu
+      if (hasReplied) continue;
 
       const sentAt = sentEmail.sent_at as string;
       const daysSince = Math.floor((now - new Date(sentAt).getTime()) / (1000 * 60 * 60 * 24));
 
-      if (daysSince < daysThreshold) continue; // Pas encore le moment
+      if (daysSince < daysThreshold) continue;
 
-      // Compter le nombre de relances déjà faites
-      const followUpCount = (sentEmails || []).filter(
-        (e) => e.lead_id === leadId
-      ).length - 1; // -1 car le premier email ne compte pas
+      const followUpCount = (sentEmails || []).filter((e) => e.lead_id === leadId).length - 1;
 
-      // Logique de recommandation
       let recommendedAction: FollowUpCandidate['recommendedAction'] = 'wait';
-      if (daysSince >= daysThreshold && followUpCount === 0) {
-        recommendedAction = 'follow_up_1'; // Première relance
-      } else if (daysSince >= daysThreshold * 2 && followUpCount === 1) {
-        recommendedAction = 'follow_up_2'; // Deuxième relance (plus courte)
-      } else if (followUpCount >= 2) {
-        recommendedAction = 'archive'; // Après 2 relances, on archive
+      if (daysSince >= followup_1_days && followUpCount === 0) {
+        recommendedAction = 'follow_up_1';
+      } else if (daysSince >= followup_2_days && followUpCount === 1) {
+        recommendedAction = 'follow_up_2';
+      } else if (followUpCount >= archive_after_followups) {
+        recommendedAction = 'archive';
       }
 
       candidates.push({
-        lead,
-        lastEmailSentAt: sentAt,
-        daysSinceLastEmail: daysSince,
-        hasOpened,
-        hasReplied,
-        followUpCount,
-        recommendedAction,
+        lead, lastEmailSentAt: sentAt, daysSinceLastEmail: daysSince,
+        hasOpened, hasReplied, followUpCount, recommendedAction,
       });
     }
 
-    // Trier par priorité (relance 1 d'abord, puis relance 2)
     return candidates.sort((a, b) => {
       const order = { follow_up_1: 0, follow_up_2: 1, archive: 2, wait: 3 };
       return order[a.recommendedAction] - order[b.recommendedAction];
     });
+  },
+
+  /** Crée un draft de relance (relance_1 ou relance_2) pour un lead, à partir du template de la bibliothèque */
+  async createFollowUpDraft(
+    lead: ProspectionLead,
+    step: 'relance_1' | 'relance_2',
+  ): Promise<{ id: string; sujet: string; corps_du_mail: string }> {
+    const templates = await templatesService.getTemplates();
+    const template = templatesService.resolveTemplate(templates, lead.segment, step);
+    if (!template) {
+      throw new Error(`Aucun template trouvé pour ${lead.segment}/${step}`);
+    }
+
+    const rendered = templatesService.renderTemplate(template, lead as unknown as Lead);
+
+    const { data, error } = await supabase
+      .from('generated_emails')
+      .insert([{
+        lead_id: lead.id,
+        campaign_id: null,
+        step,
+        sujet: rendered.subject,
+        corps_du_mail: rendered.body,
+        statut_envoi: 'draft',
+        model_used: 'template',
+      }])
+      .select('id, sujet, corps_du_mail')
+      .single();
+
+    if (error) throw error;
+    return data;
   },
 
   /**

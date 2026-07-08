@@ -2,19 +2,42 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles, Plus, Play, Pause, BarChart3, Mail,
   RefreshCw, Check, X, Edit3, Send, ChevronDown, ChevronUp,
-  AlertCircle, Loader, Eye, Trash2, Users, Zap
+  AlertCircle, Loader, Eye, Trash2, Users, Zap, FileEdit
 } from 'lucide-react';
 import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEmail } from '../services/campaignsService';
 import { prospectionService, type ProspectionLead } from '../services/prospectionService';
+import { templatesService, type EmailTemplate } from '../services/templatesService';
+import { leadsService, type Lead } from '../services/leadsService';
+import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../services/supabaseClient';
+import { ProspectionModeToggle } from '../components/ProspectionModeToggle';
+import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
-type Tab = 'campaigns' | 'generation' | 'followup';
+type Tab = 'campaigns' | 'generation' | 'templates' | 'followup';
 
 // ── Composant principal ────────────────────────────────────────────────────────
 export const Prospection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('campaigns');
   const { showToast } = useToast();
+  const [mode, setMode] = useState<'manual' | 'auto'>('manual');
+
+  useEffect(() => {
+    settingsService.getProspectionSettings().then((s) => setMode(s.prospection_mode));
+  }, []);
+
+  const handleModeChange = async (newMode: 'manual' | 'auto') => {
+    const previousMode = mode;
+    setMode(newMode);
+    try {
+      await settingsService.updateProspectionSettings({ prospection_mode: newMode });
+      showToast(`Mode ${newMode === 'auto' ? 'automatique' : 'vérification humaine'} activé`, 'success');
+    } catch {
+      setMode(previousMode);
+      showToast('Erreur changement de mode', 'error');
+    }
+  };
 
   return (
     <div className="prospection-view">
@@ -23,8 +46,9 @@ export const Prospection: React.FC = () => {
         <div className="prospection-title">
           <Sparkles size={20} style={{ color: 'var(--purple)' }} />
           <h1>Prospection IA</h1>
-          <span className="prospection-badge">Gemini 2.5 Flash</span>
+          <span className="prospection-badge">Templates + fusion</span>
         </div>
+        <ProspectionModeToggle mode={mode} onChange={handleModeChange} />
         <p className="prospection-subtitle">
           Générez et envoyez des emails ultra-personnalisés en quelques clics.
         </p>
@@ -45,6 +69,12 @@ export const Prospection: React.FC = () => {
           <Sparkles size={14} /> Génération IA
         </button>
         <button
+          className={`pros-tab ${activeTab === 'templates' ? 'active' : ''}`}
+          onClick={() => setActiveTab('templates')}
+        >
+          <FileEdit size={14} /> Templates
+        </button>
+        <button
           className={`pros-tab ${activeTab === 'followup' ? 'active' : ''}`}
           onClick={() => setActiveTab('followup')}
         >
@@ -56,6 +86,7 @@ export const Prospection: React.FC = () => {
       <div className="prospection-body">
         {activeTab === 'campaigns' && <CampaignsTab showToast={showToast} />}
         {activeTab === 'generation' && <GenerationTab showToast={showToast} />}
+        {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
         {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
       </div>
     </div>
@@ -68,6 +99,12 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
   const [campaigns, setCampaigns] = useState<CampaignMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [flushing, setFlushing] = useState(false);
+  const [quota, setQuota] = useState<number | null>(null);
+
+  useEffect(() => {
+    settingsService.getProspectionSettings().then((s) => setQuota(s.daily_send_quota));
+  }, []);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -82,6 +119,36 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
   }, [showToast]);
 
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  const [unassignedCount, setUnassignedCount] = useState({ draft: 0, approved: 0, sent: 0 });
+
+  const loadUnassigned = useCallback(async () => {
+    const [draft, approved, sent] = await Promise.all([
+      campaignsService.getUnassignedGeneratedEmails('draft'),
+      campaignsService.getUnassignedGeneratedEmails('approved'),
+      campaignsService.getUnassignedGeneratedEmails('sent'),
+    ]);
+    setUnassignedCount({ draft: draft.length, approved: approved.length, sent: sent.length });
+  }, []);
+
+  useEffect(() => { loadUnassigned(); }, [loadUnassigned]);
+
+  const handleFlush = async () => {
+    setFlushing(true);
+    try {
+      const result = await campaignsService.flushSendQueue();
+      if (result.skipped) {
+        showToast(`Rien à envoyer : ${result.skipped}`, 'info');
+      } else {
+        showToast(`${result.sent}/${result.processed} emails envoyés`, result.failed > 0 ? 'info' : 'success');
+      }
+      loadCampaigns();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur envoi du lot', 'error');
+    } finally {
+      setFlushing(false);
+    }
+  };
 
   const handleStatusToggle = async (campaign: CampaignMetrics) => {
     const newStatus = campaign.status === 'active' ? 'paused' : 'active';
@@ -109,9 +176,15 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
     <div>
       <div className="pros-section-header">
         <h2>Campagnes actives</h2>
-        <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
-          <Plus size={13} /> Nouvelle campagne
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary-sm" onClick={handleFlush} disabled={flushing}>
+            {flushing ? <Loader size={13} className="spin" /> : <Send size={13} />}
+            Envoyer le lot du jour {quota !== null ? `(quota: ${quota}/j)` : ''}
+          </button>
+          <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
+            <Plus size={13} /> Nouvelle campagne
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -137,6 +210,15 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
         </div>
       )}
 
+      <div className="mt-4 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
+        <div className="font-semibold text-brand-text mb-2">Flux automatique (sans campagne)</div>
+        <div className="flex gap-6 text-brand-text-secondary text-sm">
+          <span>{unassignedCount.draft} en attente</span>
+          <span>{unassignedCount.approved} planifiés</span>
+          <span>{unassignedCount.sent} envoyés</span>
+        </div>
+      </div>
+
       {showCreateModal && (
         <CreateCampaignModal
           onClose={() => setShowCreateModal(false)}
@@ -159,6 +241,23 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'select' | 'review'>('select');
+  const [subView, setSubView] = useState<'auto' | 'manual'>('auto');
+  const [autoDrafts, setAutoDrafts] = useState<GeneratedEmail[]>([]);
+  const [autoLoading, setAutoLoading] = useState(true);
+
+  const loadAutoDrafts = useCallback(async () => {
+    setAutoLoading(true);
+    try {
+      const drafts = await campaignsService.getUnassignedGeneratedEmails('draft');
+      setAutoDrafts(drafts);
+    } catch {
+      showToast('Erreur chargement de la file de validation', 'error');
+    } finally {
+      setAutoLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { loadAutoDrafts(); }, [loadAutoDrafts]);
 
   useEffect(() => {
     const load = async () => {
@@ -201,26 +300,45 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
     setIsGenerating(true);
     setProgress({ current: 0, total: selectedLeads.size });
     const leadIds = Array.from(selectedLeads);
+    const templates = await templatesService.getTemplates();
+    const generated: GeneratedEmail[] = [];
+    const failedLeads: string[] = [];
 
-    try {
-      const { success, failed } = await campaignsService.bulkGenerateEmails(
-        leadIds,
-        selectedCampaign,
-        (current, total) => setProgress({ current, total })
-      );
+    for (let i = 0; i < leadIds.length; i++) {
+      const lead = leads.find((l) => l.id === leadIds[i]);
+      setProgress({ current: i + 1, total: leadIds.length });
+      if (!lead) { failedLeads.push(leadIds[i]); continue; }
 
-      setGeneratedEmails(success);
-      if (failed.length > 0) {
-        showToast(`${success.length} emails générés, ${failed.length} échecs`, 'info');
-      } else {
-        showToast(`${success.length} emails générés avec succès !`, 'success');
-      }
-      setViewMode('review');
-    } catch (err) {
-      showToast('Erreur lors de la génération', 'error');
-    } finally {
-      setIsGenerating(false);
+      const template = templatesService.resolveTemplate(templates, lead.segment, 'initial');
+      if (!template) { failedLeads.push(leadIds[i]); continue; }
+
+      const rendered = templatesService.renderTemplate(template, lead);
+      const { data, error } = await supabase
+        .from('generated_emails')
+        .insert([{
+          lead_id: lead.id,
+          campaign_id: selectedCampaign,
+          step: 'initial',
+          sujet: rendered.subject,
+          corps_du_mail: rendered.body,
+          statut_envoi: 'draft',
+          model_used: 'template',
+        }])
+        .select(`*, lead:leads!lead_id(contact_name, company_name, email, poste, segment)`)
+        .single();
+
+      if (error || !data) failedLeads.push(leadIds[i]);
+      else generated.push(data as GeneratedEmail);
     }
+
+    setGeneratedEmails(generated);
+    if (failedLeads.length > 0) {
+      showToast(`${generated.length} emails générés, ${failedLeads.length} échecs (template manquant pour le segment)`, 'info');
+    } else {
+      showToast(`${generated.length} emails générés avec succès !`, 'success');
+    }
+    setViewMode('review');
+    setIsGenerating(false);
   };
 
   const handleReload = async () => {
@@ -235,14 +353,43 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
   return (
     <div>
       <div className="pros-section-header">
-        <h2>{viewMode === 'select' ? 'Sélection & Génération' : `${generatedEmails.length} emails générés`}</h2>
-        {viewMode === 'review' && (
+        <h2>{subView === 'auto' ? 'File de validation (auto-pipeline)' : viewMode === 'select' ? 'Génération manuelle' : `${generatedEmails.length} emails générés`}</h2>
+        <div className="flex gap-2">
+          <button className={`btn-ghost-sm ${subView === 'auto' ? 'active' : ''}`} onClick={() => setSubView('auto')}>Auto ({autoDrafts.length})</button>
+          <button className={`btn-ghost-sm ${subView === 'manual' ? 'active' : ''}`} onClick={() => setSubView('manual')}>Manuelle</button>
+        </div>
+        {subView === 'manual' && viewMode === 'review' && (
           <button className="btn-secondary-sm" onClick={() => setViewMode('select')}>
             ← Retour à la sélection
           </button>
         )}
       </div>
 
+      {subView === 'auto' && (
+        autoLoading ? (
+          <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>
+        ) : autoDrafts.length === 0 ? (
+          <div className="pros-empty">
+            <Mail size={28} style={{ opacity: 0.4 }} />
+            <p>Aucun draft en attente — tout lead ajouté avec un email génère automatiquement son 1er mail ici.</p>
+          </div>
+        ) : (
+          <div className="gen-review-list">
+            {autoDrafts.map((email) => (
+              <EmailPreviewCard
+                key={email.id}
+                email={email}
+                showToast={showToast}
+                onUpdate={() => setAutoDrafts((prev) => prev.filter((e) => e.id !== email.id))}
+                queueMode
+              />
+            ))}
+          </div>
+        )
+      )}
+
+      {subView === 'manual' && (
+      <>
       {viewMode === 'select' && (
         <>
           {/* Sélection campagne */}
@@ -354,6 +501,131 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
           )}
         </div>
       )}
+      </>
+      )}
+    </div>
+  );
+};
+
+// ── Tab Templates ──────────────────────────────────────────────────────────────
+
+const SEGMENTS: EmailTemplate['segment'][] = ['All', 'Media', 'Retail', 'Instit'];
+const STEPS: { key: EmailTemplate['step']; label: string }[] = [
+  { key: 'initial', label: '1er email' },
+  { key: 'relance_1', label: 'Relance 1' },
+  { key: 'relance_2', label: 'Relance 2' },
+];
+const VARIABLES = ['{{contact_name}}', '{{company_name}}', '{{poste}}', '{{segment}}'];
+
+const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [segment, setSegment] = useState<EmailTemplate['segment']>('All');
+  const [step, setStep] = useState<EmailTemplate['step']>('initial');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [previewLeadId, setPreviewLeadId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [t, l] = await Promise.all([templatesService.getTemplates(), leadsService.getLeads()]);
+      setTemplates(t);
+      setLeads(l);
+    } catch {
+      showToast('Erreur chargement des templates', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const existing = templates.find((t) => t.segment === segment && t.step === step);
+    setSubject(existing?.subject || '');
+    setBody(existing?.body || '');
+  }, [segment, step, templates]);
+
+  const insertVariable = (variable: string) => {
+    const textarea = bodyRef.current;
+    if (!textarea) { setBody((prev) => prev + variable); return; }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    setBody((prev) => prev.slice(0, start) + variable + prev.slice(end));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await templatesService.upsertTemplate(segment, step, subject, body);
+      showToast('Template sauvegardé ✓', 'success');
+      load();
+    } catch {
+      showToast('Erreur sauvegarde template', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const previewLead = leads.find((l) => l.id === previewLeadId);
+  const preview = previewLead ? templatesService.renderTemplate({ subject, body }, previewLead) : null;
+
+  if (loading) return <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-3">
+        <select className="gen-select" value={segment} onChange={(e) => setSegment(e.target.value as EmailTemplate['segment'])}>
+          {SEGMENTS.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select className="gen-select" value={step} onChange={(e) => setStep(e.target.value as EmailTemplate['step'])}>
+          {STEPS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+        </select>
+      </div>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Sujet</label>
+        <input className="gen-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </div>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Corps</label>
+        <div className="flex gap-2 flex-wrap mb-2">
+          {VARIABLES.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className="text-xs px-2 py-1 rounded-full bg-brand-bg-panel border border-brand-border text-brand-text-secondary hover:text-white"
+              onClick={() => insertVariable(v)}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        <textarea ref={bodyRef} className="gen-textarea" rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
+      </div>
+
+      <button className="btn-primary-sm" onClick={handleSave} disabled={saving} style={{ alignSelf: 'flex-start' }}>
+        {saving ? <Loader size={13} className="spin" /> : <Check size={13} />} Sauvegarder
+      </button>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Aperçu sur un lead</label>
+        <select className="gen-select" value={previewLeadId} onChange={(e) => setPreviewLeadId(e.target.value)}>
+          <option value="">-- Choisir un lead --</option>
+          {leads.map((l) => <option key={l.id} value={l.id}>{l.contact_name} — {l.company_name}</option>)}
+        </select>
+        {preview && (
+          <div className="mt-3 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
+            <div className="font-semibold text-brand-text">{preview.subject}</div>
+            <div className="mt-2 text-brand-text-secondary whitespace-pre-line">{preview.body}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -366,7 +638,7 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
 
   useEffect(() => {
     let cancelled = false;
-    prospectionService.getFollowUpCandidates(5)
+    prospectionService.getFollowUpCandidates()
       .then((data) => { if (!cancelled) setCandidates(data); })
       .catch(() => { if (!cancelled) showToast('Erreur chargement relances', 'error'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -380,6 +652,18 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
     follow_up_2: { label: '2ème relance', color: 'var(--purple)' },
     archive: { label: 'À archiver', color: 'var(--text-muted)' },
     wait: { label: 'Attente', color: 'var(--text-secondary)' },
+  };
+
+  const handleGenerateFollowUp = async (candidate: (typeof candidates)[number]) => {
+    if (candidate.recommendedAction !== 'follow_up_1' && candidate.recommendedAction !== 'follow_up_2') return;
+    const step = candidate.recommendedAction === 'follow_up_1' ? 'relance_1' : 'relance_2';
+    try {
+      await prospectionService.createFollowUpDraft(candidate.lead, step);
+      showToast(`Relance générée pour ${candidate.lead.contact_name}`, 'success');
+      setCandidates((prev) => prev.filter((c) => c.lead.id !== candidate.lead.id));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur génération relance', 'error');
+    }
   };
 
   return (
@@ -398,7 +682,8 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
         </div>
       ) : (
         <div className="followup-list">
-          {candidates.map(({ lead, daysSinceLastEmail, hasOpened, followUpCount, recommendedAction }) => {
+          {candidates.map((candidate) => {
+            const { lead, daysSinceLastEmail, hasOpened, followUpCount, recommendedAction } = candidate;
             const action = actionLabels[recommendedAction];
             return (
               <div key={lead.id} className="followup-row">
@@ -417,6 +702,11 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
                 >
                   {action.label}
                 </span>
+                {(recommendedAction === 'follow_up_1' || recommendedAction === 'follow_up_2') && (
+                  <button className="btn-ghost-sm" onClick={() => handleGenerateFollowUp(candidate)}>
+                    Générer la relance
+                  </button>
+                )}
               </div>
             );
           })}
@@ -509,7 +799,8 @@ const EmailPreviewCard: React.FC<{
   email: GeneratedEmail;
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
   onUpdate: () => void;
-}> = ({ email, showToast, onUpdate }) => {
+  queueMode?: boolean;
+}> = ({ email, showToast, onUpdate, queueMode = false }) => {
   const [expanded, setExpanded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -534,6 +825,20 @@ const EmailPreviewCard: React.FC<{
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur envoi', 'error');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleApproveAndQueue = async () => {
+    setIsSending(true);
+    try {
+      const { scheduledAt } = await campaignsService.approveAndSchedule(email.id);
+      const date = new Date(scheduledAt).toLocaleDateString('fr-FR');
+      showToast(`Email approuvé, planifié pour le ${date}`, 'success');
+      onUpdate();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur planification', 'error');
     } finally {
       setIsSending(false);
     }
@@ -630,14 +935,17 @@ const EmailPreviewCard: React.FC<{
           {/* Actions */}
           {!isEditing && (
             <div className="epc-actions">
-              <button
-                className="btn-primary-sm"
-                onClick={handleApproveAndSend}
-                disabled={isSending}
-              >
-                {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
-                {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
-              </button>
+              {queueMode ? (
+                <button className="btn-primary-sm" onClick={handleApproveAndQueue} disabled={isSending}>
+                  {isSending ? <Loader size={12} className="spin" /> : <Check size={12} />}
+                  {isSending ? 'Planification...' : 'Approuver'}
+                </button>
+              ) : (
+                <button className="btn-primary-sm" onClick={handleApproveAndSend} disabled={isSending}>
+                  {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
+                  {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
+                </button>
+              )}
               <button className="btn-ghost-sm" onClick={() => setIsEditing(true)}>
                 <Edit3 size={12} /> Modifier
               </button>

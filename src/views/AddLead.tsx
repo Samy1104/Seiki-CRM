@@ -108,6 +108,15 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
     concurrence: { value: 0, label: '' }
   });
 
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<Array<{ key: string; value: string }>>([]);
+
+  const addCustomField = () => setCustomFields((prev) => [...prev, { key: '', value: '' }]);
+  const updateCustomField = (index: number, field: 'key' | 'value', val: string) =>
+    setCustomFields((prev) => prev.map((cf, i) => (i === index ? { ...cf, [field]: val } : cf)));
+  const removeCustomField = (index: number) =>
+    setCustomFields((prev) => prev.filter((_, i) => i !== index));
+
   useEffect(() => {
     const fetchStages = async () => {
       try {
@@ -149,6 +158,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
       fit: { value: 0, label: '' },
       concurrence: { value: 0, label: '' }
     });
+    setCustomFields([]);
   };
 
   const calculateTotalScore = () => {
@@ -207,7 +217,10 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
         note: form.note.trim() || null,
         owner_id: null,
         email_verified: false,
-        domain: null
+        domain: null,
+        custom_fields: Object.fromEntries(
+          customFields.filter((cf) => cf.key.trim()).map((cf) => [cf.key.trim(), cf.value])
+        )
       };
 
       // Prepare score list
@@ -370,12 +383,36 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
 
               <div className="form-field full">
                 <div className="field-label">Note</div>
-                <textarea 
-                  placeholder="Contexte, déclencheur, informations utiles..." 
+                <textarea
+                  placeholder="Contexte, déclencheur, informations utiles..."
                   value={form.note}
                   onChange={e => setForm({ ...form, note: e.target.value })}
                   rows={3}
                 />
+              </div>
+
+              <div className="form-field full">
+                <div className="field-label">Champs personnalisés (utilisables dans les templates via {'{{custom.<clé>}}'})</div>
+                {customFields.map((cf, i) => (
+                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                    <input
+                      type="text"
+                      placeholder="clé (ex: evenement)"
+                      value={cf.key}
+                      onChange={(e) => updateCustomField(i, 'key', e.target.value)}
+                      style={{ flex: '1' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="valeur (ex: Salon VivaTech)"
+                      value={cf.value}
+                      onChange={(e) => updateCustomField(i, 'value', e.target.value)}
+                      style={{ flex: '2' }}
+                    />
+                    <button type="button" className="btn" onClick={() => removeCustomField(i)}>×</button>
+                  </div>
+                ))}
+                <button type="button" className="btn" onClick={addCustomField}>+ Ajouter un champ</button>
               </div>
             </div>
 
