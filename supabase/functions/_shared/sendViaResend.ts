@@ -43,6 +43,7 @@ function buildEmailHtml(corps: string, trackingPixelUrl: string): string {
   <p style="font-size:11px;color:#888;margin:0">
     Envoyé par Seiki — <a href="mailto:contact@seiki.fr" style="color:#6B5FE6">contact@seiki.fr</a>
   </p>
+  <!-- Tracking pixel (ouverture) -->
   <img src="${trackingPixelUrl}" width="1" height="1" style="display:none" alt=""/>
 </body>
 </html>`;

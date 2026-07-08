@@ -21,6 +21,13 @@ serve(async (req: Request) => {
   }
 
   try {
+    if (!Deno.env.get("RESEND_API_KEY")) {
+      return new Response(
+        JSON.stringify({ error: "RESEND_API_KEY non configurée" }),
+        { status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
+      );
+    }
+
     const body = (await req.json()) as SendRequest;
     if (!body.generatedEmailId) {
       return new Response(
