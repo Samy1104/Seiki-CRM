@@ -82,9 +82,14 @@ serve(async (req: Request) => {
     let failed = 0;
 
     for (const row of due ?? []) {
-      const outcome = await sendGeneratedEmailViaResend(supabase, row.id as string);
-      if (outcome.success) sent++;
-      else failed++;
+      try {
+        const outcome = await sendGeneratedEmailViaResend(supabase, row.id as string);
+        if (outcome.success) sent++;
+        else failed++;
+      } catch (err) {
+        console.error("[flush-send-queue] Send failed for row", row.id, ":", err instanceof Error ? err.message : err);
+        failed++;
+      }
     }
 
     return new Response(
