@@ -45,8 +45,9 @@ DECLARE
   v_used_today  INTEGER;
   v_slot        TIMESTAMPTZ;
 BEGIN
-  SELECT COALESCE((value->>'count')::INTEGER, 100) INTO v_quota
+  SELECT (value->>'count')::INTEGER INTO v_quota
   FROM public.app_settings WHERE key = 'daily_send_quota';
+  v_quota := COALESCE(v_quota, 100);
 
   LOOP
     SELECT count(*) INTO v_used_today
