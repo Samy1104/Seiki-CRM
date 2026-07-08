@@ -2,15 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Sparkles, Plus, Play, Pause, BarChart3, Mail,
   RefreshCw, Check, X, Edit3, Send, ChevronDown, ChevronUp,
-  AlertCircle, Loader, Eye, Trash2, Users, Zap
+  AlertCircle, Loader, Eye, Trash2, Users, Zap, FileEdit
 } from 'lucide-react';
 import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEmail } from '../services/campaignsService';
 import { prospectionService, type ProspectionLead } from '../services/prospectionService';
+import { templatesService, type EmailTemplate } from '../services/templatesService';
+import { leadsService, type Lead } from '../services/leadsService';
 import { useToast } from '../context/ToastContext';
 import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
-type Tab = 'campaigns' | 'generation' | 'followup';
+type Tab = 'campaigns' | 'generation' | 'templates' | 'followup';
 
 // ── Composant principal ────────────────────────────────────────────────────────
 export const Prospection: React.FC = () => {
@@ -46,6 +48,12 @@ export const Prospection: React.FC = () => {
           <Sparkles size={14} /> Génération IA
         </button>
         <button
+          className={`pros-tab ${activeTab === 'templates' ? 'active' : ''}`}
+          onClick={() => setActiveTab('templates')}
+        >
+          <FileEdit size={14} /> Templates
+        </button>
+        <button
           className={`pros-tab ${activeTab === 'followup' ? 'active' : ''}`}
           onClick={() => setActiveTab('followup')}
         >
@@ -57,6 +65,7 @@ export const Prospection: React.FC = () => {
       <div className="prospection-body">
         {activeTab === 'campaigns' && <CampaignsTab showToast={showToast} />}
         {activeTab === 'generation' && <GenerationTab showToast={showToast} />}
+        {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
         {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
       </div>
     </div>
@@ -355,6 +364,129 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
           )}
         </div>
       )}
+    </div>
+  );
+};
+
+// ── Tab Templates ──────────────────────────────────────────────────────────────
+
+const SEGMENTS: EmailTemplate['segment'][] = ['All', 'Media', 'Retail', 'Instit'];
+const STEPS: { key: EmailTemplate['step']; label: string }[] = [
+  { key: 'initial', label: '1er email' },
+  { key: 'relance_1', label: 'Relance 1' },
+  { key: 'relance_2', label: 'Relance 2' },
+];
+const VARIABLES = ['{{contact_name}}', '{{company_name}}', '{{poste}}', '{{segment}}'];
+
+const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [segment, setSegment] = useState<EmailTemplate['segment']>('All');
+  const [step, setStep] = useState<EmailTemplate['step']>('initial');
+  const [subject, setSubject] = useState('');
+  const [body, setBody] = useState('');
+  const [previewLeadId, setPreviewLeadId] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const bodyRef = React.useRef<HTMLTextAreaElement>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [t, l] = await Promise.all([templatesService.getTemplates(), leadsService.getLeads()]);
+      setTemplates(t);
+      setLeads(l);
+    } catch {
+      showToast('Erreur chargement des templates', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    const existing = templates.find((t) => t.segment === segment && t.step === step);
+    setSubject(existing?.subject || '');
+    setBody(existing?.body || '');
+  }, [segment, step, templates]);
+
+  const insertVariable = (variable: string) => {
+    const textarea = bodyRef.current;
+    if (!textarea) { setBody((prev) => prev + variable); return; }
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    setBody((prev) => prev.slice(0, start) + variable + prev.slice(end));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await templatesService.upsertTemplate(segment, step, subject, body);
+      showToast('Template sauvegardé ✓', 'success');
+      load();
+    } catch {
+      showToast('Erreur sauvegarde template', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const previewLead = leads.find((l) => l.id === previewLeadId);
+  const preview = previewLead ? templatesService.renderTemplate({ subject, body }, previewLead) : null;
+
+  if (loading) return <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-3">
+        <select className="gen-select" value={segment} onChange={(e) => setSegment(e.target.value as EmailTemplate['segment'])}>
+          {SEGMENTS.map((s) => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select className="gen-select" value={step} onChange={(e) => setStep(e.target.value as EmailTemplate['step'])}>
+          {STEPS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
+        </select>
+      </div>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Sujet</label>
+        <input className="gen-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </div>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Corps</label>
+        <div className="flex gap-2 flex-wrap mb-2">
+          {VARIABLES.map((v) => (
+            <button
+              key={v}
+              type="button"
+              className="text-xs px-2 py-1 rounded-full bg-brand-bg-panel border border-brand-border text-brand-text-secondary hover:text-white"
+              onClick={() => insertVariable(v)}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+        <textarea ref={bodyRef} className="gen-textarea" rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
+      </div>
+
+      <button className="btn-primary-sm" onClick={handleSave} disabled={saving} style={{ alignSelf: 'flex-start' }}>
+        {saving ? <Loader size={13} className="spin" /> : <Check size={13} />} Sauvegarder
+      </button>
+
+      <div className="gen-field-group">
+        <label className="gen-label">Aperçu sur un lead</label>
+        <select className="gen-select" value={previewLeadId} onChange={(e) => setPreviewLeadId(e.target.value)}>
+          <option value="">-- Choisir un lead --</option>
+          {leads.map((l) => <option key={l.id} value={l.id}>{l.contact_name} — {l.company_name}</option>)}
+        </select>
+        {preview && (
+          <div className="mt-3 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
+            <div className="font-semibold text-brand-text">{preview.subject}</div>
+            <div className="mt-2 text-brand-text-secondary whitespace-pre-line">{preview.body}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
