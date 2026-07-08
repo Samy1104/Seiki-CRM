@@ -8,6 +8,7 @@ import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEm
 import { prospectionService, type ProspectionLead } from '../services/prospectionService';
 import { templatesService, type EmailTemplate } from '../services/templatesService';
 import { leadsService, type Lead } from '../services/leadsService';
+import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../services/supabaseClient';
 import './prospection.css';
@@ -79,6 +80,12 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
   const [campaigns, setCampaigns] = useState<CampaignMetrics[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [flushing, setFlushing] = useState(false);
+  const [quota, setQuota] = useState<number | null>(null);
+
+  useEffect(() => {
+    settingsService.getProspectionSettings().then((s) => setQuota(s.daily_send_quota));
+  }, []);
 
   const loadCampaigns = useCallback(async () => {
     try {
@@ -93,6 +100,36 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
   }, [showToast]);
 
   useEffect(() => { loadCampaigns(); }, [loadCampaigns]);
+
+  const [unassignedCount, setUnassignedCount] = useState({ draft: 0, approved: 0, sent: 0 });
+
+  const loadUnassigned = useCallback(async () => {
+    const [draft, approved, sent] = await Promise.all([
+      campaignsService.getUnassignedGeneratedEmails('draft'),
+      campaignsService.getUnassignedGeneratedEmails('approved'),
+      campaignsService.getUnassignedGeneratedEmails('sent'),
+    ]);
+    setUnassignedCount({ draft: draft.length, approved: approved.length, sent: sent.length });
+  }, []);
+
+  useEffect(() => { loadUnassigned(); }, [loadUnassigned]);
+
+  const handleFlush = async () => {
+    setFlushing(true);
+    try {
+      const result = await campaignsService.flushSendQueue();
+      if (result.skipped) {
+        showToast(`Rien à envoyer : ${result.skipped}`, 'info');
+      } else {
+        showToast(`${result.sent}/${result.processed} emails envoyés`, result.failed > 0 ? 'info' : 'success');
+      }
+      loadCampaigns();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur envoi du lot', 'error');
+    } finally {
+      setFlushing(false);
+    }
+  };
 
   const handleStatusToggle = async (campaign: CampaignMetrics) => {
     const newStatus = campaign.status === 'active' ? 'paused' : 'active';
@@ -120,9 +157,15 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
     <div>
       <div className="pros-section-header">
         <h2>Campagnes actives</h2>
-        <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
-          <Plus size={13} /> Nouvelle campagne
-        </button>
+        <div className="flex gap-2">
+          <button className="btn-secondary-sm" onClick={handleFlush} disabled={flushing}>
+            {flushing ? <Loader size={13} className="spin" /> : <Send size={13} />}
+            Envoyer le lot du jour {quota !== null ? `(quota: ${quota}/j)` : ''}
+          </button>
+          <button className="btn-primary-sm" onClick={() => setShowCreateModal(true)}>
+            <Plus size={13} /> Nouvelle campagne
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -147,6 +190,15 @@ const CampaignsTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
           ))}
         </div>
       )}
+
+      <div className="mt-4 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
+        <div className="font-semibold text-brand-text mb-2">Flux automatique (sans campagne)</div>
+        <div className="flex gap-6 text-brand-text-secondary text-sm">
+          <span>{unassignedCount.draft} en attente</span>
+          <span>{unassignedCount.approved} planifiés</span>
+          <span>{unassignedCount.sent} envoyés</span>
+        </div>
+      </div>
 
       {showCreateModal && (
         <CreateCampaignModal
