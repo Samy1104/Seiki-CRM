@@ -126,10 +126,10 @@ Expected: no errors printed; command exits 0.
 
 - [ ] **Step 3: Verify with a query**
 
-Run: `supabase db query --linked --command "SELECT segment, step, subject FROM public.email_templates ORDER BY segment, step;"`
+Run: `supabase db query --linked "SELECT segment, step, subject FROM public.email_templates ORDER BY segment, step;"`
 Expected: 3 rows (`All`/`initial`, `All`/`relance_1`, `All`/`relance_2`).
 
-Run: `supabase db query --linked --command "SELECT key, value FROM public.app_settings WHERE category = 'prospection' ORDER BY key;"`
+Run: `supabase db query --linked "SELECT key, value FROM public.app_settings WHERE category = 'prospection' ORDER BY key;"`
 Expected: 5 rows matching the keys above.
 
 - [ ] **Step 4: Commit**
@@ -196,7 +196,7 @@ Expected: no errors (function created; Tasks 3-4 append to this same file before
 
 Run:
 ```sql
-supabase db query --linked --command "
+supabase db query --linked "
 INSERT INTO public.leads (company_name, contact_name, email, segment, stage_id, custom_fields)
 SELECT 'ACME Corp', 'Jean Dupont', 'jean@acme-test.example', 'Media', id, '{\"evenement\": \"Salon Test\"}'::jsonb
 FROM public.pipeline_stages LIMIT 1
@@ -205,11 +205,11 @@ RETURNING id;
 ```
 Note the returned `id`, then:
 ```sql
-supabase db query --linked --command "SELECT public.render_template('Bonjour {{contact_name}} de {{company_name}}, vu à {{custom.evenement}}', '<paste-id-here>');"
+supabase db query --linked "SELECT public.render_template('Bonjour {{contact_name}} de {{company_name}}, vu à {{custom.evenement}}', '<paste-id-here>');"
 ```
 Expected: `Bonjour Jean Dupont de ACME Corp, vu à Salon Test`
 
-Clean up the test lead: `supabase db query --linked --command "DELETE FROM public.leads WHERE email = 'jean@acme-test.example';"`
+Clean up the test lead: `supabase db query --linked "DELETE FROM public.leads WHERE email = 'jean@acme-test.example';"`
 
 - [ ] **Step 3: Commit**
 
@@ -280,11 +280,11 @@ Expected: no errors.
 
 Manual verification of the rollover (temporarily lower the quota to make it fast to test):
 ```sql
-supabase db query --linked --command "UPDATE public.app_settings SET value = '{\"count\": 1}' WHERE key = 'daily_send_quota';"
+supabase db query --linked "UPDATE public.app_settings SET value = '{\"count\": 1}' WHERE key = 'daily_send_quota';"
 ```
 Create 2 draft `generated_emails` rows for any existing lead (reuse an existing lead id), call `SELECT public.schedule_send('<id-1>');` then `SELECT public.schedule_send('<id-2>');` — expect the first call to return today's date and the second to return tomorrow's date (since quota is 1). Then restore the real quota:
 ```sql
-supabase db query --linked --command "UPDATE public.app_settings SET value = '{\"count\": 100}' WHERE key = 'daily_send_quota';"
+supabase db query --linked "UPDATE public.app_settings SET value = '{\"count\": 100}' WHERE key = 'daily_send_quota';"
 ```
 And delete the 2 test rows.
 
@@ -371,7 +371,7 @@ Expected: no errors.
 
 Verify manual mode (default): insert a test lead, then check a draft was created:
 ```sql
-supabase db query --linked --command "
+supabase db query --linked "
 INSERT INTO public.leads (company_name, contact_name, email, segment, stage_id)
 SELECT 'Trigger Test SA', 'Alice Test', 'alice@trigger-test.example', 'Media', id
 FROM public.pipeline_stages LIMIT 1
@@ -379,11 +379,11 @@ RETURNING id;
 "
 ```
 ```sql
-supabase db query --linked --command "SELECT statut_envoi, step, sujet FROM public.generated_emails ge JOIN public.leads l ON l.id = ge.lead_id WHERE l.email = 'alice@trigger-test.example';"
+supabase db query --linked "SELECT statut_envoi, step, sujet FROM public.generated_emails ge JOIN public.leads l ON l.id = ge.lead_id WHERE l.email = 'alice@trigger-test.example';"
 ```
 Expected: 1 row, `statut_envoi = 'draft'`, `step = 'initial'`.
 
-Verify auto mode: `supabase db query --linked --command "UPDATE public.app_settings SET value = '{\"mode\": \"auto\"}' WHERE key = 'prospection_mode';"`, insert a second test lead the same way with a different email, then check its `generated_emails` row has `statut_envoi = 'approved'` and `scheduled_at` set. Restore mode to manual afterward: `UPDATE public.app_settings SET value = '{"mode": "manual"}' WHERE key = 'prospection_mode';`
+Verify auto mode: `supabase db query --linked "UPDATE public.app_settings SET value = '{\"mode\": \"auto\"}' WHERE key = 'prospection_mode';"`, insert a second test lead the same way with a different email, then check its `generated_emails` row has `statut_envoi = 'approved'` and `scheduled_at` set. Restore mode to manual afterward: `UPDATE public.app_settings SET value = '{"mode": "manual"}' WHERE key = 'prospection_mode';`
 
 Clean up both test leads and their generated_emails rows (`ON DELETE CASCADE` on `generated_emails.lead_id` means deleting the lead is enough): `DELETE FROM public.leads WHERE email IN ('alice@trigger-test.example', '<second-test-email>');`
 
@@ -1121,7 +1121,7 @@ Expected: TypeScript compiles with no errors mentioning `custom_fields` or `AddL
 - [ ] **Step 4: Verify in the browser**
 
 Open Add Lead, fill in a company/segment, add a custom field `evenement` = `Salon Test`, submit. Then check in Supabase SQL Editor:
-Run: `supabase db query --linked --command "SELECT custom_fields FROM public.leads ORDER BY created_at DESC LIMIT 1;"`
+Run: `supabase db query --linked "SELECT custom_fields FROM public.leads ORDER BY created_at DESC LIMIT 1;"`
 Expected: `{"evenement": "Salon Test"}`
 
 - [ ] **Step 5: Commit**
@@ -1294,7 +1294,7 @@ Add the tab panel, after the SLA panel closes (after line 558, before the final 
 
 Open Réglages → Prospection tab, change "Quota d'envoi quotidien" to `50`, save, reload the page, confirm it still shows `50`.
 
-Run: `supabase db query --linked --command "SELECT value FROM public.app_settings WHERE key = 'daily_send_quota';"`
+Run: `supabase db query --linked "SELECT value FROM public.app_settings WHERE key = 'daily_send_quota';"`
 Expected: `{"count": 50}`
 
 Then set it back to `100` the same way (don't leave the test project misconfigured).
