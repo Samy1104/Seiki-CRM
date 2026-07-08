@@ -18,16 +18,25 @@ export interface EmailTemplate {
   updated_at: string;
 }
 
+/**
+ * Escapes literal $ characters in replacement values to prevent
+ * JavaScript's special replacement patterns ($&, $$, $`, $') from
+ * being interpreted. Matches SQL's plain literal string replacement behavior.
+ */
+function escapeReplacement(value: string): string {
+  return value.replace(/\$/g, '$$$$');
+}
+
 function fillOne(template: string, lead: Lead): string {
   let result = template
-    .replace(/\{\{contact_name\}\}/g, lead.contact_name || '')
-    .replace(/\{\{company_name\}\}/g, lead.company_name || '')
-    .replace(/\{\{poste\}\}/g, (lead as unknown as { poste?: string }).poste || '')
-    .replace(/\{\{segment\}\}/g, lead.segment || '');
+    .replace(/\{\{contact_name\}\}/g, escapeReplacement(lead.contact_name || ''))
+    .replace(/\{\{company_name\}\}/g, escapeReplacement(lead.company_name || ''))
+    .replace(/\{\{poste\}\}/g, escapeReplacement((lead as unknown as { poste?: string }).poste || ''))
+    .replace(/\{\{segment\}\}/g, escapeReplacement(lead.segment || ''));
 
   const customFields = (lead as unknown as { custom_fields?: Record<string, string> }).custom_fields || {};
   for (const [key, value] of Object.entries(customFields)) {
-    result = result.replaceAll(`{{custom.${key}}}`, value ?? '');
+    result = result.replaceAll(`{{custom.${key}}}`, escapeReplacement(value ?? ''));
   }
   return result;
 }
