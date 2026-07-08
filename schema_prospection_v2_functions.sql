@@ -32,3 +32,43 @@ BEGIN
   RETURN v_result;
 END;
 $$;
+
+-- ============================================================
+-- schedule_send — trouve le prochain créneau sous quota et
+-- passe l'email en 'approved' avec scheduled_at fixé
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.schedule_send(p_generated_email_id UUID)
+RETURNS TIMESTAMPTZ LANGUAGE plpgsql AS $$
+DECLARE
+  v_quota       INTEGER;
+  v_day         DATE := current_date;
+  v_used_today  INTEGER;
+  v_slot        TIMESTAMPTZ;
+BEGIN
+  SELECT COALESCE((value->>'count')::INTEGER, 100) INTO v_quota
+  FROM public.app_settings WHERE key = 'daily_send_quota';
+
+  LOOP
+    SELECT count(*) INTO v_used_today
+    FROM public.generated_emails
+    WHERE id <> p_generated_email_id
+      AND (
+        (statut_envoi = 'sent' AND sent_at::date = v_day)
+        OR (statut_envoi IN ('approved', 'sending') AND scheduled_at::date = v_day)
+      );
+
+    EXIT WHEN v_used_today < v_quota;
+    v_day := v_day + 1;
+  END LOOP;
+
+  v_slot := v_day::TIMESTAMPTZ;
+
+  UPDATE public.generated_emails
+  SET statut_envoi = 'approved',
+      scheduled_at = v_slot,
+      approved_at  = now()
+  WHERE id = p_generated_email_id;
+
+  RETURN v_slot;
+END;
+$$;
