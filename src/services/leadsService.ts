@@ -51,6 +51,7 @@ export interface Lead {
   merged_into_id: string | null;
   sequence_id: string | null;
   sequence_status: 'idle' | 'active' | 'paused' | 'completed' | 'replied';
+  custom_fields: Record<string, string>;
   created_at: string;
   updated_at: string;
   owner?: TeamMember | null;
