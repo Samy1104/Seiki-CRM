@@ -619,7 +619,7 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
 
   useEffect(() => {
     let cancelled = false;
-    prospectionService.getFollowUpCandidates(5)
+    prospectionService.getFollowUpCandidates()
       .then((data) => { if (!cancelled) setCandidates(data); })
       .catch(() => { if (!cancelled) showToast('Erreur chargement relances', 'error'); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -633,6 +633,18 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
     follow_up_2: { label: '2ème relance', color: 'var(--purple)' },
     archive: { label: 'À archiver', color: 'var(--text-muted)' },
     wait: { label: 'Attente', color: 'var(--text-secondary)' },
+  };
+
+  const handleGenerateFollowUp = async (candidate: (typeof candidates)[number]) => {
+    if (candidate.recommendedAction !== 'follow_up_1' && candidate.recommendedAction !== 'follow_up_2') return;
+    const step = candidate.recommendedAction === 'follow_up_1' ? 'relance_1' : 'relance_2';
+    try {
+      await prospectionService.createFollowUpDraft(candidate.lead, step);
+      showToast(`Relance générée pour ${candidate.lead.contact_name}`, 'success');
+      setCandidates((prev) => prev.filter((c) => c.lead.id !== candidate.lead.id));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur génération relance', 'error');
+    }
   };
 
   return (
@@ -651,7 +663,8 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
         </div>
       ) : (
         <div className="followup-list">
-          {candidates.map(({ lead, daysSinceLastEmail, hasOpened, followUpCount, recommendedAction }) => {
+          {candidates.map((candidate) => {
+            const { lead, daysSinceLastEmail, hasOpened, followUpCount, recommendedAction } = candidate;
             const action = actionLabels[recommendedAction];
             return (
               <div key={lead.id} className="followup-row">
@@ -670,6 +683,11 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
                 >
                   {action.label}
                 </span>
+                {(recommendedAction === 'follow_up_1' || recommendedAction === 'follow_up_2') && (
+                  <button className="btn-ghost-sm" onClick={() => handleGenerateFollowUp(candidate)}>
+                    Générer la relance
+                  </button>
+                )}
               </div>
             );
           })}
