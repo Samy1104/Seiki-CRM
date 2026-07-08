@@ -11,6 +11,7 @@ import { leadsService, type Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { supabase } from '../services/supabaseClient';
+import { ProspectionModeToggle } from '../components/ProspectionModeToggle';
 import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
@@ -20,6 +21,21 @@ type Tab = 'campaigns' | 'generation' | 'templates' | 'followup';
 export const Prospection: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>('campaigns');
   const { showToast } = useToast();
+  const [mode, setMode] = useState<'manual' | 'auto'>('manual');
+
+  useEffect(() => {
+    settingsService.getProspectionSettings().then((s) => setMode(s.prospection_mode));
+  }, []);
+
+  const handleModeChange = async (newMode: 'manual' | 'auto') => {
+    setMode(newMode);
+    try {
+      await settingsService.updateProspectionSettings({ prospection_mode: newMode });
+      showToast(`Mode ${newMode === 'auto' ? 'automatique' : 'vérification humaine'} activé`, 'success');
+    } catch {
+      showToast('Erreur changement de mode', 'error');
+    }
+  };
 
   return (
     <div className="prospection-view">
@@ -28,8 +44,9 @@ export const Prospection: React.FC = () => {
         <div className="prospection-title">
           <Sparkles size={20} style={{ color: 'var(--purple)' }} />
           <h1>Prospection IA</h1>
-          <span className="prospection-badge">Gemini 2.5 Flash</span>
+          <span className="prospection-badge">Templates + fusion</span>
         </div>
+        <ProspectionModeToggle mode={mode} onChange={handleModeChange} />
         <p className="prospection-subtitle">
           Générez et envoyez des emails ultra-personnalisés en quelques clics.
         </p>
