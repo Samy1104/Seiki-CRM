@@ -64,16 +64,6 @@ export interface GeneratedEmail {
   } | null;
 }
 
-export interface GenerateResult {
-  success: boolean;
-  generatedEmail: GeneratedEmail;
-  meta: {
-    model: string;
-    generationMs: number;
-    tokens: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-  };
-}
-
 export interface SendResult {
   success: boolean;
   resendMessageId: string;
@@ -140,71 +130,6 @@ export const campaignsService = {
       .eq('id', id);
 
     if (error) throw error;
-  },
-
-  // ── Génération IA ────────────────────────────────────────────────────────────
-
-  /**
-   * Génère un email personnalisé pour UN lead via l'Edge Function.
-   * @returns L'email généré (en statut 'draft') avec toutes ses données.
-   */
-  async generateEmailForLead(leadId: string, campaignId: string): Promise<GenerateResult> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/generate-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-      },
-      body: JSON.stringify({ leadId, campaignId }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || `Erreur Edge Function (${response.status})`);
-    }
-
-    return data as GenerateResult;
-  },
-
-  /**
-   * Génère des emails pour PLUSIEURS leads (batch) avec rate-limiting.
-   * Envoie 1 requête à la fois avec 300ms de délai entre chaque.
-   * @returns Résultats {success, failed} avec les emails générés.
-   */
-  async bulkGenerateEmails(
-    leadIds: string[],
-    campaignId: string,
-    onProgress?: (current: number, total: number, leadId: string) => void
-  ): Promise<{ success: GeneratedEmail[]; failed: Array<{ leadId: string; error: string }> }> {
-    const success: GeneratedEmail[] = [];
-    const failed: Array<{ leadId: string; error: string }> = [];
-
-    for (let i = 0; i < leadIds.length; i++) {
-      const leadId = leadIds[i];
-
-      try {
-        onProgress?.(i + 1, leadIds.length, leadId);
-        const result = await this.generateEmailForLead(leadId, campaignId);
-        success.push(result.generatedEmail);
-      } catch (err) {
-        failed.push({
-          leadId,
-          error: err instanceof Error ? err.message : 'Erreur inconnue',
-        });
-      }
-
-      // Délai de 300ms entre chaque génération pour éviter le rate-limiting OpenAI
-      if (i < leadIds.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-    }
-
-    return { success, failed };
   },
 
   // ── Emails générés ───────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import { prospectionService, type ProspectionLead } from '../services/prospectio
 import { templatesService, type EmailTemplate } from '../services/templatesService';
 import { leadsService, type Lead } from '../services/leadsService';
 import { useToast } from '../context/ToastContext';
+import { supabase } from '../services/supabaseClient';
 import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
@@ -169,6 +170,23 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'select' | 'review'>('select');
+  const [subView, setSubView] = useState<'auto' | 'manual'>('auto');
+  const [autoDrafts, setAutoDrafts] = useState<GeneratedEmail[]>([]);
+  const [autoLoading, setAutoLoading] = useState(true);
+
+  const loadAutoDrafts = useCallback(async () => {
+    setAutoLoading(true);
+    try {
+      const drafts = await campaignsService.getUnassignedGeneratedEmails('draft');
+      setAutoDrafts(drafts);
+    } catch {
+      showToast('Erreur chargement de la file de validation', 'error');
+    } finally {
+      setAutoLoading(false);
+    }
+  }, [showToast]);
+
+  useEffect(() => { loadAutoDrafts(); }, [loadAutoDrafts]);
 
   useEffect(() => {
     const load = async () => {
@@ -211,26 +229,45 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
     setIsGenerating(true);
     setProgress({ current: 0, total: selectedLeads.size });
     const leadIds = Array.from(selectedLeads);
+    const templates = await templatesService.getTemplates();
+    const generated: GeneratedEmail[] = [];
+    const failedLeads: string[] = [];
 
-    try {
-      const { success, failed } = await campaignsService.bulkGenerateEmails(
-        leadIds,
-        selectedCampaign,
-        (current, total) => setProgress({ current, total })
-      );
+    for (let i = 0; i < leadIds.length; i++) {
+      const lead = leads.find((l) => l.id === leadIds[i]);
+      setProgress({ current: i + 1, total: leadIds.length });
+      if (!lead) { failedLeads.push(leadIds[i]); continue; }
 
-      setGeneratedEmails(success);
-      if (failed.length > 0) {
-        showToast(`${success.length} emails générés, ${failed.length} échecs`, 'info');
-      } else {
-        showToast(`${success.length} emails générés avec succès !`, 'success');
-      }
-      setViewMode('review');
-    } catch (err) {
-      showToast('Erreur lors de la génération', 'error');
-    } finally {
-      setIsGenerating(false);
+      const template = templatesService.resolveTemplate(templates, lead.segment, 'initial');
+      if (!template) { failedLeads.push(leadIds[i]); continue; }
+
+      const rendered = templatesService.renderTemplate(template, lead);
+      const { data, error } = await supabase
+        .from('generated_emails')
+        .insert([{
+          lead_id: lead.id,
+          campaign_id: selectedCampaign,
+          step: 'initial',
+          sujet: rendered.subject,
+          corps_du_mail: rendered.body,
+          statut_envoi: 'draft',
+          model_used: 'template',
+        }])
+        .select(`*, lead:leads!lead_id(contact_name, company_name, email, poste, segment)`)
+        .single();
+
+      if (error || !data) failedLeads.push(leadIds[i]);
+      else generated.push(data as GeneratedEmail);
     }
+
+    setGeneratedEmails(generated);
+    if (failedLeads.length > 0) {
+      showToast(`${generated.length} emails générés, ${failedLeads.length} échecs (template manquant pour le segment)`, 'info');
+    } else {
+      showToast(`${generated.length} emails générés avec succès !`, 'success');
+    }
+    setViewMode('review');
+    setIsGenerating(false);
   };
 
   const handleReload = async () => {
@@ -245,14 +282,43 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
   return (
     <div>
       <div className="pros-section-header">
-        <h2>{viewMode === 'select' ? 'Sélection & Génération' : `${generatedEmails.length} emails générés`}</h2>
-        {viewMode === 'review' && (
+        <h2>{subView === 'auto' ? 'File de validation (auto-pipeline)' : viewMode === 'select' ? 'Génération manuelle' : `${generatedEmails.length} emails générés`}</h2>
+        <div className="flex gap-2">
+          <button className={`btn-ghost-sm ${subView === 'auto' ? 'active' : ''}`} onClick={() => setSubView('auto')}>Auto ({autoDrafts.length})</button>
+          <button className={`btn-ghost-sm ${subView === 'manual' ? 'active' : ''}`} onClick={() => setSubView('manual')}>Manuelle</button>
+        </div>
+        {subView === 'manual' && viewMode === 'review' && (
           <button className="btn-secondary-sm" onClick={() => setViewMode('select')}>
             ← Retour à la sélection
           </button>
         )}
       </div>
 
+      {subView === 'auto' && (
+        autoLoading ? (
+          <div className="pros-loading"><Loader size={20} className="spin" /> Chargement...</div>
+        ) : autoDrafts.length === 0 ? (
+          <div className="pros-empty">
+            <Mail size={28} style={{ opacity: 0.4 }} />
+            <p>Aucun draft en attente — tout lead ajouté avec un email génère automatiquement son 1er mail ici.</p>
+          </div>
+        ) : (
+          <div className="gen-review-list">
+            {autoDrafts.map((email) => (
+              <EmailPreviewCard
+                key={email.id}
+                email={email}
+                showToast={showToast}
+                onUpdate={() => setAutoDrafts((prev) => prev.filter((e) => e.id !== email.id))}
+                queueMode
+              />
+            ))}
+          </div>
+        )
+      )}
+
+      {subView === 'manual' && (
+      <>
       {viewMode === 'select' && (
         <>
           {/* Sélection campagne */}
@@ -363,6 +429,8 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
             ))
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );
@@ -642,7 +710,8 @@ const EmailPreviewCard: React.FC<{
   email: GeneratedEmail;
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
   onUpdate: () => void;
-}> = ({ email, showToast, onUpdate }) => {
+  queueMode?: boolean;
+}> = ({ email, showToast, onUpdate, queueMode = false }) => {
   const [expanded, setExpanded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -667,6 +736,20 @@ const EmailPreviewCard: React.FC<{
       }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur envoi', 'error');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleApproveAndQueue = async () => {
+    setIsSending(true);
+    try {
+      const { scheduledAt } = await campaignsService.approveAndSchedule(email.id);
+      const date = new Date(scheduledAt).toLocaleDateString('fr-FR');
+      showToast(`Email approuvé, planifié pour le ${date}`, 'success');
+      onUpdate();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur planification', 'error');
     } finally {
       setIsSending(false);
     }
@@ -763,14 +846,17 @@ const EmailPreviewCard: React.FC<{
           {/* Actions */}
           {!isEditing && (
             <div className="epc-actions">
-              <button
-                className="btn-primary-sm"
-                onClick={handleApproveAndSend}
-                disabled={isSending}
-              >
-                {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
-                {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
-              </button>
+              {queueMode ? (
+                <button className="btn-primary-sm" onClick={handleApproveAndQueue} disabled={isSending}>
+                  {isSending ? <Loader size={12} className="spin" /> : <Check size={12} />}
+                  {isSending ? 'Planification...' : 'Approuver'}
+                </button>
+              ) : (
+                <button className="btn-primary-sm" onClick={handleApproveAndSend} disabled={isSending}>
+                  {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
+                  {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
+                </button>
+              )}
               <button className="btn-ghost-sm" onClick={() => setIsEditing(true)}>
                 <Edit3 size={12} /> Modifier
               </button>
