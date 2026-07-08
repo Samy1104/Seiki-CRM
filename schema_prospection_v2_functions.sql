@@ -73,3 +73,57 @@ BEGIN
   RETURN v_slot;
 END;
 $$;
+
+-- ============================================================
+-- auto_create_prospection_draft — dès qu'un lead est créé,
+-- prépare son email initial (draft, ou approved+planifié si
+-- le mode automatique est actif)
+-- ============================================================
+CREATE OR REPLACE FUNCTION public.auto_create_prospection_draft()
+RETURNS TRIGGER LANGUAGE plpgsql AS $$
+DECLARE
+  v_subject TEXT;
+  v_body    TEXT;
+  v_mode    TEXT;
+  v_new_id  UUID;
+BEGIN
+  IF NEW.email IS NULL OR NEW.is_archived THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT subject, body INTO v_subject, v_body
+  FROM public.email_templates
+  WHERE segment = NEW.segment AND step = 'initial';
+
+  IF NOT FOUND THEN
+    SELECT subject, body INTO v_subject, v_body
+    FROM public.email_templates
+    WHERE segment = 'All' AND step = 'initial';
+  END IF;
+
+  IF NOT FOUND OR v_subject IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  INSERT INTO public.generated_emails (lead_id, campaign_id, step, sujet, corps_du_mail, statut_envoi, model_used)
+  VALUES (
+    NEW.id, NULL, 'initial',
+    public.render_template(v_subject, NEW.id),
+    public.render_template(v_body, NEW.id),
+    'draft', 'template'
+  )
+  RETURNING id INTO v_new_id;
+
+  SELECT (value->>'mode') INTO v_mode FROM public.app_settings WHERE key = 'prospection_mode';
+
+  IF v_mode = 'auto' THEN
+    PERFORM public.schedule_send(v_new_id);
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_auto_create_prospection_draft
+  AFTER INSERT ON public.leads
+  FOR EACH ROW EXECUTE FUNCTION public.auto_create_prospection_draft();
