@@ -694,8 +694,17 @@ serve(async (req: Request) => {
 
     // En mode manuel, la purge automatique (cron) ne doit rien faire —
     // seul le bouton explicite de l'UI doit envoyer. On distingue les deux
-    // via un header interne posé uniquement par le bouton manuel.
-    const isManualTrigger = req.headers.get("x-triggered-by") === "manual-button";
+    // via un flag dans le corps JSON (pas un header custom : un header
+    // non listé dans Access-Control-Allow-Headers de _shared/cors.ts
+    // ferait échouer le preflight CORS pour tout appel navigateur).
+    let triggeredBy: string | undefined;
+    try {
+      const body = await req.json();
+      triggeredBy = body?.triggeredBy;
+    } catch {
+      // Pas de corps (ex: appel cron sans body) — reste undefined, traité comme non-manuel.
+    }
+    const isManualTrigger = triggeredBy === "manual-button";
     if (mode === "manual" && !isManualTrigger) {
       return new Response(
         JSON.stringify({ skipped: "prospection_mode is manual", processed: 0, sent: 0, failed: 0 }),
@@ -760,12 +769,12 @@ serve(async (req: Request) => {
 Run: `supabase functions deploy flush-send-queue --project-ref <your-project-ref>`
 Expected: deploy succeeds.
 
-Verify the manual-mode skip: with `prospection_mode` set to `manual` (default), call the function without the special header —
-Run: `curl -X POST https://<project-ref>.supabase.co/functions/v1/flush-send-queue -H "Authorization: Bearer <anon-key>" -H "apikey: <anon-key>"`
+Verify the manual-mode skip: with `prospection_mode` set to `manual` (default), call the function with an empty body —
+Run: `curl -X POST https://<project-ref>.supabase.co/functions/v1/flush-send-queue -H "Authorization: Bearer <anon-key>" -H "apikey: <anon-key>" -H "Content-Type: application/json" -d '{}'`
 Expected: `{"skipped":"prospection_mode is manual","processed":0,"sent":0,"failed":0}`
 
-Verify it processes when the manual header is present and there's at least one `approved` row with `scheduled_at` today (create one via `schedule_send()` in the SQL console first):
-Run: `curl -X POST https://<project-ref>.supabase.co/functions/v1/flush-send-queue -H "Authorization: Bearer <anon-key>" -H "apikey: <anon-key>" -H "x-triggered-by: manual-button"`
+Verify it processes when `triggeredBy` is in the body and there's at least one `approved` row with `scheduled_at` today (create one via `schedule_send()` in the SQL console first):
+Run: `curl -X POST https://<project-ref>.supabase.co/functions/v1/flush-send-queue -H "Authorization: Bearer <anon-key>" -H "apikey: <anon-key>" -H "Content-Type: application/json" -d '{"triggeredBy":"manual-button"}'`
 Expected: `{"processed":1,"sent":1,"failed":0}` (or however many rows were due).
 
 - [ ] **Step 3: Commit**
@@ -1378,8 +1387,8 @@ After `sendEmail` (around line 304), add:
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${supabaseKey}`,
         'apikey': supabaseKey,
-        'x-triggered-by': 'manual-button',
       },
+      body: JSON.stringify({ triggeredBy: 'manual-button' }),
     });
 
     const data = await response.json();
@@ -2131,7 +2140,7 @@ Add the card in the JSX, right before `{showCreateModal && (...)}` (line 140):
 Run: `npm run build`
 Expected: no TypeScript errors.
 
-Open Campagnes tab, confirm the quota shows `(quota: 100/j)`, the "Flux automatique" card shows non-zero counts if Task 16's test lead is still `approved`, and clicking "Envoyer le lot du jour" shows a toast (either a skip message if `prospection_mode` is `manual` and... wait — note this button always sends `x-triggered-by: manual-button`, so it works regardless of mode, per Task 6's design).
+Open Campagnes tab, confirm the quota shows `(quota: 100/j)`, the "Flux automatique" card shows non-zero counts if Task 16's test lead is still `approved`, and clicking "Envoyer le lot du jour" shows a toast — the button always sends `{ triggeredBy: 'manual-button' }` in the request body, so it works regardless of `prospection_mode`, per Task 6's design.
 
 - [ ] **Step 4: Commit**
 
