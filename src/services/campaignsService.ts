@@ -232,6 +232,26 @@ export const campaignsService = {
     return (data || []) as GeneratedEmail[];
   },
 
+  /** Récupère les emails générés hors campagne (flux automatique par lead) */
+  async getUnassignedGeneratedEmails(statut?: GeneratedEmail['statut_envoi']): Promise<GeneratedEmail[]> {
+    let query = supabase
+      .from('generated_emails')
+      .select(`
+        *,
+        lead:leads!lead_id(contact_name, company_name, email, poste, segment)
+      `)
+      .is('campaign_id', null)
+      .order('created_at', { ascending: false });
+
+    if (statut) {
+      query = query.eq('statut_envoi', statut);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as GeneratedEmail[];
+  },
+
   /** Récupère un email généré par ID */
   async getGeneratedEmailById(id: string): Promise<GeneratedEmail> {
     const { data, error } = await supabase
@@ -274,6 +294,13 @@ export const campaignsService = {
     if (error) throw error;
   },
 
+  /** Approuve un email ET le planifie sous quota (remplace approveEmail pour le nouveau flux) */
+  async approveAndSchedule(generatedEmailId: string): Promise<{ scheduledAt: string }> {
+    const { data, error } = await supabase.rpc('schedule_send', { p_generated_email_id: generatedEmailId });
+    if (error) throw error;
+    return { scheduledAt: data as string };
+  },
+
   /**
    * Envoie un email approuvé via l'Edge Function Resend.
    */
@@ -301,6 +328,28 @@ export const campaignsService = {
     }
 
     return data as SendResult;
+  },
+
+  /** Déclenche la purge de la file d'envoi du jour (bouton manuel) */
+  async flushSendQueue(): Promise<{ processed: number; sent: number; failed: number; skipped?: string }> {
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    const response = await fetch(`${supabaseUrl}/functions/v1/flush-send-queue`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseKey}`,
+        'apikey': supabaseKey,
+      },
+      body: JSON.stringify({ triggeredBy: 'manual-button' }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || `Erreur purge file (${response.status})`);
+    }
+    return data;
   },
 
   /** Supprime un email généré */
