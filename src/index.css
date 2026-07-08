@@ -1486,7 +1486,7 @@ input:checked + .toggle-slider:before {
   position: relative;
   overflow: visible;
   cursor: grab;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .task-board-card:active {
@@ -1494,9 +1494,40 @@ input:checked + .toggle-slider:before {
 }
 
 .task-board-card:hover {
-  transform: translateY(-1px);
   border-color: var(--border-active);
   box-shadow: 0 4px 15px rgba(107, 95, 230, 0.15);
+}
+
+/* Drop indicator line — marks exactly where a dragged card will land */
+.task-drop-indicator {
+  height: 2px;
+  width: 100%;
+  background: var(--purple);
+  opacity: 0;
+  border-radius: 2px;
+  transition: opacity 0.12s ease;
+}
+
+/* Per-column quick-add trigger in board headers */
+.pipe-head-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.pipe-head-add-btn:hover {
+  background: rgba(107, 95, 230, 0.12);
+  border-color: var(--purple);
+  color: #fff;
 }
 
 .task-card-actions {
@@ -1706,6 +1737,7 @@ input:checked + .toggle-slider:before {
   flex-direction: column;
   overflow: hidden;
   box-sizing: border-box;
+  animation: modalScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .modal-header {
@@ -3301,6 +3333,7 @@ input:checked + .toggle-slider:before {
   align-items: center;
   justify-content: center;
   padding: 24px;
+  animation: modalFadeIn 0.15s ease;
 }
 
 .modal-box {
@@ -3312,6 +3345,17 @@ input:checked + .toggle-slider:before {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  animation: modalScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 .modal-header {

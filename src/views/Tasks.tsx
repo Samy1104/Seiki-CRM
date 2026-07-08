@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion } from 'motion/react';
 
 import { tasksService } from '../services/tasksService';
 import type { Task } from '../services/tasksService';
@@ -8,7 +9,44 @@ import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
-import { List, Kanban, Calendar, Trash2, Flag, Tag, User, SlidersHorizontal, X } from 'lucide-react';
+import { List, Kanban, Calendar, Trash2, Flag, Tag, User, SlidersHorizontal, X, Plus } from 'lucide-react';
+
+// Board column drop indicator — a thin line inserted between cards showing
+// exactly where the dragged card will land. Opacity is toggled imperatively
+// (not via React state) so dragging over many cards doesn't cause re-renders.
+const DropIndicator: React.FC<{ beforeId: string | null; column: string }> = ({ beforeId, column }) => (
+  <div data-before={beforeId || '-1'} data-column={column} className="task-drop-indicator" />
+);
+
+const getColumnIndicators = (column: string): HTMLElement[] =>
+  Array.from(document.querySelectorAll<HTMLElement>(`[data-column="${column}"]`));
+
+const clearColumnHighlights = (column: string, els?: HTMLElement[]) => {
+  const indicators = els || getColumnIndicators(column);
+  indicators.forEach(i => { i.style.opacity = '0'; });
+};
+
+const getNearestIndicator = (e: React.DragEvent, indicators: HTMLElement[]) => {
+  const DISTANCE_OFFSET = 50;
+  return indicators.reduce<{ offset: number; element: HTMLElement }>(
+    (closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = e.clientY - (box.top + DISTANCE_OFFSET);
+      if (offset < 0 && offset > closest.offset) {
+        return { offset, element: child };
+      }
+      return closest;
+    },
+    { offset: Number.NEGATIVE_INFINITY, element: indicators[indicators.length - 1] }
+  );
+};
+
+const highlightColumnIndicator = (e: React.DragEvent, column: string) => {
+  const indicators = getColumnIndicators(column);
+  clearColumnHighlights(column, indicators);
+  const { element } = getNearestIndicator(e, indicators);
+  if (element) element.style.opacity = '1';
+};
 
 interface ActiveDropdown {
   taskId: string;
@@ -93,6 +131,8 @@ export const Tasks: React.FC = () => {
   const [newPriority, setNewPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([]);
   const [newLeadId, setNewLeadId] = useState('');
+  const [newStatus, setNewStatus] = useState<'todo' | 'in_progress' | 'done'>('todo');
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
 
   // Drag and drop state
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -136,6 +176,11 @@ export const Tasks: React.FC = () => {
     }
   };
 
+  const openTaskModal = (status: 'todo' | 'in_progress' | 'done' = 'todo') => {
+    setNewStatus(status);
+    setTaskModalOpen(true);
+  };
+
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDesc.trim()) return;
@@ -148,7 +193,7 @@ export const Tasks: React.FC = () => {
         assignee_ids: newAssigneeIds,
         created_by: null,
         priority: newPriority,
-        status: 'todo',
+        status: newStatus,
         due_date: newDueDate || null
       });
 
@@ -157,6 +202,8 @@ export const Tasks: React.FC = () => {
       setNewPriority('medium');
       setNewAssigneeIds([]);
       setNewLeadId('');
+      setNewStatus('todo');
+      setTaskModalOpen(false);
 
       showToast('Tâche ajoutée');
       loadTasksData();
@@ -355,6 +402,81 @@ export const Tasks: React.FC = () => {
       const updated = [...tasks];
       const fromIdx = updated.findIndex(t => t.id === taskId);
       const toIdx = updated.findIndex(t => t.id === targetTaskId);
+      if (fromIdx === -1 || toIdx === -1) return;
+      const [moved] = updated.splice(fromIdx, 1);
+      const adjustedTo = toIdx > fromIdx ? toIdx - 1 : toIdx;
+      updated.splice(adjustedTo, 0, moved);
+      setTasks(updated);
+
+      const sectionTasks = updated.filter(t => t.status === targetStatus);
+      try {
+        await Promise.all(sectionTasks.map((t, i) => tasksService.updateTask(t.id, { position: i })));
+        showToast('Ordre mis à jour');
+      } catch (err) {
+        console.error('Error persisting task order:', err);
+        showToast('Erreur lors de la sauvegarde de l\'ordre', 'error');
+        loadTasksData();
+      }
+    }
+  };
+
+  // --- BOARD VIEW DRAG & DROP — indicator-line based (mirrors reference kanban) ---
+  const handleBoardDragOver = (e: React.DragEvent, column: 'todo' | 'in_progress' | 'done') => {
+    e.preventDefault();
+    setDragOverStatus(column);
+    highlightColumnIndicator(e, column);
+  };
+
+  const handleBoardDragLeave = (column: 'todo' | 'in_progress' | 'done') => {
+    setDragOverStatus(null);
+    clearColumnHighlights(column);
+  };
+
+  const handleBoardDrop = async (e: React.DragEvent, targetStatus: 'todo' | 'in_progress' | 'done') => {
+    e.preventDefault();
+    const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+    const indicators = getColumnIndicators(targetStatus);
+    const { element } = getNearestIndicator(e, indicators);
+    const beforeTaskId = element?.dataset.before || '-1';
+
+    setDraggedTaskId(null);
+    setDragOverStatus(null);
+    clearColumnHighlights(targetStatus, indicators);
+
+    if (!taskId) return;
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (task.status !== targetStatus) {
+      // Move between sections, dropped at the position the indicator line marks
+      const updated = tasks.filter(t => t.id !== taskId);
+      const movedTask = { ...task, status: targetStatus };
+      if (beforeTaskId === '-1' || beforeTaskId === taskId) {
+        updated.push(movedTask);
+      } else {
+        const insertIndex = updated.findIndex(t => t.id === beforeTaskId);
+        if (insertIndex === -1) {
+          updated.push(movedTask);
+        } else {
+          updated.splice(insertIndex, 0, movedTask);
+        }
+      }
+      setTasks(updated);
+
+      try {
+        await tasksService.updateTask(taskId, { status: targetStatus });
+        showToast(`Tâche déplacée dans "${targetStatus === 'todo' ? 'À faire' : targetStatus === 'in_progress' ? 'En cours' : 'Terminé'}"`);
+        loadTasksData();
+      } catch (err) {
+        console.error('Error updating drag status:', err);
+        showToast('Erreur lors du déplacement de la tâche', 'error');
+        loadTasksData();
+      }
+    } else if (beforeTaskId !== '-1' && beforeTaskId !== taskId) {
+      // Reorder within same section — optimistic update
+      const updated = [...tasks];
+      const fromIdx = updated.findIndex(t => t.id === taskId);
+      const toIdx = updated.findIndex(t => t.id === beforeTaskId);
       if (fromIdx === -1 || toIdx === -1) return;
       const [moved] = updated.splice(fromIdx, 1);
       const adjustedTo = toIdx > fromIdx ? toIdx - 1 : toIdx;
@@ -759,98 +881,14 @@ export const Tasks: React.FC = () => {
             <Kanban size={14} style={{ marginRight: '4px' }} />
             Tableau
           </button>
+          <button
+            className="btn btn-sm btn-grad"
+            onClick={() => openTaskModal('todo')}
+          >
+            <Plus size={14} style={{ marginRight: '4px' }} />
+            Nouvelle tâche
+          </button>
         </div>
-      </div>
-
-      {/* Task Creation Form */}
-      <div className="card" style={{ padding: '16px', marginBottom: '20px' }}>
-        <form onSubmit={handleAddTask} className="quick-task-form">
-          <input
-            type="text"
-            placeholder="Écrire une tâche à faire..."
-            value={newDesc}
-            onChange={e => setNewDesc(e.target.value)}
-            required
-            style={{ flex: '1' }}
-          />
-          <input
-            type="date"
-            value={newDueDate}
-            onChange={e => setNewDueDate(e.target.value)}
-            style={{ width: '130px' }}
-          />
-          <select
-            value={newPriority}
-            onChange={e => setNewPriority(e.target.value as any)}
-            style={{ width: '110px' }}
-          >
-            <option value="high">Haute</option>
-            <option value="medium">Moyenne</option>
-            <option value="low">Basse</option>
-          </select>
-
-          {/* Multi-assign in Creation Form */}
-          <div className="clickup-inline-dropdown-wrap">
-            <button
-              type="button"
-              className="btn btn-sm"
-              onClick={(e) => {
-                if (activeDropdown?.taskId === 'new-task') { setActiveDropdown(null); return; }
-                const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                setActiveDropdown({ taskId: 'new-task', type: 'assignee', x: r.left, y: r.bottom + 4 });
-              }}
-              style={{ width: '145px', background: 'rgba(255,255,255,0.03)', border: '0.5px solid var(--border-subtle)', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
-            >
-              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {newAssigneeIds.length === 0
-                  ? 'Assigner'
-                  : `${newAssigneeIds.length} assigné(s)`}
-              </span>
-              <span style={{ fontSize: '10px' }}>▼</span>
-            </button>
-
-            {activeDropdown?.taskId === 'new-task' && activeDropdown?.type === 'assignee' && createPortal(
-              <div
-                ref={dropdownWrapperRef}
-                className="clickup-dropdown-menu"
-                style={{ position: 'fixed', top: activeDropdown.y, left: activeDropdown.x, zIndex: 9999, transform: 'none' }}
-              >
-                <div className="clickup-dropdown-title">Assigner à...</div>
-                {teamMembers.map(m => {
-                  const isSelected = newAssigneeIds.includes(m.id);
-                  return (
-                    <div
-                      key={m.id}
-                      className={`clickup-dropdown-item ${isSelected ? 'selected' : ''}`}
-                      onClick={() => {
-                        setNewAssigneeIds(prev =>
-                          prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
-                        );
-                      }}
-                    >
-                      <div className="clickup-dropdown-checkbox">{isSelected ? '✓' : ''}</div>
-                      <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
-                      <span>{m.full_name}</span>
-                    </div>
-                  );
-                })}
-              </div>,
-              document.body
-            )}
-          </div>
-
-          <select
-            value={newLeadId}
-            onChange={e => setNewLeadId(e.target.value)}
-            style={{ width: '160px' }}
-          >
-            <option value="">— Lier un lead</option>
-            {leads.map(l => (
-              <option key={l.id} value={l.id}>{l.company_name}</option>
-            ))}
-          </select>
-          <button type="submit" className="btn btn-grad">+</button>
-        </form>
       </div>
 
       {/* Filter Bar */}
@@ -1003,131 +1041,285 @@ export const Tasks: React.FC = () => {
           {/* TO DO Column */}
           <div
             className={`pipe-col ${dragOverStatus === 'todo' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'todo')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'todo')}
+            onDragOver={(e) => handleBoardDragOver(e, 'todo')}
+            onDragLeave={() => handleBoardDragLeave('todo')}
+            onDrop={(e) => handleBoardDrop(e, 'todo')}
           >
             <div className="pipe-head" style={{ borderBottomColor: 'var(--red)' }}>
-              À faire <span>{todoTasks.length}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                À faire <span>{todoTasks.length}</span>
+              </span>
+              <button className="pipe-head-add-btn" onClick={() => openTaskModal('todo')} title="Ajouter une tâche">
+                <Plus size={13} />
+              </button>
             </div>
             <div className="pipe-cards-container">
               {todoTasks.map(task => {
                 const pColor = getPriorityInfo(task.priority).color;
                 return (
-                  <div
-                    key={task.id}
-                    className="task-board-card"
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                  >
-                    <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
-                      {task.description}
-                    </div>
+                  <React.Fragment key={task.id}>
+                    <DropIndicator beforeId={task.id} column="todo" />
+                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <motion.div layout layoutId={task.id} className="task-board-card">
+                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
+                          {task.description}
+                        </div>
 
-                    {/* Interactive ClickUp Parameters Row */}
-                    <div className="task-board-card-clickup-row">
-                      {renderAssigneeWidget(task)}
-                      {renderDatePickerWidget(task)}
-                      {renderPriorityWidget(task)}
-                      {renderLeadWidget(task)}
-                    </div>
+                        {/* Interactive ClickUp Parameters Row */}
+                        <div className="task-board-card-clickup-row">
+                          {renderAssigneeWidget(task)}
+                          {renderDatePickerWidget(task)}
+                          {renderPriorityWidget(task)}
+                          {renderLeadWidget(task)}
+                        </div>
 
-                    <div className="task-card-actions">
-                      <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>En cours →</button>
-                      <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
+                        <div className="task-card-actions">
+                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>En cours →</button>
+                          <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
+                        </div>
+                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
+                      </motion.div>
                     </div>
-                    <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
+              <DropIndicator beforeId={null} column="todo" />
             </div>
           </div>
 
           {/* IN PROGRESS Column */}
           <div
             className={`pipe-col ${dragOverStatus === 'in_progress' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'in_progress')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'in_progress')}
+            onDragOver={(e) => handleBoardDragOver(e, 'in_progress')}
+            onDragLeave={() => handleBoardDragLeave('in_progress')}
+            onDrop={(e) => handleBoardDrop(e, 'in_progress')}
           >
             <div className="pipe-head" style={{ borderBottomColor: 'var(--gold)' }}>
-              En cours <span>{inProgressTasks.length}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                En cours <span>{inProgressTasks.length}</span>
+              </span>
+              <button className="pipe-head-add-btn" onClick={() => openTaskModal('in_progress')} title="Ajouter une tâche">
+                <Plus size={13} />
+              </button>
             </div>
             <div className="pipe-cards-container">
               {inProgressTasks.map(task => {
                 const pColor = getPriorityInfo(task.priority).color;
                 return (
-                  <div
-                    key={task.id}
-                    className="task-board-card"
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                  >
-                    <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
-                      {task.description}
-                    </div>
+                  <React.Fragment key={task.id}>
+                    <DropIndicator beforeId={task.id} column="in_progress" />
+                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <motion.div layout layoutId={task.id} className="task-board-card">
+                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
+                          {task.description}
+                        </div>
 
-                    {/* Interactive ClickUp Parameters Row */}
-                    <div className="task-board-card-clickup-row">
-                      {renderAssigneeWidget(task)}
-                      {renderDatePickerWidget(task)}
-                      {renderPriorityWidget(task)}
-                      {renderLeadWidget(task)}
-                    </div>
+                        {/* Interactive ClickUp Parameters Row */}
+                        <div className="task-board-card-clickup-row">
+                          {renderAssigneeWidget(task)}
+                          {renderDatePickerWidget(task)}
+                          {renderPriorityWidget(task)}
+                          {renderLeadWidget(task)}
+                        </div>
 
-                    <div className="task-card-actions">
-                      <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'todo')}>← À faire</button>
-                      <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'done')}>Fini ✓</button>
+                        <div className="task-card-actions">
+                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'todo')}>← À faire</button>
+                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'done')}>Fini ✓</button>
+                        </div>
+                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
+                      </motion.div>
                     </div>
-                    <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
+              <DropIndicator beforeId={null} column="in_progress" />
             </div>
           </div>
 
           {/* DONE Column */}
           <div
             className={`pipe-col ${dragOverStatus === 'done' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleDragOver(e, 'done')}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, 'done')}
+            onDragOver={(e) => handleBoardDragOver(e, 'done')}
+            onDragLeave={() => handleBoardDragLeave('done')}
+            onDrop={(e) => handleBoardDrop(e, 'done')}
           >
             <div className="pipe-head" style={{ borderBottomColor: 'var(--green)' }}>
-              Terminé <span>{doneTasks.length}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                Terminé <span>{doneTasks.length}</span>
+              </span>
+              <button className="pipe-head-add-btn" onClick={() => openTaskModal('done')} title="Ajouter une tâche">
+                <Plus size={13} />
+              </button>
             </div>
             <div className="pipe-cards-container">
               {doneTasks.map(task => {
                 const pColor = getPriorityInfo(task.priority).color;
                 return (
-                  <div
-                    key={task.id}
-                    className="task-board-card"
-                    style={{ opacity: 0.7 }}
-                    draggable="true"
-                    onDragStart={(e) => handleDragStart(e, task.id)}
-                  >
-                    <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', textDecoration: 'line-through', marginBottom: '12px' }}>
-                      {task.description}
-                    </div>
+                  <React.Fragment key={task.id}>
+                    <DropIndicator beforeId={task.id} column="done" />
+                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
+                      <motion.div layout layoutId={task.id} className="task-board-card" style={{ opacity: 0.7 }}>
+                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', textDecoration: 'line-through', marginBottom: '12px' }}>
+                          {task.description}
+                        </div>
 
-                    {/* Interactive ClickUp Parameters Row */}
-                    <div className="task-board-card-clickup-row">
-                      {renderAssigneeWidget(task)}
-                      {renderDatePickerWidget(task)}
-                      {renderPriorityWidget(task)}
-                      {renderLeadWidget(task)}
-                    </div>
+                        {/* Interactive ClickUp Parameters Row */}
+                        <div className="task-board-card-clickup-row">
+                          {renderAssigneeWidget(task)}
+                          {renderDatePickerWidget(task)}
+                          {renderPriorityWidget(task)}
+                          {renderLeadWidget(task)}
+                        </div>
 
-                    <div className="task-card-actions">
-                      <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>← Ouvrir</button>
-                      <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
+                        <div className="task-card-actions">
+                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>← Ouvrir</button>
+                          <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
+                        </div>
+                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
+                      </motion.div>
                     </div>
-                    <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                  </div>
+                  </React.Fragment>
                 );
               })}
+              <DropIndicator beforeId={null} column="done" />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Task Modal */}
+      {taskModalOpen && (
+        <div className="modal-overlay open" onClick={() => setTaskModalOpen(false)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Nouvelle tâche</h2>
+              <button className="btn-icon" onClick={() => setTaskModalOpen(false)}><X size={16} /></button>
+            </div>
+            <form onSubmit={handleAddTask} className="modal-form">
+              <div className="gen-field-group">
+                <label className="gen-label">Description *</label>
+                <input
+                  className="gen-input"
+                  placeholder="Écrire une tâche à faire..."
+                  value={newDesc}
+                  onChange={e => setNewDesc(e.target.value)}
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div className="gen-field-row">
+                <div className="gen-field-group">
+                  <label className="gen-label">Échéance</label>
+                  <input
+                    className="gen-input"
+                    type="date"
+                    value={newDueDate}
+                    onChange={e => setNewDueDate(e.target.value)}
+                  />
+                </div>
+                <div className="gen-field-group">
+                  <label className="gen-label">Priorité</label>
+                  <select
+                    className="gen-select"
+                    value={newPriority}
+                    onChange={e => setNewPriority(e.target.value as any)}
+                  >
+                    <option value="high">Haute</option>
+                    <option value="medium">Moyenne</option>
+                    <option value="low">Basse</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="gen-field-row">
+                <div className="gen-field-group">
+                  <label className="gen-label">Assignés</label>
+                  <div className="clickup-inline-dropdown-wrap">
+                    <button
+                      type="button"
+                      className="gen-select"
+                      onClick={(e) => {
+                        if (activeDropdown?.taskId === 'new-task') { setActiveDropdown(null); return; }
+                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setActiveDropdown({ taskId: 'new-task', type: 'assignee', x: r.left, y: r.bottom + 4 });
+                      }}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}
+                    >
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {newAssigneeIds.length === 0
+                          ? 'Assigner'
+                          : `${newAssigneeIds.length} assigné(s)`}
+                      </span>
+                      <span style={{ fontSize: '10px' }}>▼</span>
+                    </button>
+
+                    {activeDropdown?.taskId === 'new-task' && activeDropdown?.type === 'assignee' && createPortal(
+                      <div
+                        ref={dropdownWrapperRef}
+                        className="clickup-dropdown-menu"
+                        style={{ position: 'fixed', top: activeDropdown.y, left: activeDropdown.x, zIndex: 9999, transform: 'none' }}
+                      >
+                        <div className="clickup-dropdown-title">Assigner à...</div>
+                        {teamMembers.map(m => {
+                          const isSelected = newAssigneeIds.includes(m.id);
+                          return (
+                            <div
+                              key={m.id}
+                              className={`clickup-dropdown-item ${isSelected ? 'selected' : ''}`}
+                              onClick={() => {
+                                setNewAssigneeIds(prev =>
+                                  prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
+                                );
+                              }}
+                            >
+                              <div className="clickup-dropdown-checkbox">{isSelected ? '✓' : ''}</div>
+                              <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
+                              <span>{m.full_name}</span>
+                            </div>
+                          );
+                        })}
+                      </div>,
+                      document.body
+                    )}
+                  </div>
+                </div>
+                <div className="gen-field-group">
+                  <label className="gen-label">Lead lié</label>
+                  <select
+                    className="gen-select"
+                    value={newLeadId}
+                    onChange={e => setNewLeadId(e.target.value)}
+                  >
+                    <option value="">— Aucun</option>
+                    {leads.map(l => (
+                      <option key={l.id} value={l.id}>{l.company_name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="gen-field-group">
+                <label className="gen-label">Statut</label>
+                <select
+                  className="gen-select"
+                  value={newStatus}
+                  onChange={e => setNewStatus(e.target.value as any)}
+                >
+                  <option value="todo">À faire</option>
+                  <option value="in_progress">En cours</option>
+                  <option value="done">Terminé</option>
+                </select>
+              </div>
+
+              <div className="modal-footer">
+                <button type="button" className="btn-ghost-sm" onClick={() => setTaskModalOpen(false)}>Annuler</button>
+                <button type="submit" className="btn-primary-sm">
+                  <Plus size={13} />
+                  Créer la tâche
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
