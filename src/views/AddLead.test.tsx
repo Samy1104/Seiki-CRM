@@ -23,8 +23,8 @@ vi.mock('../context/ToastContext', () => ({
 }));
 
 const mockStages = [
-  { id: 'stage-1', name: 'Prospect', order_index: 0 },
-  { id: 'stage-2', name: 'Qualification', order_index: 1 },
+  { id: 'stage-1', name: 'Prospect', position: 0, color: 'blue', is_closed_won: false, is_active: true },
+  { id: 'stage-2', name: 'Qualification', position: 1, color: 'green', is_closed_won: false, is_active: true },
 ];
 
 describe('AddLead View', () => {
