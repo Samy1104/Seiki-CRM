@@ -4,6 +4,7 @@ import {
   RefreshCw, Check, X, Edit3, Send, ChevronDown, ChevronUp,
   AlertCircle, Loader, Eye, Trash2, Users, Zap, FileEdit
 } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { campaignsService, type Campaign, type CampaignMetrics, type GeneratedEmail } from '../services/campaignsService';
 import { prospectionService, type ProspectionLead } from '../services/prospectionService';
 import { templatesService, type EmailTemplate } from '../services/templatesService';
@@ -395,16 +396,20 @@ const GenerationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
           {/* Sélection campagne */}
           <div className="gen-field-group">
             <label className="gen-label">Campagne *</label>
-            <select
-              className="gen-select"
+            <Select
               value={selectedCampaign}
-              onChange={(e) => setSelectedCampaign(e.target.value)}
+              onValueChange={val => setSelectedCampaign(val)}
             >
-              <option value="">-- Choisir une campagne --</option>
-              {campaigns.map((c) => (
-                <option key={c.id} value={c.id}>{c.name} ({c.objective})</option>
-              ))}
-            </select>
+              <SelectTrigger className="gen-select">
+                <SelectValue placeholder="-- Choisir une campagne --" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">-- Choisir une campagne --</SelectItem>
+                {campaigns.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name} ({c.objective})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Liste des leads */}
@@ -578,13 +583,27 @@ const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-3">
-        <select className="gen-select" value={segment} onChange={(e) => setSegment(e.target.value as EmailTemplate['segment'])}>
-          {SEGMENTS.map((s) => <option key={s} value={s}>{s}</option>)}
-        </select>
-        <select className="gen-select" value={step} onChange={(e) => setStep(e.target.value as EmailTemplate['step'])}>
-          {STEPS.map((s) => <option key={s.key} value={s.key}>{s.label}</option>)}
-        </select>
+      <div className="flex gap-3" style={{ width: '100%' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Select value={segment} onValueChange={val => setSegment(val as EmailTemplate['segment'])}>
+            <SelectTrigger className="gen-select">
+              <SelectValue placeholder={segment} />
+            </SelectTrigger>
+            <SelectContent>
+              {SEGMENTS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Select value={step} onValueChange={val => setStep(val as EmailTemplate['step'])}>
+            <SelectTrigger className="gen-select">
+              <SelectValue placeholder={step} />
+            </SelectTrigger>
+            <SelectContent>
+              {STEPS.map((s) => <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="gen-field-group">
@@ -615,10 +634,15 @@ const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
 
       <div className="gen-field-group">
         <label className="gen-label">Aperçu sur un lead</label>
-        <select className="gen-select" value={previewLeadId} onChange={(e) => setPreviewLeadId(e.target.value)}>
-          <option value="">-- Choisir un lead --</option>
-          {leads.map((l) => <option key={l.id} value={l.id}>{l.contact_name} — {l.company_name}</option>)}
-        </select>
+        <Select value={previewLeadId} onValueChange={val => setPreviewLeadId(val)}>
+          <SelectTrigger className="gen-select">
+            <SelectValue placeholder="-- Choisir un lead --" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="">-- Choisir un lead --</SelectItem>
+            {leads.map((l) => <SelectItem key={l.id} value={l.id}>{l.contact_name} — {l.company_name}</SelectItem>)}
+          </SelectContent>
+        </Select>
         {preview && (
           <div className="mt-3 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
             <div className="font-semibold text-brand-text">{preview.subject}</div>
@@ -1042,21 +1066,31 @@ const CreateCampaignModal: React.FC<{
           <div className="gen-field-row">
             <div className="gen-field-group">
               <label className="gen-label">Segment cible</label>
-              <select className="gen-select" value={form.target_segment || 'All'} onChange={(e) => update('target_segment', e.target.value)}>
-                <option value="All">Tous</option>
-                <option value="Media">Media</option>
-                <option value="Retail">Retail</option>
-                <option value="Instit">Instit</option>
-              </select>
+              <Select value={form.target_segment || 'All'} onValueChange={(val) => update('target_segment', val as any)}>
+                <SelectTrigger className="gen-select">
+                  <SelectValue placeholder={form.target_segment || 'Tous'} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">Tous</SelectItem>
+                  <SelectItem value="Media">Media</SelectItem>
+                  <SelectItem value="Retail">Retail</SelectItem>
+                  <SelectItem value="Instit">Instit</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="gen-field-group">
               <label className="gen-label">Ton</label>
-              <select className="gen-select" value={form.tone} onChange={(e) => update('tone', e.target.value)}>
-                <option value="professionnel">Professionnel</option>
-                <option value="décontracté">Décontracté</option>
-                <option value="direct">Direct</option>
-                <option value="consultatif">Consultatif</option>
-              </select>
+              <Select value={form.tone} onValueChange={(val) => update('tone', val as any)}>
+                <SelectTrigger className="gen-select">
+                  <SelectValue placeholder={form.tone} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="professionnel">Professionnel</SelectItem>
+                  <SelectItem value="décontracté">Décontracté</SelectItem>
+                  <SelectItem value="direct">Direct</SelectItem>
+                  <SelectItem value="consultatif">Consultatif</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="gen-field-group">
