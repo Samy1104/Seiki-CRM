@@ -22,7 +22,7 @@ sudo apt install -y nginx
 ```bash
 # 1. Créer le dossier et attribuer les droits
 sudo mkdir -p /var/www/seiki-crm
-sudo chown -R samy1104:samy1104 /var/www
+sudo chown -R samy1104:samy1104 /var/www/seiki-crm
 
 # 2. Cloner le dépôt Git
 git clone https://github.com/Samy1104/Seiki-CRM.git /var/www/seiki-crm

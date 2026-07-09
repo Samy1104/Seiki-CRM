@@ -8,7 +8,7 @@ echo "1. Récupération des dernières modifications..."
 git pull origin main
 
 echo "2. Installation des dépendances npm..."
-npm install
+npm ci
 
 echo "3. Compilation de l'application..."
 npm run build
