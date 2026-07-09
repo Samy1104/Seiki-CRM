@@ -24,7 +24,8 @@ interface SelectContextProps {
   contentRef: React.RefObject<HTMLDivElement | null>;
   focusedValue: string | null;
   setFocusedValue: (value: string | null) => void;
-  itemsRegistry: Record<string, { label: React.ReactNode; textValue?: string }>;
+  staticRegistry: Record<string, { label: React.ReactNode; textValue?: string }>;
+  itemsRef: React.RefObject<Record<string, { label: React.ReactNode; textValue?: string }>>;
   registerItem: (value: string, label: React.ReactNode, textValue?: string) => void;
   unregisterItem: (value: string) => void;
   triggerId: string;
@@ -97,10 +98,9 @@ export const Select: React.FC<SelectProps> = ({
   const contentRef = useRef<HTMLDivElement | null>(null);
 
   const [focusedValue, setFocusedValue] = useState<string | null>(null);
-  const [dynamicRegistry, setDynamicRegistry] = useState<Record<string, { label: React.ReactNode; textValue?: string }>>({});
+  const itemsRef = useRef<Record<string, { label: React.ReactNode; textValue?: string }>>({});
 
   const staticRegistry = React.useMemo(() => findSelectItems(children), [children]);
-  const itemsRegistry = React.useMemo(() => ({ ...staticRegistry, ...dynamicRegistry }), [staticRegistry, dynamicRegistry]);
 
   const triggerId = useId();
   const contentId = useId();
@@ -126,21 +126,11 @@ export const Select: React.FC<SelectProps> = ({
   );
 
   const registerItem = useCallback((val: string, label: React.ReactNode, textValue?: string) => {
-    setDynamicRegistry(prev => {
-      if (prev[val] && prev[val].label === label && prev[val].textValue === textValue) {
-        return prev;
-      }
-      return { ...prev, [val]: { label, textValue } };
-    });
+    itemsRef.current[val] = { label, textValue };
   }, []);
 
   const unregisterItem = useCallback((val: string) => {
-    setDynamicRegistry(prev => {
-      if (!(val in prev)) return prev;
-      const next = { ...prev };
-      delete next[val];
-      return next;
-    });
+    delete itemsRef.current[val];
   }, []);
 
   // Click outside handling
@@ -175,7 +165,8 @@ export const Select: React.FC<SelectProps> = ({
     contentRef,
     focusedValue,
     setFocusedValue,
-    itemsRegistry,
+    staticRegistry,
+    itemsRef,
     registerItem,
     unregisterItem,
     triggerId,
@@ -317,11 +308,10 @@ export interface SelectValueProps {
 }
 
 export const SelectValue: React.FC<SelectValueProps> = ({ placeholder, className }) => {
-  const { value, itemsRegistry } = useSelectContext();
+  const { value, staticRegistry, itemsRef } = useSelectContext();
 
-  const displayContent = value !== undefined && itemsRegistry[value]
-    ? itemsRegistry[value].label
-    : placeholder;
+  const item = value !== undefined ? (staticRegistry[value] || itemsRef.current?.[value]) : undefined;
+  const displayContent = item ? item.label : placeholder;
 
   return (
     <span className={cn("block truncate text-left", className)}>
@@ -401,6 +391,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
     const {
       value: selectedValue,
       onValueChange,
+      open,
       setOpen,
       focusedValue,
       setFocusedValue,
@@ -412,13 +403,35 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
     const isSelected = selectedValue === value;
     const isHighlighted = focusedValue === value;
 
+    const localRef = useRef<HTMLDivElement | null>(null);
+
+    const setRefs = useCallback(
+      (node: HTMLDivElement | null) => {
+        localRef.current = node;
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          (ref as React.MutableRefObject<HTMLDivElement | null>).current = node;
+        }
+      },
+      [ref]
+    );
+
     // Register this item in the context registry so SelectValue can display it when selected
     useEffect(() => {
       registerItem(value, children, textValue);
       return () => {
         unregisterItem(value);
       };
-    }, [value, children, textValue, registerItem, unregisterItem]);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, textValue, registerItem, unregisterItem]);
+
+    // Scroll highlighted item into view when open
+    useEffect(() => {
+      if (isHighlighted && open && localRef.current) {
+        localRef.current.scrollIntoView?.({ block: 'nearest' });
+      }
+    }, [isHighlighted, open]);
 
     const handleClick = () => {
       if (disabled) return;
@@ -428,12 +441,14 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
 
     const handlePointerMove = () => {
       if (disabled) return;
-      setFocusedValue(value);
+      if (focusedValue !== value) {
+        setFocusedValue(value);
+      }
     };
 
     return (
       <div
-        ref={ref}
+        ref={setRefs}
         id={`${contentId}-option-${value}`}
         role="option"
         aria-selected={isSelected}
