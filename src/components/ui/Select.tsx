@@ -380,7 +380,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              "absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-lg border border-[var(--border-subtle)] bg-[#0c0c16]/95 backdrop-blur-lg p-1 shadow-2xl focus:outline-none scrollbar-thin top-full left-0",
+              "absolute z-50 mt-1.5 max-h-60 min-w-full w-max overflow-y-auto overflow-x-hidden rounded-lg border border-[var(--border-subtle)] bg-[#0c0c16]/95 backdrop-blur-lg p-1 shadow-2xl focus:outline-none scrollbar-thin top-full left-0",
               className
             )}
             style={{
