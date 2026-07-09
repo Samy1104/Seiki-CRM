@@ -71,7 +71,9 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
   return (
     <aside className="sidebar">
       <div className="logo">
-        <div className="logo-wordmark">seiki</div>
+        <div className="logo-mark-wrap">
+          <img src="/grand_logo.png" alt="Seiki" className="logo-mark" />
+        </div>
         <div className="logo-sub">CRM — Mobilité intelligente</div>
       </div>
       
@@ -120,7 +122,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
         {/* Powered by Seiki Footer */}
         <div className="powered-by-seiki-footer">
           <span className="powered-text">Powered by</span>
-          <img src="/seiki_logo.png" className="seiki-footer-logo" alt="Seiki Logo" />
+          <img src="/seiki_logo_large.png" className="seiki-footer-logo" alt="Seiki Logo" />
           <span className="seiki-footer-name">Seiki</span>
         </div>
       </div>
