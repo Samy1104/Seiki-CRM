@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
@@ -314,14 +314,23 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   };
 
   // Calculations
-  const activeLeads = leads.filter(l => !l.is_archived && l.stage?.name !== 'Gagné');
-  const wonLeads = leads.filter(l => l.stage?.is_closed_won);
-  const totalVal = leads.reduce((acc, l) => acc + l.deal_value, 0);
-  const wonVal = wonLeads.reduce((acc, l) => acc + l.deal_value, 0);
-  const avgScore = leads.length ? Math.round(leads.reduce((acc, l) => acc + l.score, 0) / leads.length) : 0;
-  const hotCount = leads.filter(l => l.score >= 80).length;
+  const activeLeads = useMemo(
+    () => leads.filter(l => !l.is_archived && l.stage?.name !== 'Gagné'),
+    [leads]
+  );
+  const wonLeads = useMemo(() => leads.filter(l => l.stage?.is_closed_won), [leads]);
+  const totalVal = useMemo(() => leads.reduce((acc, l) => acc + l.deal_value, 0), [leads]);
+  const wonVal = useMemo(() => wonLeads.reduce((acc, l) => acc + l.deal_value, 0), [wonLeads]);
+  const avgScore = useMemo(
+    () => (leads.length ? Math.round(leads.reduce((acc, l) => acc + l.score, 0) / leads.length) : 0),
+    [leads]
+  );
+  const hotCount = useMemo(() => leads.filter(l => l.score >= 80).length, [leads]);
 
-  const slaBreaches = activeLeads.filter(l => getSlaStatus(l));
+  const slaBreaches = useMemo(
+    () => activeLeads.filter(l => getSlaStatus(l)),
+    [activeLeads, slaLimits]
+  );
 
   if (loading) {
     return (

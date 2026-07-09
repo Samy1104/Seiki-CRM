@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion } from 'motion/react';
 
@@ -508,7 +508,7 @@ export const Tasks: React.FC = () => {
   const activeFilterCount = [filterPriority, filterLeadId, filterAssigneeId, sortByDue].filter(Boolean).length;
 
   // Apply filters + optional due-date sort
-  const filteredTasks = (() => {
+  const filteredTasks = useMemo(() => {
     let result = [...tasks];
 
     if (filterPriority) {
@@ -530,12 +530,12 @@ export const Tasks: React.FC = () => {
     }
 
     return result;
-  })();
+  }, [tasks, filterPriority, filterLeadId, filterAssigneeId, sortByDue]);
 
   // Groups for views
-  const todoTasks = filteredTasks.filter(t => t.status === 'todo');
-  const inProgressTasks = filteredTasks.filter(t => t.status === 'in_progress');
-  const doneTasks = filteredTasks.filter(t => t.status === 'done');
+  const todoTasks = useMemo(() => filteredTasks.filter(t => t.status === 'todo'), [filteredTasks]);
+  const inProgressTasks = useMemo(() => filteredTasks.filter(t => t.status === 'in_progress'), [filteredTasks]);
+  const doneTasks = useMemo(() => filteredTasks.filter(t => t.status === 'done'), [filteredTasks]);
 
   // Helper formatting priority color
   const getPriorityInfo = (priority: string | null) => {
