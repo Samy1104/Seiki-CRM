@@ -5,6 +5,13 @@ import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { FileText, Award } from 'lucide-react';
 import { EmailGenerator } from '../components/EmailGenerator';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem
+} from '../components/ui/Select';
 
 const CRITERIA = [
   {
@@ -330,16 +337,20 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
 
               <div className="form-field">
                 <div className="field-label">Segment *</div>
-                <select 
+                <Select
                   value={form.segment}
-                  onChange={e => setForm({ ...form, segment: e.target.value as any })}
-                  required
+                  onValueChange={val => setForm({ ...form, segment: val as any })}
                 >
-                  <option value="">— Choisir</option>
-                  <option value="Media">Media</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Instit">Instit</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="— Choisir" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">— Choisir</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Retail">Retail</SelectItem>
+                    <SelectItem value="Instit">Instit</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="form-field">
@@ -354,31 +365,41 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
 
               <div className="form-field">
                 <div className="field-label">Source</div>
-                <select 
+                <Select
                   value={form.source}
-                  onChange={e => setForm({ ...form, source: e.target.value })}
+                  onValueChange={val => setForm({ ...form, source: val })}
                 >
-                  <option value="LinkedIn">LinkedIn</option>
-                  <option value="Événement">Événement</option>
-                  <option value="Réseau">Réseau</option>
-                  <option value="AndZup">AndZup</option>
-                  <option value="Inbound">Inbound</option>
-                  <option value="Chrome Extension">Chrome Extension</option>
-                  <option value="Autre">Autre</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="LinkedIn" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="LinkedIn">LinkedIn</SelectItem>
+                    <SelectItem value="Événement">Événement</SelectItem>
+                    <SelectItem value="Réseau">Réseau</SelectItem>
+                    <SelectItem value="AndZup">AndZup</SelectItem>
+                    <SelectItem value="Inbound">Inbound</SelectItem>
+                    <SelectItem value="Chrome Extension">Chrome Extension</SelectItem>
+                    <SelectItem value="Autre">Autre</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="form-field">
                 <div className="field-label">Étape initiale</div>
-                <select 
+                <Select
                   value={form.stage_id}
-                  onChange={e => setForm({ ...form, stage_id: e.target.value })}
+                  onValueChange={val => setForm({ ...form, stage_id: val })}
                 >
-                  <option value="auto">Auto (selon score)</option>
-                  {stages.map(st => (
-                    <option key={st.id} value={st.id}>{st.name}</option>
-                  ))}
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Auto (selon score)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto (selon score)</SelectItem>
+                    {stages.map(st => (
+                      <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="form-field full">
@@ -446,20 +467,24 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
               <div key={c.id} className="crit-item">
                 <span className="crit-name">{c.label}</span>
                 <span className="crit-max">/{c.max}</span>
-                <select 
-                  className="crit-select"
-                  value={scores[c.id].value}
-                  onChange={e => {
-                    const val = parseInt(e.target.value) || 0;
+                <Select
+                  value={String(scores[c.id].value)}
+                  onValueChange={valStr => {
+                    const val = parseInt(valStr) || 0;
                     const opt = c.opts.find(o => o.v === val);
                     handleScoreChange(c.id, val, opt ? opt.l : '');
                   }}
                 >
-                  <option value="0">— Sélectionner</option>
-                  {c.opts.map(o => (
-                    <option key={o.v} value={o.v}>{o.l} ({o.v}pts)</option>
-                  ))}
-                </select>
+                  <SelectTrigger className="crit-select" style={{ height: 'auto', padding: '4px 8px', fontSize: '11px' }}>
+                    <SelectValue placeholder="— Sélectionner" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">— Sélectionner</SelectItem>
+                    {c.opts.map(o => (
+                      <SelectItem key={o.v} value={String(o.v)}>{o.l} ({o.v}pts)</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <span className="crit-pts" style={{ 
                   color: scores[c.id].value > 0 ? (scores[c.id].value >= c.max * 0.8 ? 'var(--green)' : scores[c.id].value >= c.max * 0.5 ? 'var(--gold)' : 'var(--red)') : 'var(--text-muted)' 
                 }}>
