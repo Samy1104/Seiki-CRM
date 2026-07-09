@@ -1,6 +1,6 @@
 // ============================================================
-// campaigns.service.ts
-// Gère les campagnes et les emails générés par IA.
+// emailsService.ts
+// Gère les emails générés (drafts, approbation, envoi).
 // Fait le pont entre le UI React et Supabase (DB + Edge Fns).
 // ============================================================
 
@@ -8,38 +8,9 @@ import { supabase } from './supabaseClient';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export interface Campaign {
-  id: string;
-  name: string;
-  description: string | null;
-  objective: string;
-  target_segment: 'Media' | 'Retail' | 'Instit' | 'All' | null;
-  sequence_id: string | null;
-  status: 'draft' | 'active' | 'paused' | 'completed';
-  system_prompt: string | null;
-  tone: 'professionnel' | 'décontracté' | 'direct' | 'consultatif';
-  created_by: string | null;
-  emails_sent: number;
-  emails_opened: number;
-  emails_replied: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CampaignMetrics extends Campaign {
-  total_generated: number;
-  total_sent: number;
-  total_draft: number;
-  total_opened: number;
-  total_replied: number;
-  open_rate: number | null;
-  reply_rate: number | null;
-}
-
 export interface GeneratedEmail {
   id: string;
   lead_id: string;
-  campaign_id: string | null;
   sequence_step_id: string | null;
   sujet: string;
   corps_du_mail: string;
@@ -71,101 +42,18 @@ export interface SendResult {
   to: string;
 }
 
-// ── CRUD Campagnes ─────────────────────────────────────────────────────────────
+// ── Service ────────────────────────────────────────────────────────────────────
 
-export const campaignsService = {
+export const emailsService = {
 
-  /** Récupère toutes les campagnes avec métriques agrégées */
-  async getCampaigns(): Promise<CampaignMetrics[]> {
-    const { data, error } = await supabase
-      .from('campaign_metrics')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return (data || []) as CampaignMetrics[];
-  },
-
-  /** Récupère une campagne par ID */
-  async getCampaignById(id: string): Promise<Campaign> {
-    const { data, error } = await supabase
-      .from('campaigns')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) throw error;
-    return data as Campaign;
-  },
-
-  /** Crée une nouvelle campagne */
-  async createCampaign(
-    campaign: Omit<Campaign, 'id' | 'emails_sent' | 'emails_opened' | 'emails_replied' | 'created_at' | 'updated_at'>
-  ): Promise<Campaign> {
-    const { data, error } = await supabase
-      .from('campaigns')
-      .insert([campaign])
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data as Campaign;
-  },
-
-  /** Met à jour une campagne */
-  async updateCampaign(id: string, updates: Partial<Campaign>): Promise<void> {
-    const { error } = await supabase
-      .from('campaigns')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (error) throw error;
-  },
-
-  /** Supprime une campagne */
-  async deleteCampaign(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('campaigns')
-      .delete()
-      .eq('id', id);
-
-    if (error) throw error;
-  },
-
-  // ── Emails générés ───────────────────────────────────────────────────────────
-
-  /** Récupère tous les emails générés d'une campagne */
-  async getGeneratedEmails(
-    campaignId: string,
-    statut?: GeneratedEmail['statut_envoi']
-  ): Promise<GeneratedEmail[]> {
+  /** Récupère tous les emails générés, filtrés optionnellement par statut */
+  async getGeneratedEmails(statut?: GeneratedEmail['statut_envoi']): Promise<GeneratedEmail[]> {
     let query = supabase
       .from('generated_emails')
       .select(`
         *,
         lead:leads!lead_id(contact_name, company_name, email, poste, segment)
       `)
-      .eq('campaign_id', campaignId)
-      .order('created_at', { ascending: false });
-
-    if (statut) {
-      query = query.eq('statut_envoi', statut);
-    }
-
-    const { data, error } = await query;
-    if (error) throw error;
-    return (data || []) as GeneratedEmail[];
-  },
-
-  /** Récupère les emails générés hors campagne (flux automatique par lead) */
-  async getUnassignedGeneratedEmails(statut?: GeneratedEmail['statut_envoi']): Promise<GeneratedEmail[]> {
-    let query = supabase
-      .from('generated_emails')
-      .select(`
-        *,
-        lead:leads!lead_id(contact_name, company_name, email, poste, segment)
-      `)
-      .is('campaign_id', null)
       .order('created_at', { ascending: false });
 
     if (statut) {
