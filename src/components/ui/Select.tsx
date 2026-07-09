@@ -186,7 +186,7 @@ export interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButto
 }
 
 export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(
-  ({ children, className, ...props }, ref) => {
+  ({ children, className, onClick, onKeyDown, ...props }, ref) => {
     const {
       open,
       setOpen,
@@ -268,6 +268,16 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
       }
     };
 
+    const handleTriggerClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      setOpen(!open);
+      onClick?.(e);
+    };
+
+    const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      handleKeyDown(e);
+      onKeyDown?.(e);
+    };
+
     return (
       <button
         ref={triggerRef}
@@ -278,13 +288,13 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
         aria-controls={open ? contentId : undefined}
         aria-activedescendant={focusedValue ? `${contentId}-option-${focusedValue}` : undefined}
         disabled={disabled}
-        onClick={() => setOpen(!open)}
-        onKeyDown={handleKeyDown}
+        {...props}
+        onClick={handleTriggerClick}
+        onKeyDown={handleTriggerKeyDown}
         className={cn(
           "flex h-10 w-full items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.04] focus:outline-none focus:border-[var(--border-active)] disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 cursor-pointer",
           className
         )}
-        {...props}
       >
         <span className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
           {children}
@@ -335,6 +345,13 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
       if (open) {
         if (value) {
           setFocusedValue(value);
+          // Scroll the active item into view on open
+          requestAnimationFrame(() => {
+            if (contentRef.current) {
+              const activeEl = contentRef.current.querySelector(`[data-value="${value}"]`);
+              activeEl?.scrollIntoView?.({ block: 'nearest' });
+            }
+          });
         } else {
           // Highlight first option
           if (contentRef.current) {
@@ -387,17 +404,28 @@ export interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
-  ({ children, value, disabled = false, textValue, className, ...props }, ref) => {
+  ({
+    children,
+    value,
+    disabled = false,
+    textValue,
+    className,
+    onClick,
+    onPointerMove,
+    onKeyDown,
+    onMouseEnter,
+    ...props
+  }, ref) => {
     const {
       value: selectedValue,
       onValueChange,
-      open,
       setOpen,
       focusedValue,
       setFocusedValue,
       registerItem,
       unregisterItem,
-      contentId
+      contentId,
+      triggerRef
     } = useSelectContext();
 
     const isSelected = selectedValue === value;
@@ -423,27 +451,22 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
       return () => {
         unregisterItem(value);
       };
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [value, textValue, registerItem, unregisterItem]);
+    }, [value, children, textValue, registerItem, unregisterItem]);
 
-    // Scroll highlighted item into view when open
-    useEffect(() => {
-      if (isHighlighted && open && localRef.current) {
-        localRef.current.scrollIntoView?.({ block: 'nearest' });
-      }
-    }, [isHighlighted, open]);
-
-    const handleClick = () => {
+    const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
       if (disabled) return;
       onValueChange?.(value);
       setOpen(false);
+      triggerRef.current?.focus();
+      onClick?.(e);
     };
 
-    const handlePointerMove = () => {
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
       if (disabled) return;
       if (focusedValue !== value) {
         setFocusedValue(value);
       }
+      onPointerMove?.(e);
     };
 
     return (
@@ -456,8 +479,11 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
         data-select-item
         data-value={value}
         data-disabled={disabled ? "true" : undefined}
+        {...props}
         onClick={handleClick}
         onPointerMove={handlePointerMove}
+        onKeyDown={onKeyDown}
+        onMouseEnter={onMouseEnter}
         className={cn(
           "relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm text-[var(--text-primary)] outline-none transition-colors duration-150",
           disabled && "pointer-events-none opacity-50 cursor-not-allowed",
@@ -465,7 +491,6 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
           isSelected && "bg-[var(--purple-glow)] text-white font-medium",
           className
         )}
-        {...props}
       >
         {isSelected && (
           <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--purple)]">
