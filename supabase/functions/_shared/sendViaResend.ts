@@ -8,7 +8,6 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 interface GeneratedEmail {
   id: string;
   lead_id: string;
-  campaign_id: string | null;
   sujet: string;
   corps_du_mail: string;
   statut_envoi: string;
@@ -108,7 +107,6 @@ export async function sendGeneratedEmailViaResend(
     tags: [
       { name: "source", value: "seiki-crm" },
       { name: "generated_email_id", value: generatedEmailId },
-      ...(ge.campaign_id ? [{ name: "campaign_id", value: ge.campaign_id }] : []),
     ],
   };
 
