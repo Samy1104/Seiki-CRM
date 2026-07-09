@@ -385,10 +385,10 @@ const EmailPreviewCard: React.FC<{
   const handleApproveAndSend = async () => {
     setIsSending(true);
     try {
-      // Route through schedule_send() so this respects the daily quota just
-      // like the auto-pipeline path — an immediate send only happens if the
-      // quota-aware scheduler actually grants today's date; otherwise the
-      // email stays approved/queued for its assigned day, same as queueMode.
+      // Route through schedule_send() so this respects the daily quota —
+      // an immediate send only happens if the quota-aware scheduler actually
+      // grants today's date; otherwise the email stays approved/queued for
+      // its assigned day.
       const { scheduledAt } = await emailsService.approveAndSchedule(email.id);
       const scheduledDate = new Date(scheduledAt);
       const isToday = scheduledDate.toDateString() === new Date().toDateString();
