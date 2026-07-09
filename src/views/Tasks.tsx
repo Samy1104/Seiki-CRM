@@ -495,15 +495,6 @@ export const Tasks: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Chargement des tâches...</div>
-      </div>
-    );
-  }
-
   // Active filter count for badge
   const activeFilterCount = [filterPriority, filterLeadId, filterAssigneeId, sortByDue].filter(Boolean).length;
 
@@ -536,6 +527,15 @@ export const Tasks: React.FC = () => {
   const todoTasks = useMemo(() => filteredTasks.filter(t => t.status === 'todo'), [filteredTasks]);
   const inProgressTasks = useMemo(() => filteredTasks.filter(t => t.status === 'in_progress'), [filteredTasks]);
   const doneTasks = useMemo(() => filteredTasks.filter(t => t.status === 'done'), [filteredTasks]);
+
+  if (loading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Chargement des tâches...</div>
+      </div>
+    );
+  }
 
   // Helper formatting priority color
   const getPriorityInfo = (priority: string | null) => {
