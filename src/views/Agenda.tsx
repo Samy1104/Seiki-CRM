@@ -3,6 +3,7 @@ import { eventsService } from '../services/eventsService';
 import type { EventItem } from '../services/eventsService';
 import { useToast } from '../context/ToastContext';
 import { Plus, Calendar, MapPin, Target, Trash2, Download, Link2, Edit2 } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 
 // ── iCal helpers ─────────────────────────────────────────────────────────────
 
@@ -355,15 +356,20 @@ export const Agenda: React.FC = () => {
               </div>
               <div className="form-field">
                 <div className="field-label">Segment ciblé</div>
-                <select 
+                <Select 
                   value={newSegment}
-                  onChange={e => setNewSegment(e.target.value as any)}
+                  onValueChange={val => setNewSegment(val as any)}
                 >
-                  <option value="">Tous les segments</option>
-                  <option value="Media">Media</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Instit">Instit</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les segments" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tous les segments</SelectItem>
+                    <SelectItem value="Media">Media</SelectItem>
+                    <SelectItem value="Retail">Retail</SelectItem>
+                    <SelectItem value="Instit">Instit</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="form-field" style={{ gridColumn: 'span 2' }}>
                 <div className="field-label">Objectif / Action clé</div>
