@@ -205,21 +205,7 @@ export const campaignsService = {
     if (error) throw error;
   },
 
-  /** Approuve un email (statut draft → approved) */
-  async approveEmail(id: string, approverId?: string): Promise<void> {
-    const { error } = await supabase
-      .from('generated_emails')
-      .update({
-        statut_envoi: 'approved',
-        approved_by: approverId || null,
-        approved_at: new Date().toISOString(),
-      })
-      .eq('id', id);
-
-    if (error) throw error;
-  },
-
-  /** Approuve un email ET le planifie sous quota (remplace approveEmail pour le nouveau flux) */
+  /** Approuve un email ET le planifie sous quota */
   async approveAndSchedule(generatedEmailId: string): Promise<{ scheduledAt: string }> {
     const { data, error } = await supabase.rpc('schedule_send', { p_generated_email_id: generatedEmailId });
     if (error) throw error;

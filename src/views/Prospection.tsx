@@ -810,15 +810,31 @@ const EmailPreviewCard: React.FC<{
   const handleApproveAndSend = async () => {
     setIsSending(true);
     try {
-      await campaignsService.approveEmail(email.id);
+      // Route through schedule_send() so this respects the daily quota just
+      // like the auto-pipeline path — an immediate send only happens if the
+      // quota-aware scheduler actually grants today's date; otherwise the
+      // email stays approved/queued for its assigned day, same as queueMode.
+      const { scheduledAt } = await campaignsService.approveAndSchedule(email.id);
+      const scheduledDate = new Date(scheduledAt);
+      const isToday = scheduledDate.toDateString() === new Date().toDateString();
+
+      if (!isToday) {
+        showToast(
+          `Quota du jour atteint — email planifié pour le ${scheduledDate.toLocaleDateString('fr-FR')}`,
+          'info'
+        );
+        onUpdate();
+        return;
+      }
+
       try {
         await campaignsService.sendEmail(email.id);
         showToast(`Email envoyé à ${email.lead?.contact_name || 'le prospect'} !`, 'success');
         onUpdate();
       } catch (sendErr) {
-        // approveEmail succeeded but sendEmail failed (network error, Resend
-        // down, etc). Roll back to 'draft' so the email stays visible and
-        // retryable in the review list instead of silently disappearing
+        // approveAndSchedule succeeded but sendEmail failed (network error,
+        // Resend down, etc). Roll back to 'draft' so the email stays visible
+        // and retryable in the review list instead of silently disappearing
         // (getGeneratedEmails only fetches statut_envoi === 'draft').
         await campaignsService.updateGeneratedEmail(email.id, { statut_envoi: 'draft' }).catch(() => {});
         throw sendErr;
