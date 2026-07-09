@@ -5,6 +5,7 @@ import { settingsService } from '../services/settingsService';
 import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 
 interface LeadsProps {
   setView: (view: string) => void;
@@ -192,32 +193,47 @@ export const Leads: React.FC<LeadsProps> = () => {
         <div className="filters-group-wrap">
           <div className="filter-item-wrap">
             <Filter size={12} className="filter-icon" />
-            <select value={segmentFilter} onChange={e => setSegmentFilter(e.target.value)}>
-              <option value="">Tous les segments</option>
-              <option value="Media">Media</option>
-              <option value="Retail">Retail</option>
-              <option value="Instit">Instit</option>
-            </select>
+            <Select value={segmentFilter} onValueChange={val => setSegmentFilter(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tous les segments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Tous les segments</SelectItem>
+                <SelectItem value="Media">Media</SelectItem>
+                <SelectItem value="Retail">Retail</SelectItem>
+                <SelectItem value="Instit">Instit</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="filter-item-wrap">
             <Filter size={12} className="filter-icon" />
-            <select value={scoreFilter} onChange={e => setScoreFilter(e.target.value)}>
-              <option value="">Tous les scores</option>
-              <option value="hot">Chauds (≥ 80)</option>
-              <option value="qualified">Qualifiés (60-79)</option>
-              <option value="nurturing">Nurturing (&lt; 60)</option>
-            </select>
+            <Select value={scoreFilter} onValueChange={val => setScoreFilter(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tous les scores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Tous les scores</SelectItem>
+                <SelectItem value="hot">Chauds (≥ 80)</SelectItem>
+                <SelectItem value="qualified">Qualifiés (60-79)</SelectItem>
+                <SelectItem value="nurturing">Nurturing (&lt; 60)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="filter-item-wrap">
             <Filter size={12} className="filter-icon" />
-            <select value={ownerFilter} onChange={e => setOwnerFilter(e.target.value)}>
-              <option value="">Tous les propriétaires</option>
-              {teamMembers.map(m => (
-                <option key={m.id} value={m.id}>{m.full_name}</option>
-              ))}
-            </select>
+            <Select value={ownerFilter} onValueChange={val => setOwnerFilter(val)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Tous les propriétaires" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Tous les propriétaires</SelectItem>
+                {teamMembers.map(m => (
+                  <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
