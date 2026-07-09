@@ -7,6 +7,7 @@ import { tasksService } from '../services/tasksService';
 import type { Task } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
 import { AlertTriangle, Plus, Trash2, User } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 
 interface PipelineProps {
   setView: (view: string) => void;
@@ -638,26 +639,36 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
                     </div>
                     <div className="form-field">
                       <div className="field-label">Étape</div>
-                      <select 
+                      <Select 
                         value={editForm.stage_id}
-                        onChange={e => setEditForm({ ...editForm, stage_id: e.target.value })}
+                        onValueChange={val => setEditForm({ ...editForm, stage_id: val })}
                       >
-                        {stages.map(st => (
-                          <option key={st.id} value={st.id}>{st.name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Choisir une étape" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {stages.map(st => (
+                            <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="form-field">
                       <div className="field-label">Propriétaire</div>
-                      <select 
+                      <Select 
                         value={editForm.owner_id}
-                        onChange={e => setEditForm({ ...editForm, owner_id: e.target.value })}
+                        onValueChange={val => setEditForm({ ...editForm, owner_id: val })}
                       >
-                        <option value="">— Aucun</option>
-                        {teamMembers.map(m => (
-                          <option key={m.id} value={m.id}>{m.full_name}</option>
-                        ))}
-                      </select>
+                        <SelectTrigger>
+                          <SelectValue placeholder="— Aucun" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">— Aucun</SelectItem>
+                          {teamMembers.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="form-field full">
                       <div className="field-label">Note</div>
@@ -769,25 +780,37 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
                       onChange={e => setNewTaskDate(e.target.value)}
                       style={{ width: '130px' }}
                     />
-                    <select 
-                      value={newTaskPriority}
-                      onChange={e => setNewTaskPriority(e.target.value as any)}
-                      style={{ width: '100px' }}
-                    >
-                      <option value="high">Haute</option>
-                      <option value="medium">Moyenne</option>
-                      <option value="low">Basse</option>
-                    </select>
-                    <select 
-                      value={newTaskAssignee}
-                      onChange={e => setNewTaskAssignee(e.target.value)}
-                      style={{ width: '130px' }}
-                    >
-                      <option value="">— Assigné</option>
-                      {teamMembers.map(m => (
-                        <option key={m.id} value={m.id}>{m.full_name}</option>
-                      ))}
-                    </select>
+                    <div style={{ width: '100px' }}>
+                      <Select 
+                        value={newTaskPriority}
+                        onValueChange={val => setNewTaskPriority(val as any)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Moyenne" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="high">Haute</SelectItem>
+                          <SelectItem value="medium">Moyenne</SelectItem>
+                          <SelectItem value="low">Basse</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div style={{ width: '130px' }}>
+                      <Select 
+                        value={newTaskAssignee}
+                        onValueChange={val => setNewTaskAssignee(val)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="— Assigné" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">— Assigné</SelectItem>
+                          {teamMembers.map(m => (
+                            <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <button type="submit" className="btn btn-sm btn-grad">+</button>
                   </div>
                 </form>
