@@ -10,6 +10,7 @@ import { settingsService } from '../services/settingsService';
 import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { List, Kanban, Calendar, Trash2, Flag, Tag, User, SlidersHorizontal, X, Plus } from 'lucide-react';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 
 // Board column drop indicator — a thin line inserted between cards showing
 // exactly where the dragged card will land. Opacity is toggled imperatively
@@ -898,40 +899,52 @@ export const Tasks: React.FC = () => {
           <span className="tasks-filter-label">Filtres</span>
 
           {/* Priority filter */}
-          <select
-            className="tasks-filter-select"
+          <Select
             value={filterPriority}
-            onChange={e => setFilterPriority(e.target.value as any)}
+            onValueChange={val => setFilterPriority(val as any)}
           >
-            <option value="">Priorité — Toutes</option>
-            <option value="high">Urgent</option>
-            <option value="medium">Normal</option>
-            <option value="low">Basse</option>
-          </select>
+            <SelectTrigger className="tasks-filter-select">
+              <SelectValue placeholder="Priorité — Toutes" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Priorité — Toutes</SelectItem>
+              <SelectItem value="high">Urgent</SelectItem>
+              <SelectItem value="medium">Normal</SelectItem>
+              <SelectItem value="low">Basse</SelectItem>
+            </SelectContent>
+          </Select>
 
           {/* Lead filter */}
-          <select
-            className="tasks-filter-select"
+          <Select
             value={filterLeadId}
-            onChange={e => setFilterLeadId(e.target.value)}
+            onValueChange={val => setFilterLeadId(val)}
           >
-            <option value="">Lead — Tous</option>
-            {leads.map(l => (
-              <option key={l.id} value={l.id}>{l.company_name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="tasks-filter-select">
+              <SelectValue placeholder="Lead — Tous" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Lead — Tous</SelectItem>
+              {leads.map(l => (
+                <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Assignee filter */}
-          <select
-            className="tasks-filter-select"
+          <Select
             value={filterAssigneeId}
-            onChange={e => setFilterAssigneeId(e.target.value)}
+            onValueChange={val => setFilterAssigneeId(val)}
           >
-            <option value="">Assigné — Tous</option>
-            {teamMembers.map(m => (
-              <option key={m.id} value={m.id}>{m.full_name}</option>
-            ))}
-          </select>
+            <SelectTrigger className="tasks-filter-select">
+              <SelectValue placeholder="Assigné — Tous" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">Assigné — Tous</SelectItem>
+              {teamMembers.map(m => (
+                <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {/* Due date sort toggle */}
           <button
@@ -1220,15 +1233,19 @@ export const Tasks: React.FC = () => {
                 </div>
                 <div className="gen-field-group">
                   <label className="gen-label">Priorité</label>
-                  <select
-                    className="gen-select"
+                  <Select
                     value={newPriority}
-                    onChange={e => setNewPriority(e.target.value as any)}
+                    onValueChange={val => setNewPriority(val as any)}
                   >
-                    <option value="high">Haute</option>
-                    <option value="medium">Moyenne</option>
-                    <option value="low">Basse</option>
-                  </select>
+                    <SelectTrigger className="gen-select">
+                      <SelectValue placeholder="Moyenne" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="high">Haute</SelectItem>
+                      <SelectItem value="medium">Moyenne</SelectItem>
+                      <SelectItem value="low">Basse</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -1286,30 +1303,38 @@ export const Tasks: React.FC = () => {
                 </div>
                 <div className="gen-field-group">
                   <label className="gen-label">Lead lié</label>
-                  <select
-                    className="gen-select"
+                  <Select
                     value={newLeadId}
-                    onChange={e => setNewLeadId(e.target.value)}
+                    onValueChange={val => setNewLeadId(val)}
                   >
-                    <option value="">— Aucun</option>
-                    {leads.map(l => (
-                      <option key={l.id} value={l.id}>{l.company_name}</option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="gen-select">
+                      <SelectValue placeholder="— Aucun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Aucun</SelectItem>
+                      {leads.map(l => (
+                        <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
               <div className="gen-field-group">
                 <label className="gen-label">Statut</label>
-                <select
-                  className="gen-select"
+                <Select
                   value={newStatus}
-                  onChange={e => setNewStatus(e.target.value as any)}
+                  onValueChange={val => setNewStatus(val as any)}
                 >
-                  <option value="todo">À faire</option>
-                  <option value="in_progress">En cours</option>
-                  <option value="done">Terminé</option>
-                </select>
+                  <SelectTrigger className="gen-select">
+                    <SelectValue placeholder="À faire" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todo">À faire</SelectItem>
+                    <SelectItem value="in_progress">En cours</SelectItem>
+                    <SelectItem value="done">Terminé</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="modal-footer">
