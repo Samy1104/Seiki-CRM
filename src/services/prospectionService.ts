@@ -88,7 +88,6 @@ export const prospectionService = {
       .select(`
         lead_id,
         sent_at,
-        campaign_id,
         lead:leads!lead_id(
           id, contact_name, company_name, email, segment, sequence_status,
           is_archived, merged_into_id, poste, enrichi_contexte, custom_fields,
@@ -176,7 +175,6 @@ export const prospectionService = {
       .from('generated_emails')
       .insert([{
         lead_id: lead.id,
-        campaign_id: null,
         step,
         sujet: rendered.subject,
         corps_du_mail: rendered.body,
