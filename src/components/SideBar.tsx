@@ -12,15 +12,17 @@ import {
   Target, 
   Settings, 
   LogOut,
-  Sparkles
+  Sparkles,
+  LayoutGrid
 } from 'lucide-react';
 
 interface SideBarProps {
   currentView: string;
   setView: (view: string) => void;
+  setActiveApp?: (app: 'portal' | 'crm' | 'contenu') => void;
 }
 
-export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
+export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiveApp }) => {
   const { logout } = useAuth();
   const [stats, setStats] = useState({
     leadsCount: 0,
@@ -114,6 +116,13 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView }) => {
         <div className="sidebar-stat">Pipeline : <strong>{stats.totalVal}k€</strong></div>
         <div className="sidebar-stat">Score moyen : <strong>{stats.avgScore}/100</strong></div>
         
+        {setActiveApp && (
+          <button className="btn-logout" style={{ marginBottom: '8px' }} onClick={() => setActiveApp('portal')}>
+            <LayoutGrid size={14} style={{ marginRight: '6px' }} />
+            Retour Portail
+          </button>
+        )}
+
         <button className="btn-logout" onClick={logout}>
           <LogOut size={14} style={{ marginRight: '6px' }} />
           Déconnexion

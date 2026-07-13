@@ -14,10 +14,13 @@ import { Codir } from './views/Codir';
 import { Settings } from './views/Settings';
 import { Prospection } from './views/Prospection';
 import './App.css';
+import { Portal } from './views/Portal';
+import { Contenu } from './views/Contenu';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, loading } = useAuth();
   const [currentView, setView] = useState<string>('pipeline');
+  const [activeApp, setActiveApp] = useState<'portal' | 'crm' | 'contenu'>('portal');
 
   if (loading) {
     return (
@@ -32,10 +35,18 @@ const AppContent: React.FC = () => {
     return <Login />;
   }
 
+  if (activeApp === 'portal') {
+    return <Portal setActiveApp={setActiveApp} />;
+  }
+
+  if (activeApp === 'contenu') {
+    return <Contenu setActiveApp={setActiveApp} />;
+  }
+
   return (
     <div className="app-container">
       {/* Sidebar navigation */}
-      <SideBar currentView={currentView} setView={setView} />
+      <SideBar currentView={currentView} setView={setView} setActiveApp={setActiveApp} />
 
       {/* Main workspace area */}
       <main className="main-content">
