@@ -2495,6 +2495,11 @@ input:checked + .toggle-slider:before {
   flex: 1;
 }
 
+.tasks-filter-bar-inner > div {
+  width: 190px;
+  flex-shrink: 0;
+}
+
 .tasks-filter-label {
   font-size: 13px;
   font-weight: 600;
