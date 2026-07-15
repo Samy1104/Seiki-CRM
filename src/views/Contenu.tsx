@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw } from 'lucide-react';
+import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap } from 'lucide-react';
 import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost } from '../services/contentService';
 import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../services/linkedinService';
 
@@ -25,7 +25,9 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
   const [language, setLanguage] = useState<ContentLanguage>('fr');
   const [loading, setLoading] = useState(false);
   const [post, setPost] = useState<LinkedInPost | null>(null);
+  const [originalPost, setOriginalPost] = useState<LinkedInPost | null>(null);
   const [copied, setCopied] = useState(false);
+  const [learning, setLearning] = useState(false);
 
   const [accounts, setAccounts] = useState<LinkedinAccount[]>([]);
   const [queue, setQueue] = useState<ScheduledPost[]>([]);
@@ -65,6 +67,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
     try {
       const result = await contentService.generateLinkedInPost(brief, voice, language);
       setPost(result);
+      setOriginalPost(result);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la génération', 'error');
     } finally {
@@ -80,6 +83,27 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
     navigator.clipboard.writeText(fullText).catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const postsAreEqual = (a: LinkedInPost, b: LinkedInPost) =>
+    a.hook === b.hook && a.corps === b.corps && a.hashtags.join(' ') === b.hashtags.join(' ');
+
+  const handleLearn = async () => {
+    if (!post || !originalPost) return;
+    if (postsAreEqual(post, originalPost)) {
+      showToast('Aucune modification à apprendre.', 'info');
+      return;
+    }
+    setLearning(true);
+    try {
+      await contentService.learnFromEdit(voice, originalPost, post);
+      setOriginalPost(post);
+      showToast('Style mis à jour à partir de tes corrections.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Erreur lors de l'apprentissage", 'error');
+    } finally {
+      setLearning(false);
+    }
   };
 
   const handleSchedule = async () => {
@@ -108,6 +132,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
       });
       showToast('Post programmé.', 'success');
       setPost(null);
+      setOriginalPost(null);
       setBrief('');
       setImageFile(null);
       setScheduledAt('');
@@ -249,10 +274,22 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
             <div className="p-6 rounded-2xl border space-y-4" style={panelStyle}>
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-[var(--text-primary)]">Aperçu (éditable)</h2>
-                <button onClick={handleCopy} className="text-sm flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
-                  {copied ? <Check size={14} color="var(--green)" /> : <Copy size={14} />}
-                  {copied ? 'Copié' : 'Copier'}
-                </button>
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleLearn}
+                    disabled={learning}
+                    className="text-sm flex items-center gap-1"
+                    style={{ color: 'var(--text-secondary)', opacity: learning ? 0.6 : 1 }}
+                    title="Enregistre tes corrections pour améliorer les prochaines générations dans cette voix"
+                  >
+                    {learning ? <Loader2 size={14} className="animate-spin" /> : <GraduationCap size={14} />}
+                    Valider et enregistrer
+                  </button>
+                  <button onClick={handleCopy} className="text-sm flex items-center gap-1" style={{ color: 'var(--text-secondary)' }}>
+                    {copied ? <Check size={14} color="var(--green)" /> : <Copy size={14} />}
+                    {copied ? 'Copié' : 'Copier'}
+                  </button>
+                </div>
               </div>
 
               <textarea

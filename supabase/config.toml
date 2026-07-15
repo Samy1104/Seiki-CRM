@@ -408,6 +408,16 @@ s3_secret_key = "env(S3_SECRET_KEY)"
 # Set enabled = false to fall back to the legacy migra engine.
 [experimental.pgdelta]
 enabled = true
+
+# linkedin-oauth-start et linkedin-oauth-callback sont atteintes par navigation
+# directe du navigateur (redirect vers/depuis LinkedIn) — aucun header
+# Authorization possible sur ce type de requête, donc la vérification JWT
+# par défaut doit être désactivée pour ces deux fonctions.
+[functions.linkedin-oauth-start]
+verify_jwt = false
+
+[functions.linkedin-oauth-callback]
+verify_jwt = false
 # Directory under `supabase/` where declarative files are written.
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
