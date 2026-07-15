@@ -5,7 +5,10 @@
 // et publish-linkedin-post.
 // ============================================================
 
-const LINKEDIN_API_VERSION = Deno.env.get("LINKEDIN_API_VERSION") || "202401";
+// Format YYYYMM (ex: "202607" pour juillet 2026). LinkedIn désactive les
+// versions de plus de ~12 mois — si les publications se remettent à échouer
+// avec NONEXISTENT_VERSION, bump ce défaut ou le secret LINKEDIN_API_VERSION.
+const LINKEDIN_API_VERSION = Deno.env.get("LINKEDIN_API_VERSION") || "202607";
 
 interface TokenResponse {
   access_token: string;
