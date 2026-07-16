@@ -10,9 +10,8 @@ import {
   Calendar, 
   BarChart3, 
   Target, 
-  Settings, 
+  Settings,
   LogOut,
-  Sparkles,
   LayoutGrid
 } from 'lucide-react';
 
@@ -65,7 +64,6 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
     { id: 'tasks', label: 'Tâches', icon: CheckSquare, badge: stats.pendingTasks },
     { id: 'agenda', label: 'Agenda', icon: Calendar },
     { id: 'stats', label: 'Statistiques', icon: BarChart3 },
-    { id: 'prospection', label: 'Prospection IA', icon: Sparkles, isAI: true },
     { id: 'codir', label: 'Dashboard CODIR', icon: Target, isCodir: true },
     { id: 'settings', label: 'Paramètres', icon: Settings }
   ];

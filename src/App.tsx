@@ -12,7 +12,6 @@ import { Agenda } from './views/Agenda';
 import { Stats } from './views/Stats';
 import { Codir } from './views/Codir';
 import { Settings } from './views/Settings';
-import { Prospection } from './views/Prospection';
 import './App.css';
 import { Portal } from './views/Portal';
 import { Contenu } from './views/Contenu';
@@ -59,7 +58,6 @@ const AppContent: React.FC = () => {
           {currentView === 'stats' && <Stats />}
           {currentView === 'codir' && <Codir />}
           {currentView === 'settings' && <Settings />}
-          {currentView === 'prospection' && <Prospection />}
         </ErrorBoundary>
       </main>
     </div>

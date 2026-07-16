@@ -169,7 +169,12 @@ const STEPS: { key: EmailTemplate['step']; label: string }[] = [
   { key: 'relance_1', label: 'Relance 1' },
   { key: 'relance_2', label: 'Relance 2' },
 ];
-const VARIABLES = ['{{contact_name}}', '{{company_name}}', '{{poste}}', '{{segment}}'];
+const VARIABLES: { value: string; label: string }[] = [
+  { value: '{{contact_name}}', label: 'Contact' },
+  { value: '{{company_name}}', label: 'Entreprise' },
+  { value: '{{poste}}', label: 'Poste' },
+  { value: '{{segment}}', label: 'Segment' },
+];
 
 const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 'info') => void }> = ({ showToast }) => {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
@@ -201,7 +206,9 @@ const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
   useEffect(() => {
     const existing = templates.find((t) => t.segment === segment && t.step === step);
     setSubject(existing?.subject || '');
-    setBody(existing?.body || '');
+    // D'anciens templates ont été enregistrés avec des "\n" littéraux (texte)
+    // au lieu de vrais retours à la ligne — on les normalise à l'affichage.
+    setBody((existing?.body || '').replace(/\\n/g, '\n'));
   }, [segment, step, templates]);
 
   const insertVariable = (variable: string) => {
@@ -265,12 +272,12 @@ const TemplatesTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | 
         <div className="flex gap-2 flex-wrap mb-2">
           {VARIABLES.map((v) => (
             <button
-              key={v}
+              key={v.value}
               type="button"
               className="text-xs px-2 py-1 rounded-full bg-brand-bg-panel border border-brand-border text-brand-text-secondary hover:text-white"
-              onClick={() => insertVariable(v)}
+              onClick={() => insertVariable(v.value)}
             >
-              {v}
+              {v.label}
             </button>
           ))}
         </div>

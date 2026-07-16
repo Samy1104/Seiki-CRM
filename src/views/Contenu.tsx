@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap } from 'lucide-react';
-import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost } from '../services/contentService';
+import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap, AtSign, Trash2 } from 'lucide-react';
+import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost, type TagEntry } from '../services/contentService';
 import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../services/linkedinService';
+import { Prospection } from './Prospection';
+
+type MentionField = 'hook' | 'corps';
 
 interface ContenuProps {
   setActiveApp: (app: 'portal' | 'crm' | 'contenu') => void;
@@ -19,6 +22,8 @@ const inputStyle: React.CSSProperties = {
 export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
   const { logout } = useAuth();
   const { showToast } = useToast();
+
+  const [contenuView, setContenuView] = useState<'linkedin' | 'prospection'>('linkedin');
 
   const [brief, setBrief] = useState('');
   const [voice, setVoice] = useState<ContentVoice>('seiki');
@@ -36,12 +41,25 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [scheduling, setScheduling] = useState(false);
 
+  const [tagBook, setTagBook] = useState<TagEntry[]>([]);
+  const [newTagAlias, setNewTagAlias] = useState('');
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagUrn, setNewTagUrn] = useState('');
+  const [savingTag, setSavingTag] = useState(false);
+  const [mention, setMention] = useState<{ field: MentionField; query: string } | null>(null);
+
+  const hookRef = useRef<HTMLTextAreaElement>(null);
+  const corpsRef = useRef<HTMLTextAreaElement>(null);
+  const fieldRefs: Record<MentionField, React.RefObject<HTMLTextAreaElement | null>> = { hook: hookRef, corps: corpsRef };
+
   const loadAccounts = () => linkedinService.listAccounts().then(setAccounts).catch(() => {});
   const loadQueue = () => linkedinService.listScheduledPosts().then(setQueue).catch(() => {});
+  const loadTagBook = () => contentService.getTagBook().then(setTagBook).catch(() => {});
 
   useEffect(() => {
     loadAccounts();
     loadQueue();
+    loadTagBook();
 
     const params = new URLSearchParams(window.location.search);
     const linkedinStatus = params.get('linkedin');
@@ -103,6 +121,88 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
       showToast(err instanceof Error ? err.message : "Erreur lors de l'apprentissage", 'error');
     } finally {
       setLearning(false);
+    }
+  };
+
+  const detectMention = (field: MentionField, value: string, cursor: number) => {
+    const uptoCursor = value.slice(0, cursor);
+    const match = uptoCursor.match(/@([a-zA-Z0-9_-]*)$/);
+    setMention(match ? { field, query: match[1] } : null);
+  };
+
+  const handleFieldChange = (field: MentionField, e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    if (!post) return;
+    const value = e.target.value;
+    setPost({ ...post, [field]: value });
+    detectMention(field, value, e.target.selectionStart ?? value.length);
+  };
+
+  const insertMention = (tag: TagEntry) => {
+    if (!post || !mention) return;
+    const field = mention.field;
+    const el = fieldRefs[field].current;
+    const value = post[field];
+    const cursor = el?.selectionStart ?? value.length;
+    const uptoCursor = value.slice(0, cursor);
+    const match = uptoCursor.match(/@([a-zA-Z0-9_-]*)$/);
+    const start = match ? cursor - match[0].length : cursor;
+    const mentionText = `@[${tag.name}](${tag.urn})`;
+    const newValue = value.slice(0, start) + mentionText + ' ' + value.slice(cursor);
+    setPost({ ...post, [field]: newValue });
+    setMention(null);
+    requestAnimationFrame(() => {
+      const newCursor = start + mentionText.length + 1;
+      el?.focus();
+      el?.setSelectionRange(newCursor, newCursor);
+    });
+  };
+
+  const mentionMatches = mention
+    ? tagBook
+        .filter(
+          (t) =>
+            t.alias.toLowerCase().includes(mention.query.toLowerCase()) ||
+            t.name.toLowerCase().includes(mention.query.toLowerCase())
+        )
+        .slice(0, 6)
+    : [];
+
+  const handleAddTag = async () => {
+    if (!newTagAlias.trim() || !newTagName.trim() || !newTagUrn.trim()) {
+      showToast('Alias, nom et URN sont requis.', 'error');
+      return;
+    }
+    if (!/^urn:li:(organization|person):.+/.test(newTagUrn.trim())) {
+      showToast('URN invalide (doit commencer par urn:li:organization: ou urn:li:person:).', 'error');
+      return;
+    }
+    if (tagBook.some((t) => t.alias.toLowerCase() === newTagAlias.trim().toLowerCase())) {
+      showToast('Cet alias existe déjà.', 'error');
+      return;
+    }
+    setSavingTag(true);
+    try {
+      const updated = [...tagBook, { alias: newTagAlias.trim(), name: newTagName.trim(), urn: newTagUrn.trim() }];
+      await contentService.saveTagBook(updated);
+      setTagBook(updated);
+      setNewTagAlias('');
+      setNewTagName('');
+      setNewTagUrn('');
+      showToast('Compte ajouté.', 'success');
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Erreur lors de l'ajout", 'error');
+    } finally {
+      setSavingTag(false);
+    }
+  };
+
+  const handleDeleteTag = async (alias: string) => {
+    const updated = tagBook.filter((t) => t.alias !== alias);
+    try {
+      await contentService.saveTagBook(updated);
+      setTagBook(updated);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur lors de la suppression', 'error');
     }
   };
 
@@ -175,9 +275,19 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
         </div>
 
         <nav className="nav">
-          <button className="nav-item on">
+          <button
+            className={`nav-item${contenuView === 'linkedin' ? ' on' : ''}`}
+            onClick={() => setContenuView('linkedin')}
+          >
             <LayoutGrid size={16} />
             <span>Générateur LinkedIn</span>
+          </button>
+          <button
+            className={`nav-item${contenuView === 'prospection' ? ' on' : ''} nav-item-ai`}
+            onClick={() => setContenuView('prospection')}
+          >
+            <Sparkles size={16} />
+            <span>Prospection IA</span>
           </button>
         </nav>
 
@@ -200,6 +310,11 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
         </div>
       </aside>
 
+      {contenuView === 'prospection' ? (
+        <main className="main-content">
+          <Prospection />
+        </main>
+      ) : (
       <main className="main-content p-8" style={{ overflowY: 'auto' }}>
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
@@ -270,6 +385,56 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
             </button>
           </div>
 
+          <div className="space-y-3 p-6 rounded-2xl border" style={panelStyle}>
+            <h2 className="text-lg font-semibold text-[var(--text-primary)] flex items-center gap-2">
+              <AtSign size={16} /> Comptes tagués
+            </h2>
+            <p className="text-xs text-[var(--text-secondary)]">
+              Ajoute un alias une fois (nom + URN LinkedIn), puis tape @alias dans le post pour l'insérer. Pour trouver l'URN : si tu administres la page, le numéro est dans l'URL d'admin
+              (linkedin.com/company/&lt;ID&gt;/admin/) → urn:li:organization:&lt;ID&gt;. Sinon, ouvre la page publique et cherche "urn:li:organization:" dans le code source (Ctrl+U).
+            </p>
+
+            {tagBook.length > 0 && (
+              <div className="space-y-2">
+                {tagBook.map((t) => (
+                  <div key={t.alias} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
+                    <div className="min-w-0 flex items-center gap-2 text-sm">
+                      <span style={{ color: 'var(--gold)' }}>@{t.alias}</span>
+                      <span className="text-[var(--text-primary)] truncate">{t.name}</span>
+                      <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{t.urn}</span>
+                    </div>
+                    <button onClick={() => handleDeleteTag(t.alias)} className="shrink-0" style={{ color: 'var(--text-secondary)' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2 flex-wrap items-end">
+              <div>
+                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Alias</label>
+                <input value={newTagAlias} onChange={(e) => setNewTagAlias(e.target.value)} placeholder="Lyon" className="rounded-lg p-2 text-sm" style={{ ...inputStyle, width: '110px' }} />
+              </div>
+              <div>
+                <label className="block text-xs mb-1 text-[var(--text-secondary)]">Nom affiché</label>
+                <input value={newTagName} onChange={(e) => setNewTagName(e.target.value)} placeholder="Ville de Lyon" className="rounded-lg p-2 text-sm" style={{ ...inputStyle, width: '180px' }} />
+              </div>
+              <div className="flex-1 min-w-[220px]">
+                <label className="block text-xs mb-1 text-[var(--text-secondary)]">URN LinkedIn</label>
+                <input value={newTagUrn} onChange={(e) => setNewTagUrn(e.target.value)} placeholder="urn:li:organization:12345" className="w-full rounded-lg p-2 text-sm" style={inputStyle} />
+              </div>
+              <button
+                onClick={handleAddTag}
+                disabled={savingTag}
+                className="nav-item on"
+                style={{ display: 'inline-flex', alignItems: 'center', width: 'auto', padding: '10px 16px', borderRadius: 'var(--radius-btn)', cursor: savingTag ? 'default' : 'pointer', opacity: savingTag ? 0.7 : 1 }}
+              >
+                {savingTag ? <Loader2 size={14} className="animate-spin" /> : 'Ajouter'}
+              </button>
+            </div>
+          </div>
+
           {post && (
             <div className="p-6 rounded-2xl border space-y-4" style={panelStyle}>
               <div className="flex items-center justify-between">
@@ -292,20 +457,60 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
                 </div>
               </div>
 
-              <textarea
-                value={post.hook}
-                onChange={(e) => setPost({ ...post, hook: e.target.value })}
-                rows={2}
-                className="w-full rounded-lg p-3 text-sm"
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
-              <textarea
-                value={post.corps}
-                onChange={(e) => setPost({ ...post, corps: e.target.value })}
-                rows={8}
-                className="w-full rounded-lg p-3 text-sm"
-                style={{ ...inputStyle, resize: 'vertical' }}
-              />
+              <div className="relative">
+                <textarea
+                  ref={hookRef}
+                  value={post.hook}
+                  onChange={(e) => handleFieldChange('hook', e)}
+                  onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'hook' ? null : m)), 150)}
+                  rows={2}
+                  className="w-full rounded-lg p-3 text-sm"
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+                {mention?.field === 'hook' && mentionMatches.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border overflow-hidden" style={panelStyle}>
+                    {mentionMatches.map((t) => (
+                      <button
+                        key={t.alias}
+                        onClick={() => insertMention(t)}
+                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <AtSign size={12} style={{ color: 'var(--text-secondary)' }} />
+                        <span>{t.alias}</span>
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <textarea
+                  ref={corpsRef}
+                  value={post.corps}
+                  onChange={(e) => handleFieldChange('corps', e)}
+                  onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'corps' ? null : m)), 150)}
+                  rows={8}
+                  className="w-full rounded-lg p-3 text-sm"
+                  style={{ ...inputStyle, resize: 'vertical' }}
+                />
+                {mention?.field === 'corps' && mentionMatches.length > 0 && (
+                  <div className="absolute z-10 mt-1 w-full rounded-lg border overflow-hidden" style={panelStyle}>
+                    {mentionMatches.map((t) => (
+                      <button
+                        key={t.alias}
+                        onClick={() => insertMention(t)}
+                        className="w-full text-left px-3 py-2 text-sm flex items-center gap-2"
+                        style={{ color: 'var(--text-primary)' }}
+                      >
+                        <AtSign size={12} style={{ color: 'var(--text-secondary)' }} />
+                        <span>{t.alias}</span>
+                        <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>{t.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <input
                 value={post.hashtags.join(' ')}
                 onChange={(e) => setPost({ ...post, hashtags: e.target.value.split(/\s+/).filter(Boolean).map((h) => h.replace(/^#/, '')) })}
@@ -382,6 +587,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
           </div>
         </div>
       </main>
+      )}
     </div>
   );
 };

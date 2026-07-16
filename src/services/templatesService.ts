@@ -28,7 +28,10 @@ function escapeReplacement(value: string): string {
 }
 
 function fillOne(template: string, lead: Lead): string {
+  // D'anciens templates ont été enregistrés avec des "\n" littéraux (texte)
+  // au lieu de vrais retours à la ligne — on les normalise avant la fusion.
   let result = template
+    .replace(/\\n/g, '\n')
     .replace(/\{\{contact_name\}\}/g, escapeReplacement(lead.contact_name || ''))
     .replace(/\{\{company_name\}\}/g, escapeReplacement(lead.company_name || ''))
     .replace(/\{\{poste\}\}/g, escapeReplacement((lead as unknown as { poste?: string }).poste || ''))
