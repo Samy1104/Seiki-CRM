@@ -2607,7 +2607,7 @@ input:checked + .toggle-slider:before {
 
 
 /* ============================================================
-   MODULE PROSPECTION IA — Styles
+   MODULE PROSPECTION — Styles
    ============================================================ */
 
 /* Nav item IA — couleur dorée distinctive */
@@ -3021,6 +3021,19 @@ input:checked + .toggle-slider:before {
 .epc-chevron {
   color: var(--text-muted);
   flex-shrink: 0;
+}
+
+.epc-failed-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  background: var(--red-glow);
+  border-radius: 999px;
+  padding: 3px 8px;
 }
 
 .epc-body {

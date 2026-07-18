@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { fromMock, builder } = vi.hoisted(() => {
+const { fromMock, builder, rpcMock } = vi.hoisted(() => {
   const builder: any = {};
   builder.select = vi.fn(() => builder);
   builder.eq = vi.fn(() => builder);
   builder.order = vi.fn(() => builder);
   builder.single = vi.fn();
   const fromMock = vi.fn(() => builder);
-  return { fromMock, builder };
+  const rpcMock = vi.fn();
+  return { fromMock, builder, rpcMock };
 });
 
 vi.mock('./supabaseClient', () => ({
-  supabase: { from: fromMock },
+  supabase: { from: fromMock, rpc: rpcMock },
 }));
 
 import { leadsService } from './leadsService';
@@ -65,5 +66,42 @@ describe('leadsService.getLeadById', () => {
   it('throws when the query errors', async () => {
     builder.single.mockResolvedValue({ data: null, error: new Error('boom') });
     await expect(leadsService.getLeadById('lead-1')).rejects.toThrow('boom');
+  });
+});
+
+describe('leadsService.resolveMergeProposal', () => {
+  beforeEach(() => {
+    rpcMock.mockReset();
+  });
+
+  it('delegates to the resolve_merge_proposal RPC (single transaction, not 4 sequential writes)', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: null });
+
+    await leadsService.resolveMergeProposal('proposal-1', 'approved', 'resolver-1');
+
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(rpcMock).toHaveBeenCalledWith('resolve_merge_proposal', {
+      p_proposal_id: 'proposal-1',
+      p_status: 'approved',
+      p_resolver_id: 'resolver-1',
+    });
+  });
+
+  it('defaults resolverId to null when not provided', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: null });
+
+    await leadsService.resolveMergeProposal('proposal-2', 'rejected');
+
+    expect(rpcMock).toHaveBeenCalledWith('resolve_merge_proposal', {
+      p_proposal_id: 'proposal-2',
+      p_status: 'rejected',
+      p_resolver_id: null,
+    });
+  });
+
+  it('throws when the RPC errors, instead of silently leaving the proposal half-resolved', async () => {
+    rpcMock.mockResolvedValue({ data: null, error: new Error('db exploded') });
+
+    await expect(leadsService.resolveMergeProposal('proposal-3', 'approved')).rejects.toThrow('db exploded');
   });
 });

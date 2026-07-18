@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { tasksService } from '../services/tasksService';
@@ -6,51 +6,44 @@ import type { Task } from '../services/tasksService';
 import { eventsService } from '../services/eventsService';
 import type { EventItem } from '../services/eventsService';
 import { settingsService } from '../services/settingsService';
+import type { PipelineStage, SlaLimits } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Maximize2, FileDown, Target, ShieldAlert, Award, Calendar, AlertTriangle } from 'lucide-react';
+import { isSlaBreached, computeSegmentStats } from '../utils/leadMetrics';
+import { useLoadOnMount } from '../hooks/useLoadOnMount';
+import { withLoadingState } from '../utils/withLoadingState';
 
 export const Codir: React.FC = () => {
   const { showToast } = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
-  const [stages, setStages] = useState<any[]>([]);
-  const [slaLimits, setSlaLimits] = useState<Record<string, number>>({ Media: 5, Retail: 7, Instit: 14 });
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [slaLimits, setSlaLimits] = useState<SlaLimits>({ Media: 5, Retail: 7, Instit: 14 });
   const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const loadCodirData = async () => {
-    try {
-      const fetchedLeads = await leadsService.getLeads();
-      const fetchedTasks = await tasksService.getTasks();
-      const fetchedEvents = await eventsService.getEvents();
-      const fetchedStages = await settingsService.getPipelineStages();
-      const settings = await settingsService.getSettings();
+  const loadCodirData = () => withLoadingState(async () => {
+    const fetchedLeads = await leadsService.getLeads();
+    const fetchedTasks = await tasksService.getTasks();
+    const fetchedEvents = await eventsService.getEvents();
+    const fetchedStages = await settingsService.getPipelineStages();
+    const limits = await settingsService.getSlaLimits();
 
-      setLeads(fetchedLeads);
-      setTasks(fetchedTasks);
-      setEvents(fetchedEvents);
-      setStages(fetchedStages);
-
-      // Load SLA settings
-      const limits: Record<string, number> = { Media: 5, Retail: 7, Instit: 14 };
-      settings.forEach(s => {
-        if (s.key === 'sla_media' && s.value.days) limits.Media = s.value.days;
-        if (s.key === 'sla_retail' && s.value.days) limits.Retail = s.value.days;
-        if (s.key === 'sla_instit' && s.value.days) limits.Instit = s.value.days;
-      });
-      setSlaLimits(limits);
-    } catch (err) {
+    setLeads(fetchedLeads);
+    setTasks(fetchedTasks);
+    setEvents(fetchedEvents);
+    setStages(fetchedStages);
+    setSlaLimits(limits);
+  }, {
+    setLoading,
+    onError: (err) => {
       console.error('Error loading CODIR data:', err);
       showToast('Erreur de chargement des rapports', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  useEffect(() => {
-    loadCodirData();
-  }, []);
+  useLoadOnMount(loadCodirData);
 
   const toggleFullscreen = () => {
     const element = document.documentElement;
@@ -68,10 +61,7 @@ export const Codir: React.FC = () => {
   };
 
   // Helper SLA status checker
-  const getSlaStatus = (lead: Lead) => {
-    const maxDays = slaLimits[lead.segment] || 7;
-    return lead.days_in_stage > maxDays;
-  };
+  const getSlaStatus = (lead: Lead) => isSlaBreached(lead, slaLimits);
 
   // Calculations
   const activeLeads = leads.filter(l => !l.is_archived && l.stage?.name !== 'Gagné');
@@ -90,17 +80,7 @@ export const Codir: React.FC = () => {
     .slice(0, 5);
 
   // Segment Split
-  const segmentStats = {
-    Media: { count: 0, val: 0 },
-    Retail: { count: 0, val: 0 },
-    Instit: { count: 0, val: 0 }
-  };
-  leads.forEach(l => {
-    if (segmentStats[l.segment]) {
-      segmentStats[l.segment].count += 1;
-      segmentStats[l.segment].val += l.deal_value;
-    }
-  });
+  const segmentStats = computeSegmentStats(leads);
 
   const totalSegmentVal = Object.values(segmentStats).reduce((acc, curr) => acc + curr.val, 0);
 

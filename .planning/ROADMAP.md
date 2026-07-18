@@ -3,6 +3,14 @@
 > Milestone 1 — Consolidation & Features Manquantes
 > Version : 1.0 | Date : 2026-07-03
 
+> ⚠️ **Obsolète.** Aucune des 9 phases ci-dessous n'a été suivie depuis leur
+> rédaction (2026-07-03) — le travail réellement livré depuis (refonte de
+> marque, refonte/simplification Prospection, déploiement VM, portail à
+> deux accès, scheduler LinkedIn...) est documenté à la place dans
+> `docs/superpowers/plans/` et `docs/superpowers/specs/`, qui font foi.
+> À réviser ou marquer explicitement abandonné plutôt que de planifier
+> dessus en l'état (voir TECH_DEBT_AUDIT.md, finding F045).
+
 ---
 
 ## Structure des phases

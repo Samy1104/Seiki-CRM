@@ -1,6 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { motion } from 'motion/react';
 
 import { tasksService } from '../services/tasksService';
 import type { Task } from '../services/tasksService';
@@ -9,15 +7,16 @@ import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
-import { List, Kanban, Calendar, Trash2, Flag, Tag, User, SlidersHorizontal, X, Plus } from 'lucide-react';
+import { List, Kanban, Calendar, X, SlidersHorizontal, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
-
-// Board column drop indicator — a thin line inserted between cards showing
-// exactly where the dragged card will land. Opacity is toggled imperatively
-// (not via React state) so dragging over many cards doesn't cause re-renders.
-const DropIndicator: React.FC<{ beforeId: string | null; column: string }> = ({ beforeId, column }) => (
-  <div data-before={beforeId || '-1'} data-column={column} className="task-drop-indicator" />
-);
+import { useLoadOnMount } from '../hooks/useLoadOnMount';
+import { withLoadingState } from '../utils/withLoadingState';
+import { confirmAction } from '../utils/confirmAction';
+import type { ActiveDropdown, TaskWidgetHandlers } from './tasks/TaskWidgets';
+import { TaskListView } from './tasks/TaskListView';
+import type { ColWidths } from './tasks/TaskListView';
+import { TaskBoardView } from './tasks/TaskBoardView';
+import { NewTaskModal } from './tasks/NewTaskModal';
 
 const getColumnIndicators = (column: string): HTMLElement[] =>
   Array.from(document.querySelectorAll<HTMLElement>(`[data-column="${column}"]`));
@@ -48,21 +47,6 @@ const highlightColumnIndicator = (e: React.DragEvent, column: string) => {
   const { element } = getNearestIndicator(e, indicators);
   if (element) element.style.opacity = '1';
 };
-
-interface ActiveDropdown {
-  taskId: string;
-  type: 'assignee' | 'priority' | 'lead';
-  x: number;
-  y: number;
-}
-
-interface ColWidths {
-  name: number;
-  assignee: number;
-  date: number;
-  priority: number;
-  lead: number;
-}
 
 const COL_KEYS: (keyof ColWidths)[] = ['name', 'assignee', 'date', 'priority', 'lead'];
 
@@ -156,26 +140,23 @@ export const Tasks: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [activeDropdown]);
 
-  useEffect(() => {
-    loadTasksData();
-  }, []);
+  const loadTasksData = () => withLoadingState(async () => {
+    const fetchedTasks = await tasksService.getTasks();
+    const fetchedLeads = await leadsService.getLeads();
+    const fetchedMembers = await settingsService.getTeamMembers();
 
-  const loadTasksData = async () => {
-    try {
-      const fetchedTasks = await tasksService.getTasks();
-      const fetchedLeads = await leadsService.getLeads();
-      const fetchedMembers = await settingsService.getTeamMembers();
-
-      setTasks(fetchedTasks);
-      setLeads(fetchedLeads);
-      setTeamMembers(fetchedMembers);
-    } catch (err) {
+    setTasks(fetchedTasks);
+    setLeads(fetchedLeads);
+    setTeamMembers(fetchedMembers);
+  }, {
+    setLoading,
+    onError: (err) => {
       console.error('Error loading tasks:', err);
       showToast('Erreur lors du chargement des tâches', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
+
+  useLoadOnMount(loadTasksData);
 
   const openTaskModal = (status: 'todo' | 'in_progress' | 'done' = 'todo') => {
     setNewStatus(status);
@@ -227,7 +208,7 @@ export const Tasks: React.FC = () => {
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    if (window.confirm('Supprimer cette tâche ?')) {
+    if (confirmAction('Supprimer cette tâche ?')) {
       try {
         await tasksService.deleteTask(taskId);
         showToast('Tâche supprimée');
@@ -280,7 +261,7 @@ export const Tasks: React.FC = () => {
   const handleUpdateTaskParam = async (
     taskId: string,
     field: 'due_date' | 'priority' | 'lead_id' | 'status',
-    value: any
+    value: string | null
   ) => {
     try {
       // Optimistic UI update
@@ -290,13 +271,13 @@ export const Tasks: React.FC = () => {
           if (field === 'due_date') {
             updated.due_date = value;
           } else if (field === 'priority') {
-            updated.priority = value;
+            updated.priority = value as Task['priority'];
           } else if (field === 'lead_id') {
             updated.lead_id = value;
             const linkedLead = leads.find(l => l.id === value);
             updated.lead = linkedLead ? { company_name: linkedLead.company_name } : null;
           } else if (field === 'status') {
-            updated.status = value;
+            updated.status = value as Task['status'];
           }
           return updated;
         }
@@ -313,6 +294,23 @@ export const Tasks: React.FC = () => {
     }
   };
 
+  const handleUpdateDueDate = (taskId: string, value: string | null) => handleUpdateTaskParam(taskId, 'due_date', value);
+  const handleUpdatePriority = (taskId: string, priority: 'high' | 'medium' | 'low') => handleUpdateTaskParam(taskId, 'priority', priority);
+  const handleUpdateLead = (taskId: string, leadId: string | null) => handleUpdateTaskParam(taskId, 'lead_id', leadId);
+  const handleUpdateStatus = (taskId: string, status: 'todo' | 'in_progress' | 'done') => handleUpdateTaskParam(taskId, 'status', status);
+
+  const widgetHandlers: TaskWidgetHandlers = {
+    teamMembers,
+    leads,
+    activeDropdown,
+    setActiveDropdown,
+    dropdownWrapperRef,
+    onToggleAssignee: handleToggleAssignee,
+    onUpdateDueDate: handleUpdateDueDate,
+    onUpdatePriority: handleUpdatePriority,
+    onUpdateLead: handleUpdateLead,
+  };
+
   // ClickUp Column Resizing Logic
   const activeResizeCleanup = useRef<(() => void) | null>(null);
 
@@ -322,7 +320,7 @@ export const Tasks: React.FC = () => {
     return () => activeResizeCleanup.current?.();
   }, []);
 
-  const startResize = (e: React.MouseEvent, column: keyof typeof colWidths) => {
+  const startResize = (e: React.MouseEvent, column: keyof ColWidths) => {
     e.preventDefault();
     const startX = e.pageX;
     const startWidth = colWidths[column];
@@ -346,7 +344,7 @@ export const Tasks: React.FC = () => {
     activeResizeCleanup.current = handleMouseUp;
   };
 
-  // --- DRAG & DROP HANDLERS ---
+  // --- DRAG & DROP HANDLERS (LIST VIEW) ---
   const handleDragStart = (e: React.DragEvent, taskId: string) => {
     setDraggedTaskId(taskId);
     e.dataTransfer.effectAllowed = 'move';
@@ -538,325 +536,6 @@ export const Tasks: React.FC = () => {
     );
   }
 
-  // Helper formatting priority color
-  const getPriorityInfo = (priority: string | null) => {
-    switch (priority) {
-      case 'high': return { label: 'Urgent', color: 'var(--red)', bg: 'rgba(248, 113, 113, 0.12)' };
-      case 'medium': return { label: 'Normal', color: 'var(--gold)', bg: 'rgba(245, 183, 49, 0.12)' };
-      case 'low': return { label: 'Basse', color: 'var(--green)', bg: 'rgba(74, 222, 128, 0.12)' };
-      default: return { label: 'Sans', color: 'var(--text-muted)', bg: 'rgba(255, 255, 255, 0.05)' };
-    }
-  };
-
-  // Custom Inline Widgets
-  const renderAssigneeWidget = (task: Task) => {
-    const isDropdownOpen = activeDropdown?.taskId === task.id && activeDropdown?.type === 'assignee';
-    const taskAssignees = task.assignees || [];
-
-    return (
-      <div className="clickup-inline-dropdown-wrap">
-        <div
-          onClick={(e) => {
-            if (isDropdownOpen) { setActiveDropdown(null); return; }
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setActiveDropdown({ taskId: task.id, type: 'assignee', x: r.left, y: r.bottom + 4 });
-          }}
-          className="clickup-assignees-trigger-list"
-          style={{ cursor: 'pointer' }}
-        >
-          {taskAssignees.length > 0 ? (
-            <div className="assignees-overlapping-list">
-              {taskAssignees.slice(0, 3).map((a, idx) => (
-                <div
-                  key={a.id}
-                  className="member-avatar small-avatar"
-                  style={{
-                    background: a.color,
-                    zIndex: 10 - idx,
-                    marginLeft: idx > 0 ? '-6px' : '0px'
-                  }}
-                  title={a.full_name}
-                >
-                  {a.initials}
-                </div>
-              ))}
-              {taskAssignees.length > 3 && (
-                <div
-                  className="member-avatar small-avatar count"
-                  style={{ background: '#334155', zIndex: 5, marginLeft: '-6px' }}
-                  title={`${taskAssignees.length} personnes assignées`}
-                >
-                  +{taskAssignees.length - 3}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="avatar-placeholder-btn" title="Assigner des membres">
-              <User size={12} />
-            </div>
-          )}
-        </div>
-
-        {isDropdownOpen && createPortal(
-          <div
-            ref={dropdownWrapperRef}
-            className="clickup-dropdown-menu"
-            style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
-          >
-            <div className="clickup-dropdown-title">Assigner des membres...</div>
-            {teamMembers.map(m => {
-              const isAssigned = taskAssignees.some(a => a.id === m.id);
-              return (
-                <div
-                  key={m.id}
-                  className={`clickup-dropdown-item ${isAssigned ? 'selected' : ''}`}
-                  onClick={() => handleToggleAssignee(task, m.id)}
-                >
-                  <div className="clickup-dropdown-checkbox">
-                    {isAssigned ? '✓' : ''}
-                  </div>
-                  <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
-                  <span>{m.full_name}</span>
-                </div>
-              );
-            })}
-          </div>,
-          document.body
-        )}
-      </div>
-    );
-  };
-
-  const renderDatePickerWidget = (task: Task) => {
-    const isOverdue = task.due_date && task.due_date < new Date().toISOString().slice(0, 10) && task.status !== 'done';
-    const isToday = task.due_date === new Date().toISOString().slice(0, 10) && task.status !== 'done';
-
-    let dueClass = 'card-icon-btn';
-    if (task.due_date) {
-      dueClass += ' active';
-      if (isOverdue) dueClass += ' overdue';
-      else if (isToday) dueClass += ' today';
-    }
-
-    return (
-      <div className="clickup-inline-date-picker-wrap">
-        <button className={dueClass} title={task.due_date ? `Échéance : ${task.due_date}` : "Définir l'échéance"}>
-          <Calendar size={13} style={{ marginRight: task.due_date ? '4px' : '0' }} />
-          {task.due_date ? (
-            <span style={{ fontSize: '11px', fontWeight: '700' }}>
-              {new Date(task.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-            </span>
-          ) : (
-            <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.3)' }}>—</span>
-          )}
-        </button>
-        <input
-          type="date"
-          className="clickup-hidden-date-input"
-          value={task.due_date || ''}
-          onChange={(e) => handleUpdateTaskParam(task.id, 'due_date', e.target.value || null)}
-        />
-      </div>
-    );
-  };
-
-  const renderPriorityWidget = (task: Task) => {
-    const isDropdownOpen = activeDropdown?.taskId === task.id && activeDropdown?.type === 'priority';
-    const prio = getPriorityInfo(task.priority);
-    return (
-      <div className="clickup-inline-dropdown-wrap">
-        <div
-          onClick={(e) => {
-            if (isDropdownOpen) { setActiveDropdown(null); return; }
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setActiveDropdown({ taskId: task.id, type: 'priority', x: r.left, y: r.bottom + 4 });
-          }}
-          className={`card-icon-btn ${task.priority ? 'active' : ''}`}
-          style={{ gap: '6px' }}
-          title={`Priorité : ${prio.label}`}
-        >
-          <Flag size={13} style={{ color: task.priority ? prio.color : 'inherit' }} />
-          <span style={{ fontSize: '11px', fontWeight: '600' }}>{prio.label}</span>
-        </div>
-
-        {isDropdownOpen && createPortal(
-          <div
-            ref={dropdownWrapperRef}
-            className="clickup-dropdown-menu"
-            style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
-          >
-            <div className="clickup-dropdown-title">Priorité</div>
-            <div
-              className={`clickup-dropdown-item ${task.priority === 'high' ? 'selected' : ''}`}
-              onClick={() => {
-                handleUpdateTaskParam(task.id, 'priority', 'high');
-                setActiveDropdown(null);
-              }}
-            >
-              <Flag size={12} style={{ color: 'var(--red)', marginRight: '8px' }} />
-              Urgent
-            </div>
-            <div
-              className={`clickup-dropdown-item ${task.priority === 'medium' ? 'selected' : ''}`}
-              onClick={() => {
-                handleUpdateTaskParam(task.id, 'priority', 'medium');
-                setActiveDropdown(null);
-              }}
-            >
-              <Flag size={12} style={{ color: 'var(--gold)', marginRight: '8px' }} />
-              Normal
-            </div>
-            <div
-              className={`clickup-dropdown-item ${task.priority === 'low' ? 'selected' : ''}`}
-              onClick={() => {
-                handleUpdateTaskParam(task.id, 'priority', 'low');
-                setActiveDropdown(null);
-              }}
-            >
-              <Flag size={12} style={{ color: 'var(--green)', marginRight: '8px' }} />
-              Basse
-            </div>
-          </div>,
-          document.body
-        )}
-      </div>
-    );
-  };
-
-  const renderLeadWidget = (task: Task) => {
-    const isDropdownOpen = activeDropdown?.taskId === task.id && activeDropdown?.type === 'lead';
-    return (
-      <div className="clickup-inline-dropdown-wrap">
-        <div
-          onClick={(e) => {
-            if (isDropdownOpen) { setActiveDropdown(null); return; }
-            const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-            setActiveDropdown({ taskId: task.id, type: 'lead', x: r.left, y: r.bottom + 4 });
-          }}
-          className={`card-icon-btn ${task.lead_id ? 'active' : ''}`}
-          style={{ gap: '6px' }}
-          title={task.lead ? `Lead : ${task.lead.company_name}` : "Associer un Lead"}
-        >
-          <Tag size={13} style={{ color: task.lead_id ? 'var(--purple)' : 'inherit' }} />
-          <span style={{ fontSize: '11px', fontWeight: '600' }}>
-            {task.lead ? task.lead.company_name : 'Lier lead'}
-          </span>
-        </div>
-
-        {isDropdownOpen && createPortal(
-          <div
-            ref={dropdownWrapperRef}
-            className="clickup-dropdown-menu scrollable"
-            style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
-          >
-            <div className="clickup-dropdown-title">Lier à un lead...</div>
-            {leads.map(l => (
-              <div
-                key={l.id}
-                className={`clickup-dropdown-item ${task.lead_id === l.id ? 'selected' : ''}`}
-                onClick={() => {
-                  handleUpdateTaskParam(task.id, 'lead_id', l.id);
-                  setActiveDropdown(null);
-                }}
-              >
-                <span>{l.company_name}</span>
-              </div>
-            ))}
-            {task.lead_id && (
-              <div
-                className="clickup-dropdown-item clear-btn"
-                onClick={() => {
-                  handleUpdateTaskParam(task.id, 'lead_id', null);
-                  setActiveDropdown(null);
-                }}
-              >
-                Retirer le lead
-              </div>
-            )}
-          </div>,
-          document.body
-        )}
-      </div>
-    );
-  };
-
-  const renderTableRows = (tasksList: Task[], statusKey: 'todo' | 'in_progress' | 'done') => {
-    return (
-      <div
-        className={`clickup-section-body ${dragOverStatus === statusKey ? 'drag-over' : ''}`}
-        onDragOver={(e) => handleDragOver(e, statusKey)}
-        onDragLeave={handleDragLeave}
-        onDrop={(e) => handleDrop(e, statusKey)}
-      >
-        {tasksList.length > 0 ? (
-          tasksList.map(task => {
-            return (
-              <div
-                key={task.id}
-                className={`clickup-task-row${dragOverTaskId === task.id && draggedTaskId !== task.id ? ' drag-insert-before' : ''}`}
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, task.id)}
-                onDragOver={(e) => handleDragOverTask(e, task.id, statusKey)}
-                onDragLeave={handleDragLeaveTask}
-              >
-                {/* Drag handle */}
-                <div className="clickup-cell clickup-cell-drag" style={{ width: 32, flexGrow: 0, flexShrink: 0 }}>
-                  <div className="drag-handle">⋮⋮</div>
-                </div>
-
-                {/* Checkbox */}
-                <div className="clickup-cell clickup-cell-check" style={{ width: 36, flexGrow: 0, flexShrink: 0 }}>
-                  <div
-                    className={`task-check ${task.status === 'done' ? 'done' : ''}`}
-                    onClick={() => handleToggleStatus(task.id, task.status)}
-                  >
-                    {task.status === 'done' ? '✓' : ''}
-                  </div>
-                </div>
-
-                {/* Task Name */}
-                <div className="clickup-cell clickup-cell-name" style={{ width: colWidths.name, flexGrow: 0, flexShrink: 1 }}>
-                  <span className={`task-text ${task.status === 'done' ? 'done' : ''}`}>
-                    {task.description}
-                  </span>
-                </div>
-
-                {/* Assignee */}
-                <div className="clickup-cell clickup-cell-assignee" style={{ width: colWidths.assignee, flexGrow: 0, flexShrink: 1 }}>
-                  {renderAssigneeWidget(task)}
-                </div>
-
-                {/* Due Date */}
-                <div className="clickup-cell clickup-cell-date" style={{ width: colWidths.date, flexGrow: 0, flexShrink: 1 }}>
-                  {renderDatePickerWidget(task)}
-                </div>
-
-                {/* Priority */}
-                <div className="clickup-cell clickup-cell-priority" style={{ width: colWidths.priority, flexGrow: 0, flexShrink: 1 }}>
-                  {renderPriorityWidget(task)}
-                </div>
-
-                {/* Lead */}
-                <div className="clickup-cell clickup-cell-lead" style={{ width: colWidths.lead, flexGrow: 0, flexShrink: 1 }}>
-                  {renderLeadWidget(task)}
-                </div>
-
-                {/* Actions */}
-                <div className="clickup-cell clickup-cell-actions" style={{ width: 50, flexGrow: 0, flexShrink: 0 }}>
-                  <button className="btn-icon-del" onClick={() => handleDeleteTask(task.id)}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="clickup-row-empty">Aucune tâche dans cette section</div>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className={`view-section on ${viewMode === 'board' ? 'tasks-board-fullscreen' : ''}`}>
       {/* Page Header */}
@@ -901,7 +580,7 @@ export const Tasks: React.FC = () => {
           {/* Priority filter */}
           <Select
             value={filterPriority}
-            onValueChange={val => setFilterPriority(val as any)}
+            onValueChange={val => setFilterPriority(val as 'high' | 'medium' | 'low' | '')}
           >
             <SelectTrigger className="tasks-filter-select">
               <SelectValue placeholder="Priorité — Toutes" />
@@ -983,370 +662,70 @@ export const Tasks: React.FC = () => {
       </div>
 
       {/* View Panels */}
-      {/* 1. LIST VIEW */}
       {viewMode === 'list' && (
-        <div className="clickup-list-container">
-          {/* Header Row with Resizers */}
-          <div className="clickup-table-header">
-            <div className="clickup-hdr-cell clickup-cell-drag" style={{ width: 32, flexGrow: 0, flexShrink: 0 }}></div>
-            <div className="clickup-hdr-cell clickup-cell-check" style={{ width: 36, flexGrow: 0, flexShrink: 0 }}></div>
-
-            <div className="clickup-hdr-cell clickup-cell-name" style={{ width: colWidths.name, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-              Tâche
-              <div className="clickup-col-resizer" onMouseDown={(e) => startResize(e, 'name')} />
-            </div>
-
-            <div className="clickup-hdr-cell clickup-cell-assignee" style={{ width: colWidths.assignee, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-              Assignés
-              <div className="clickup-col-resizer" onMouseDown={(e) => startResize(e, 'assignee')} />
-            </div>
-
-            <div className="clickup-hdr-cell clickup-cell-date" style={{ width: colWidths.date, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-              Échéance
-              <div className="clickup-col-resizer" onMouseDown={(e) => startResize(e, 'date')} />
-            </div>
-
-            <div className="clickup-hdr-cell clickup-cell-priority" style={{ width: colWidths.priority, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-              Priorité
-              <div className="clickup-col-resizer" onMouseDown={(e) => startResize(e, 'priority')} />
-            </div>
-
-            <div className="clickup-hdr-cell clickup-cell-lead" style={{ width: colWidths.lead, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-              Lead associé
-              <div className="clickup-col-resizer" onMouseDown={(e) => startResize(e, 'lead')} />
-            </div>
-
-            <div className="clickup-hdr-cell clickup-cell-actions" style={{ width: 50, flexGrow: 0, flexShrink: 0 }}></div>
-          </div>
-
-          {/* TO DO Section */}
-          <div className="clickup-section">
-            <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--red)' }}>
-              <span className="sect-title" style={{ color: 'var(--red)' }}>À FAIRE</span>
-              <span className="sect-count">{todoTasks.length}</span>
-            </div>
-            {renderTableRows(todoTasks, 'todo')}
-          </div>
-
-          {/* IN PROGRESS Section */}
-          <div className="clickup-section" style={{ marginTop: '20px' }}>
-            <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--gold)' }}>
-              <span className="sect-title" style={{ color: 'var(--gold)' }}>EN COURS</span>
-              <span className="sect-count">{inProgressTasks.length}</span>
-            </div>
-            {renderTableRows(inProgressTasks, 'in_progress')}
-          </div>
-
-          {/* DONE Section */}
-          <div className="clickup-section" style={{ marginTop: '20px' }}>
-            <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--green)' }}>
-              <span className="sect-title" style={{ color: 'var(--green)' }}>TERMINÉES</span>
-              <span className="sect-count">{doneTasks.length}</span>
-            </div>
-            {renderTableRows(doneTasks, 'done')}
-          </div>
-        </div>
+        <TaskListView
+          todoTasks={todoTasks}
+          inProgressTasks={inProgressTasks}
+          doneTasks={doneTasks}
+          colWidths={colWidths}
+          onStartResize={startResize}
+          dragOverStatus={dragOverStatus}
+          dragOverTaskId={dragOverTaskId}
+          draggedTaskId={draggedTaskId}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDragOverTask={handleDragOverTask}
+          onDragLeaveTask={handleDragLeaveTask}
+          onDrop={handleDrop}
+          onToggleStatus={handleToggleStatus}
+          onDeleteTask={handleDeleteTask}
+          widgets={widgetHandlers}
+        />
       )}
 
-      {/* 2. KANBAN BOARD VIEW */}
       {viewMode === 'board' && (
-        <div className="pipe-wrap" style={{ gap: '16px' }}>
-          {/* TO DO Column */}
-          <div
-            className={`pipe-col ${dragOverStatus === 'todo' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleBoardDragOver(e, 'todo')}
-            onDragLeave={() => handleBoardDragLeave('todo')}
-            onDrop={(e) => handleBoardDrop(e, 'todo')}
-          >
-            <div className="pipe-head" style={{ borderBottomColor: 'var(--red)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                À faire <span>{todoTasks.length}</span>
-              </span>
-              <button className="pipe-head-add-btn" onClick={() => openTaskModal('todo')} title="Ajouter une tâche">
-                <Plus size={13} />
-              </button>
-            </div>
-            <div className="pipe-cards-container">
-              {todoTasks.map(task => {
-                const pColor = getPriorityInfo(task.priority).color;
-                return (
-                  <React.Fragment key={task.id}>
-                    <DropIndicator beforeId={task.id} column="todo" />
-                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
-                      <motion.div layout layoutId={task.id} className="task-board-card">
-                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
-                          {task.description}
-                        </div>
-
-                        {/* Interactive ClickUp Parameters Row */}
-                        <div className="task-board-card-clickup-row">
-                          {renderAssigneeWidget(task)}
-                          {renderDatePickerWidget(task)}
-                          {renderPriorityWidget(task)}
-                          {renderLeadWidget(task)}
-                        </div>
-
-                        <div className="task-card-actions">
-                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>En cours →</button>
-                          <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
-                        </div>
-                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                      </motion.div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-              <DropIndicator beforeId={null} column="todo" />
-            </div>
-          </div>
-
-          {/* IN PROGRESS Column */}
-          <div
-            className={`pipe-col ${dragOverStatus === 'in_progress' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleBoardDragOver(e, 'in_progress')}
-            onDragLeave={() => handleBoardDragLeave('in_progress')}
-            onDrop={(e) => handleBoardDrop(e, 'in_progress')}
-          >
-            <div className="pipe-head" style={{ borderBottomColor: 'var(--gold)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                En cours <span>{inProgressTasks.length}</span>
-              </span>
-              <button className="pipe-head-add-btn" onClick={() => openTaskModal('in_progress')} title="Ajouter une tâche">
-                <Plus size={13} />
-              </button>
-            </div>
-            <div className="pipe-cards-container">
-              {inProgressTasks.map(task => {
-                const pColor = getPriorityInfo(task.priority).color;
-                return (
-                  <React.Fragment key={task.id}>
-                    <DropIndicator beforeId={task.id} column="in_progress" />
-                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
-                      <motion.div layout layoutId={task.id} className="task-board-card">
-                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', marginBottom: '12px' }}>
-                          {task.description}
-                        </div>
-
-                        {/* Interactive ClickUp Parameters Row */}
-                        <div className="task-board-card-clickup-row">
-                          {renderAssigneeWidget(task)}
-                          {renderDatePickerWidget(task)}
-                          {renderPriorityWidget(task)}
-                          {renderLeadWidget(task)}
-                        </div>
-
-                        <div className="task-card-actions">
-                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'todo')}>← À faire</button>
-                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'done')}>Fini ✓</button>
-                        </div>
-                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                      </motion.div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-              <DropIndicator beforeId={null} column="in_progress" />
-            </div>
-          </div>
-
-          {/* DONE Column */}
-          <div
-            className={`pipe-col ${dragOverStatus === 'done' ? 'drag-over' : ''}`}
-            onDragOver={(e) => handleBoardDragOver(e, 'done')}
-            onDragLeave={() => handleBoardDragLeave('done')}
-            onDrop={(e) => handleBoardDrop(e, 'done')}
-          >
-            <div className="pipe-head" style={{ borderBottomColor: 'var(--green)' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                Terminé <span>{doneTasks.length}</span>
-              </span>
-              <button className="pipe-head-add-btn" onClick={() => openTaskModal('done')} title="Ajouter une tâche">
-                <Plus size={13} />
-              </button>
-            </div>
-            <div className="pipe-cards-container">
-              {doneTasks.map(task => {
-                const pColor = getPriorityInfo(task.priority).color;
-                return (
-                  <React.Fragment key={task.id}>
-                    <DropIndicator beforeId={task.id} column="done" />
-                    <div draggable="true" onDragStart={(e) => handleDragStart(e, task.id)}>
-                      <motion.div layout layoutId={task.id} className="task-board-card" style={{ opacity: 0.7 }}>
-                        <div style={{ fontSize: '13.5px', fontWeight: '600', color: 'var(--text-h)', textDecoration: 'line-through', marginBottom: '12px' }}>
-                          {task.description}
-                        </div>
-
-                        {/* Interactive ClickUp Parameters Row */}
-                        <div className="task-board-card-clickup-row">
-                          {renderAssigneeWidget(task)}
-                          {renderDatePickerWidget(task)}
-                          {renderPriorityWidget(task)}
-                          {renderLeadWidget(task)}
-                        </div>
-
-                        <div className="task-card-actions">
-                          <button className="hist-btn" onClick={() => handleUpdateTaskParam(task.id, 'status', 'in_progress')}>← Ouvrir</button>
-                          <button className="hist-btn del" onClick={() => handleDeleteTask(task.id)}>Supprimer</button>
-                        </div>
-                        <div className="task-card-priority-dot" style={{ background: pColor }}></div>
-                      </motion.div>
-                    </div>
-                  </React.Fragment>
-                );
-              })}
-              <DropIndicator beforeId={null} column="done" />
-            </div>
-          </div>
-        </div>
+        <TaskBoardView
+          todoTasks={todoTasks}
+          inProgressTasks={inProgressTasks}
+          doneTasks={doneTasks}
+          dragOverStatus={dragOverStatus}
+          onDragOver={handleBoardDragOver}
+          onDragLeave={handleBoardDragLeave}
+          onDrop={handleBoardDrop}
+          onDragStart={handleDragStart}
+          onAddTask={openTaskModal}
+          onUpdateStatus={handleUpdateStatus}
+          onDeleteTask={handleDeleteTask}
+          widgets={widgetHandlers}
+        />
       )}
 
       {/* New Task Modal */}
       {taskModalOpen && (
-        <div className="modal-overlay open" onClick={() => setTaskModalOpen(false)}>
-          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <h2>Nouvelle tâche</h2>
-              <button className="btn-icon" onClick={() => setTaskModalOpen(false)}><X size={16} /></button>
-            </div>
-            <form onSubmit={handleAddTask} className="modal-form">
-              <div className="gen-field-group">
-                <label className="gen-label">Description *</label>
-                <input
-                  className="gen-input"
-                  placeholder="Écrire une tâche à faire..."
-                  value={newDesc}
-                  onChange={e => setNewDesc(e.target.value)}
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div className="gen-field-row">
-                <div className="gen-field-group">
-                  <label className="gen-label">Échéance</label>
-                  <input
-                    className="gen-input"
-                    type="date"
-                    value={newDueDate}
-                    onChange={e => setNewDueDate(e.target.value)}
-                  />
-                </div>
-                <div className="gen-field-group">
-                  <label className="gen-label">Priorité</label>
-                  <Select
-                    value={newPriority}
-                    onValueChange={val => setNewPriority(val as any)}
-                  >
-                    <SelectTrigger className="gen-select">
-                      <SelectValue placeholder="Moyenne" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">Haute</SelectItem>
-                      <SelectItem value="medium">Moyenne</SelectItem>
-                      <SelectItem value="low">Basse</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="gen-field-row">
-                <div className="gen-field-group">
-                  <label className="gen-label">Assignés</label>
-                  <div className="clickup-inline-dropdown-wrap">
-                    <button
-                      type="button"
-                      className="gen-select"
-                      onClick={(e) => {
-                        if (activeDropdown?.taskId === 'new-task') { setActiveDropdown(null); return; }
-                        const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                        setActiveDropdown({ taskId: 'new-task', type: 'assignee', x: r.left, y: r.bottom + 4 });
-                      }}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}
-                    >
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {newAssigneeIds.length === 0
-                          ? 'Assigner'
-                          : `${newAssigneeIds.length} assigné(s)`}
-                      </span>
-                      <span style={{ fontSize: '10px' }}>▼</span>
-                    </button>
-
-                    {activeDropdown?.taskId === 'new-task' && activeDropdown?.type === 'assignee' && createPortal(
-                      <div
-                        ref={dropdownWrapperRef}
-                        className="clickup-dropdown-menu"
-                        style={{ position: 'fixed', top: activeDropdown.y, left: activeDropdown.x, zIndex: 9999, transform: 'none' }}
-                      >
-                        <div className="clickup-dropdown-title">Assigner à...</div>
-                        {teamMembers.map(m => {
-                          const isSelected = newAssigneeIds.includes(m.id);
-                          return (
-                            <div
-                              key={m.id}
-                              className={`clickup-dropdown-item ${isSelected ? 'selected' : ''}`}
-                              onClick={() => {
-                                setNewAssigneeIds(prev =>
-                                  prev.includes(m.id) ? prev.filter(id => id !== m.id) : [...prev, m.id]
-                                );
-                              }}
-                            >
-                              <div className="clickup-dropdown-checkbox">{isSelected ? '✓' : ''}</div>
-                              <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
-                              <span>{m.full_name}</span>
-                            </div>
-                          );
-                        })}
-                      </div>,
-                      document.body
-                    )}
-                  </div>
-                </div>
-                <div className="gen-field-group">
-                  <label className="gen-label">Lead lié</label>
-                  <Select
-                    value={newLeadId}
-                    onValueChange={val => setNewLeadId(val)}
-                  >
-                    <SelectTrigger className="gen-select">
-                      <SelectValue placeholder="— Aucun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">— Aucun</SelectItem>
-                      {leads.map(l => (
-                        <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div className="gen-field-group">
-                <label className="gen-label">Statut</label>
-                <Select
-                  value={newStatus}
-                  onValueChange={val => setNewStatus(val as any)}
-                >
-                  <SelectTrigger className="gen-select">
-                    <SelectValue placeholder="À faire" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="todo">À faire</SelectItem>
-                    <SelectItem value="in_progress">En cours</SelectItem>
-                    <SelectItem value="done">Terminé</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="modal-footer">
-                <button type="button" className="btn-ghost-sm" onClick={() => setTaskModalOpen(false)}>Annuler</button>
-                <button type="submit" className="btn-primary-sm">
-                  <Plus size={13} />
-                  Créer la tâche
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <NewTaskModal
+          leads={leads}
+          teamMembers={teamMembers}
+          desc={newDesc}
+          dueDate={newDueDate}
+          priority={newPriority}
+          assigneeIds={newAssigneeIds}
+          leadId={newLeadId}
+          status={newStatus}
+          onDescChange={setNewDesc}
+          onDueDateChange={setNewDueDate}
+          onPriorityChange={setNewPriority}
+          onToggleAssigneeId={(memberId) => setNewAssigneeIds(prev =>
+            prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]
+          )}
+          onLeadIdChange={setNewLeadId}
+          onStatusChange={setNewStatus}
+          onSubmit={handleAddTask}
+          onClose={() => setTaskModalOpen(false)}
+          activeDropdown={activeDropdown}
+          setActiveDropdown={setActiveDropdown}
+          dropdownWrapperRef={dropdownWrapperRef}
+        />
       )}
     </div>
   );

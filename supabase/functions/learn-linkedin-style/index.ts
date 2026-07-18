@@ -10,8 +10,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-
-const GEMINI_MODEL = "gemini-2.5-flash";
+import { callGemini } from "../_shared/geminiApi.ts";
+import { requireUser } from "../_shared/requireUser.ts";
 
 type Voice = "seiki" | "jaafar";
 
@@ -82,6 +82,9 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    const authError = await requireUser(req, supabase, corsHeaders(req));
+    if (authError) return authError;
+
     const { data: existing } = await supabase
       .from("app_settings")
       .select("value")
@@ -91,29 +94,7 @@ serve(async (req: Request) => {
 
     const prompt = buildPrompt(voice, currentRules, body.original, body.edited);
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
-    const geminiResponse = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          responseMimeType: "application/json",
-        },
-      }),
-    });
-
-    if (!geminiResponse.ok) {
-      const errBody = await geminiResponse.text();
-      throw new Error(`Gemini API error ${geminiResponse.status}: ${errBody}`);
-    }
-
-    const geminiData = await geminiResponse.json();
-    const rawText = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error("Gemini n'a pas retourné de contenu.");
-    }
+    const { rawText } = await callGemini(geminiKey, { userPrompt: prompt, temperature: 0.3 });
 
     let parsed: { rules: string };
     try {

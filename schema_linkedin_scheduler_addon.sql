@@ -25,9 +25,11 @@ COMMENT ON TABLE public.linkedin_accounts IS 'Comptes LinkedIn (personnel/entrep
 COMMENT ON COLUMN public.linkedin_accounts.access_token IS 'Token OAuth LinkedIn — non chiffré en base, protégé uniquement par RLS';
 
 ALTER TABLE public.linkedin_accounts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_full_access" ON public.linkedin_accounts;
 CREATE POLICY "authenticated_full_access" ON public.linkedin_accounts
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP TRIGGER IF EXISTS trg_linkedin_accounts_updated ON public.linkedin_accounts;
 CREATE TRIGGER trg_linkedin_accounts_updated
   BEFORE UPDATE ON public.linkedin_accounts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
@@ -54,14 +56,16 @@ CREATE TABLE IF NOT EXISTS public.scheduled_linkedin_posts (
 COMMENT ON TABLE public.scheduled_linkedin_posts IS 'File de posts LinkedIn programmés, publiés automatiquement par le cron publish-linkedin-post';
 
 ALTER TABLE public.scheduled_linkedin_posts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_full_access" ON public.scheduled_linkedin_posts;
 CREATE POLICY "authenticated_full_access" ON public.scheduled_linkedin_posts
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP TRIGGER IF EXISTS trg_scheduled_linkedin_posts_updated ON public.scheduled_linkedin_posts;
 CREATE TRIGGER trg_scheduled_linkedin_posts_updated
   BEFORE UPDATE ON public.scheduled_linkedin_posts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
-CREATE INDEX idx_scheduled_linkedin_posts_status_due
+CREATE INDEX IF NOT EXISTS idx_scheduled_linkedin_posts_status_due
   ON public.scheduled_linkedin_posts(status, scheduled_at);
 
 -- ============================================================
@@ -71,14 +75,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('linkedin-media', 'linkedin-media', true)
 ON CONFLICT (id) DO NOTHING;
 
+DROP POLICY IF EXISTS "linkedin_media_authenticated_write" ON storage.objects;
 CREATE POLICY "linkedin_media_authenticated_write"
   ON storage.objects FOR INSERT TO authenticated
   WITH CHECK (bucket_id = 'linkedin-media');
 
+DROP POLICY IF EXISTS "linkedin_media_authenticated_delete" ON storage.objects;
 CREATE POLICY "linkedin_media_authenticated_delete"
   ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'linkedin-media');
 
+DROP POLICY IF EXISTS "linkedin_media_public_read" ON storage.objects;
 CREATE POLICY "linkedin_media_public_read"
   ON storage.objects FOR SELECT TO public
   USING (bucket_id = 'linkedin-media');

@@ -7,52 +7,61 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Webhook } from "https://esm.sh/svix@1.8.0";
+import { corsHeaders } from "../_shared/cors.ts";
+import { fetchWithTimeout } from "../_shared/fetchWithTimeout.ts";
+
+function jsonError(req: Request, message: string, status: number): Response {
+  return new Response(JSON.stringify({ error: message }), {
+    status,
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+  });
+}
 
 serve(async (req: Request) => {
+  const webhookCors = { ...corsHeaders(req), "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, svix-id, svix-timestamp, svix-signature" };
+
   // Gestion de la requête de pré-vol CORS
   if (req.method === "OPTIONS") {
-    return new Response("OK", {
-      headers: {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, svix-id, svix-timestamp, svix-signature",
-        "Access-Control-Allow-Methods": "POST, OPTIONS",
-      },
-    });
+    return new Response("OK", { headers: webhookCors });
   }
 
   if (req.method !== "POST") {
-    return new Response("Method Not Allowed", { status: 405 });
+    return jsonError(req, "Method Not Allowed", 405);
   }
 
   const signatureSecret = Deno.env.get("RESEND_WEBHOOK_SECRET");
   const rawBody = await req.text();
 
-  // 1. Validation de la signature Svix si la clé secrète est configurée
-  if (signatureSecret) {
-    const svixId = req.headers.get("svix-id");
-    const svixTimestamp = req.headers.get("svix-timestamp");
-    const svixSignature = req.headers.get("svix-signature");
+  // 1. Validation de la signature Svix — obligatoire : sans secret configuré,
+  // n'importe qui connaissant l'URL pourrait injecter de faux événements
+  // (statuts d'envoi, réponses de leads...). On refuse plutôt que d'ignorer
+  // silencieusement la vérification (fail closed, pas fail open).
+  if (!signatureSecret) {
+    console.error("[resend-webhook] RESEND_WEBHOOK_SECRET non configuré — requête refusée (fail closed).");
+    return jsonError(req, "Webhook not configured", 503);
+  }
 
-    if (!svixId || !svixTimestamp || !svixSignature) {
-      console.error("[resend-webhook] En-têtes svix manquants");
-      return new Response("Missing signature headers", { status: 400 });
-    }
+  const svixId = req.headers.get("svix-id");
+  const svixTimestamp = req.headers.get("svix-timestamp");
+  const svixSignature = req.headers.get("svix-signature");
 
-    try {
-      const wh = new Webhook(signatureSecret);
-      wh.verify(rawBody, {
-        "svix-id": svixId,
-        "svix-timestamp": svixTimestamp,
-        "svix-signature": svixSignature,
-      });
-      console.log("[resend-webhook] Signature Svix validée avec succès");
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Inconnu";
-      console.error("[resend-webhook] Échec de validation de la signature :", msg);
-      return new Response("Invalid signature", { status: 400 });
-    }
-  } else {
-    console.warn("[resend-webhook] RESEND_WEBHOOK_SECRET non configuré. Validation de signature ignorée.");
+  if (!svixId || !svixTimestamp || !svixSignature) {
+    console.error("[resend-webhook] En-têtes svix manquants");
+    return jsonError(req, "Missing signature headers", 400);
+  }
+
+  try {
+    const wh = new Webhook(signatureSecret);
+    wh.verify(rawBody, {
+      "svix-id": svixId,
+      "svix-timestamp": svixTimestamp,
+      "svix-signature": svixSignature,
+    });
+    console.log("[resend-webhook] Signature Svix validée avec succès");
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Inconnu";
+    console.error("[resend-webhook] Échec de validation de la signature :", msg);
+    return jsonError(req, "Invalid signature", 400);
   }
 
   // 2. Parsing du payload JSON
@@ -61,12 +70,12 @@ serve(async (req: Request) => {
     payload = JSON.parse(rawBody);
   } catch (err) {
     console.error("[resend-webhook] JSON invalide :", err);
-    return new Response("Invalid JSON", { status: 400 });
+    return jsonError(req, "Invalid JSON", 400);
   }
 
   const { type, data } = payload;
   if (!type || !data) {
-    return new Response("Missing type or data", { status: 400 });
+    return jsonError(req, "Missing type or data", 400);
   }
 
   // Initialisation client Supabase avec la clé service_role pour bypass RLS
@@ -83,7 +92,7 @@ serve(async (req: Request) => {
     if (type === "email.opened" || type === "email.clicked") {
       const resendMessageId = data.email_id;
       if (!resendMessageId) {
-        return new Response("Missing email_id in data", { status: 400 });
+        return jsonError(req, "Missing email_id in data", 400);
       }
 
       console.log(`[resend-webhook] E-mail ouvert détecté : ${resendMessageId}`);
@@ -99,7 +108,7 @@ serve(async (req: Request) => {
 
       if (logErr) {
         console.error("[resend-webhook] Erreur de mise à jour de email_logs :", logErr.message);
-        return new Response(`DB Error: ${logErr.message}`, { status: 500 });
+        return jsonError(req, `DB Error: ${logErr.message}`, 500);
       }
 
       console.log(`[resend-webhook] Logs e-mails mis à jour : ${updatedLogs?.length || 0}`);
@@ -109,7 +118,7 @@ serve(async (req: Request) => {
     else if (type === "email.received") {
       const receivedEmailId = data.email_id;
       if (!receivedEmailId) {
-        return new Response("Missing email_id in data", { status: 400 });
+        return jsonError(req, "Missing email_id in data", 400);
       }
 
       console.log(`[resend-webhook] Réception d'e-mail détectée : ${receivedEmailId}`);
@@ -117,11 +126,11 @@ serve(async (req: Request) => {
       const resendApiKey = Deno.env.get("RESEND_API_KEY");
       if (!resendApiKey) {
         console.error("[resend-webhook] RESEND_API_KEY n'est pas configuré");
-        return new Response("RESEND_API_KEY is not configured", { status: 500 });
+        return jsonError(req, "RESEND_API_KEY is not configured", 500);
       }
 
       // Appel à l'API Resend pour récupérer le contenu complet (corps du mail)
-      const resendRes = await fetch(`https://api.resend.com/emails/receiving/${receivedEmailId}`, {
+      const resendRes = await fetchWithTimeout(`https://api.resend.com/emails/receiving/${receivedEmailId}`, {
         headers: {
           Authorization: `Bearer ${resendApiKey}`,
           "Content-Type": "application/json",
@@ -131,7 +140,7 @@ serve(async (req: Request) => {
       if (!resendRes.ok) {
         const errorText = await resendRes.text();
         console.error(`[resend-webhook] Impossible de récupérer l'e-mail (status ${resendRes.status}) :`, errorText);
-        return new Response(`Resend API error: ${errorText}`, { status: 500 });
+        return jsonError(req, `Resend API error: ${errorText}`, 500);
       }
 
       const fullEmail = await resendRes.json();
@@ -144,7 +153,7 @@ serve(async (req: Request) => {
 
       if (!senderEmail) {
         console.error("[resend-webhook] Impossible de parser l'adresse d'expéditeur :", fromStr);
-        return new Response("Invalid sender email", { status: 400 });
+        return jsonError(req, "Invalid sender email", 400);
       }
 
       console.log(`[resend-webhook] E-mail expéditeur résolu : ${senderEmail}`);
@@ -160,12 +169,16 @@ serve(async (req: Request) => {
 
       if (leadErr) {
         console.error("[resend-webhook] Erreur de recherche du lead :", leadErr.message);
-        return new Response(`DB Error: ${leadErr.message}`, { status: 500 });
+        return jsonError(req, `DB Error: ${leadErr.message}`, 500);
       }
 
       if (!lead) {
         console.warn(`[resend-webhook] Aucun lead actif trouvé pour l'adresse e-mail : ${senderEmail}`);
-        return new Response(`No active lead found for: ${senderEmail}`, { status: 200 }); // Retourne 200 pour éviter les relances Resend
+        // Retourne 200 (et non une erreur) pour éviter que Resend ne relance ce webhook indéfiniment
+        return new Response(JSON.stringify({ message: `No active lead found for: ${senderEmail}` }), {
+          status: 200,
+          headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+        });
       }
 
       console.log(`[resend-webhook] Lead identifié : ${lead.company_name} (ID: ${lead.id})`);
@@ -293,8 +306,11 @@ serve(async (req: Request) => {
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur inattendue";
     console.error("[resend-webhook] Erreur interne :", msg);
-    return new Response("Internal Server Error", { status: 500 });
+    return jsonError(req, "Internal Server Error", 500);
   }
 
-  return new Response("OK", { status: 200 });
+  return new Response(JSON.stringify({ success: true }), {
+    status: 200,
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+  });
 });

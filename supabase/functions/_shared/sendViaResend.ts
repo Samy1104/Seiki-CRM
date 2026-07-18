@@ -4,6 +4,7 @@
 // ============================================================
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { fetchWithTimeout } from "./fetchWithTimeout.ts";
 
 interface GeneratedEmail {
   id: string;
@@ -97,9 +98,28 @@ export async function sendGeneratedEmailViaResend(
 
   const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email?id=${generatedEmailId}&t=open`;
   const emailHtml = buildEmailHtml(ge.corps_du_mail, trackingPixelUrl);
+  const resolvedFromEmail = options?.fromEmail || fromEmail;
+
+  const recordFailure = async (errorMessage: string) => {
+    await supabase.from("generated_emails").update({ statut_envoi: "failed" }).eq("id", generatedEmailId);
+    // On garde une trace de la raison de l'échec (invisible autrement : la ligne
+    // generated_emails ne stocke pas d'erreur, et l'onglet Validation ne charge
+    // que les statuts 'draft'/'failed' — sans ce log, l'échec disparaît sans laisser
+    // de moyen de comprendre pourquoi ni de le rejouer en connaissance de cause).
+    await supabase.from("email_logs").insert([{
+      lead_id: ge.lead_id,
+      generated_email_id: generatedEmailId,
+      direction: "outbound",
+      from_email: resolvedFromEmail,
+      to_email: leadData.email,
+      subject: ge.sujet,
+      status: "failed",
+      error_message: errorMessage,
+    }]).then(() => {});
+  };
 
   const resendPayload = {
-    from: `${options?.fromName || fromName} <${options?.fromEmail || fromEmail}>`,
+    from: `${options?.fromName || fromName} <${resolvedFromEmail}>`,
     to: [leadData.email],
     subject: ge.sujet,
     html: emailHtml,
@@ -110,17 +130,25 @@ export async function sendGeneratedEmailViaResend(
     ],
   };
 
-  const resendResponse = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify(resendPayload),
-  });
+  let resendResponse: Response;
+  try {
+    resendResponse = await fetchWithTimeout("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify(resendPayload),
+    });
+  } catch (err) {
+    const message = `Erreur réseau vers Resend : ${err instanceof Error ? err.message : String(err)}`;
+    await recordFailure(message);
+    return { success: false, error: message };
+  }
 
   const resendData = await resendResponse.json();
 
   if (!resendResponse.ok) {
-    await supabase.from("generated_emails").update({ statut_envoi: "failed" }).eq("id", generatedEmailId);
-    return { success: false, error: `Resend API error ${resendResponse.status}: ${JSON.stringify(resendData)}` };
+    const message = `Resend API error ${resendResponse.status}: ${JSON.stringify(resendData)}`;
+    await recordFailure(message);
+    return { success: false, error: message };
   }
 
   const resendMessageId = resendData.id as string;

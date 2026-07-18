@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { leadsService } from '../services/leadsService';
+import type { Lead, LeadScoreDetail } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
@@ -236,7 +237,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
         .map(([criterion, data]) => {
           const maxVal = CRITERIA.find(c => c.id === criterion)?.max || 15;
           return {
-            criterion: criterion as any,
+            criterion: criterion as LeadScoreDetail['criterion'],
             value: data.value,
             max_value: maxVal,
             label_selected: data.label,
@@ -339,7 +340,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                 <div className="field-label">Segment *</div>
                 <Select
                   value={form.segment}
-                  onValueChange={val => setForm({ ...form, segment: val as any })}
+                  onValueChange={val => setForm({ ...form, segment: val as Lead['segment'] })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="— Choisir" />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Sparkles, Mail, RefreshCw, Check, Edit3, Send, ChevronDown, ChevronUp,
-  AlertCircle, Loader, Trash2, Zap, FileEdit
+  Mail, RefreshCw, Check, Edit3, Send, ChevronDown, ChevronUp,
+  AlertCircle, Loader, Trash2, Zap, FileEdit, AlertTriangle
 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { emailsService, type GeneratedEmail } from '../services/emailsService';
@@ -11,6 +11,7 @@ import { leadsService, type Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { ProspectionModeToggle } from '../components/ProspectionModeToggle';
+import { confirmAction } from '../utils/confirmAction';
 import './prospection.css';
 
 // ── Onglets de la vue ──────────────────────────────────────────────────────────
@@ -43,8 +44,8 @@ export const Prospection: React.FC = () => {
       {/* Header */}
       <div className="prospection-header">
         <div className="prospection-title">
-          <Sparkles size={20} style={{ color: 'var(--purple)' }} />
-          <h1>Prospection IA</h1>
+          <FileEdit size={20} style={{ color: 'var(--purple)' }} />
+          <h1>Prospection</h1>
           <span className="prospection-badge">Templates + fusion</span>
         </div>
         <ProspectionModeToggle mode={mode} onChange={handleModeChange} />
@@ -96,7 +97,7 @@ const ValidationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
   const loadDrafts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await emailsService.getGeneratedEmails('draft');
+      const data = await emailsService.getGeneratedEmails(['draft', 'failed']);
       setDrafts(data);
     } catch {
       showToast('Erreur chargement de la file de validation', 'error');
@@ -143,7 +144,7 @@ const ValidationTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' |
       ) : drafts.length === 0 ? (
         <div className="pros-empty">
           <Mail size={28} style={{ opacity: 0.4 }} />
-          <p>Aucun draft en attente — tout lead ajouté avec un email génère automatiquement son 1er mail ici.</p>
+          <p>Aucun email en attente ou en échec — tout lead ajouté avec un email génère automatiquement son 1er mail ici.</p>
         </div>
       ) : (
         <div className="gen-review-list">
@@ -438,7 +439,18 @@ const EmailPreviewCard: React.FC<{
         // Resend down, etc). Roll back to 'draft' so the email stays visible
         // and retryable in the review list instead of silently disappearing
         // (getGeneratedEmails only fetches statut_envoi === 'draft').
-        await emailsService.updateGeneratedEmail(email.id, { statut_envoi: 'draft' }).catch(() => {});
+        try {
+          await emailsService.updateGeneratedEmail(email.id, { statut_envoi: 'draft' });
+        } catch (rollbackErr) {
+          // If the rollback itself fails, the email is stuck in 'approved' —
+          // invisible to this validation queue. Surface it loudly instead of
+          // swallowing it, since there's no other way for anyone to notice.
+          console.error('Rollback to draft failed after send failure:', rollbackErr);
+          showToast(
+            "Échec d'envoi ET du retour en brouillon — cet email est bloqué en statut 'approuvé', contactez un admin",
+            'error'
+          );
+        }
         throw sendErr;
       }
     } catch (err) {
@@ -462,7 +474,7 @@ const EmailPreviewCard: React.FC<{
   };
 
   const handleDelete = async () => {
-    if (!confirm('Supprimer cet email généré ?')) return;
+    if (!confirmAction('Supprimer cet email généré ?')) return;
     try {
       await emailsService.deleteGeneratedEmail(email.id);
       onUpdate();
@@ -484,6 +496,11 @@ const EmailPreviewCard: React.FC<{
           <Mail size={12} style={{ color: 'var(--purple)', flexShrink: 0 }} />
           <span>{email.sujet}</span>
         </div>
+        {email.statut_envoi === 'failed' && (
+          <span className="epc-failed-badge">
+            <AlertTriangle size={12} /> Échec d'envoi
+          </span>
+        )}
         <div className="epc-chevron">
           {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
         </div>
@@ -541,7 +558,7 @@ const EmailPreviewCard: React.FC<{
             <div className="epc-actions">
               <button className="btn-primary-sm" onClick={handleApproveAndSend} disabled={isSending}>
                 {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
-                {isSending ? 'Envoi...' : 'Approuver & Envoyer'}
+                {isSending ? 'Envoi...' : email.statut_envoi === 'failed' ? 'Réessayer l\'envoi' : 'Approuver & Envoyer'}
               </button>
               <button className="btn-ghost-sm" onClick={() => setIsEditing(true)}>
                 <Edit3 size={12} /> Modifier

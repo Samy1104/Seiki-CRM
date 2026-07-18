@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { TrendingUp, Compass, Award } from 'lucide-react';
+import { computeSegmentStats } from '../utils/leadMetrics';
+import { useLoadOnMount } from '../hooks/useLoadOnMount';
+import { withLoadingState } from '../utils/withLoadingState';
 
 export const Stats: React.FC = () => {
   const { showToast } = useToast();
@@ -12,22 +15,18 @@ export const Stats: React.FC = () => {
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadStatsData = async () => {
-      try {
-        const fetchedLeads = await leadsService.getLeads();
-        const fetchedStages = await settingsService.getPipelineStages();
-        setLeads(fetchedLeads);
-        setStages(fetchedStages);
-      } catch (err) {
-        console.error('Error loading stats data:', err);
-        showToast('Erreur de chargement des statistiques', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadStatsData();
-  }, []);
+  useLoadOnMount(() => withLoadingState(async () => {
+    const fetchedLeads = await leadsService.getLeads();
+    const fetchedStages = await settingsService.getPipelineStages();
+    setLeads(fetchedLeads);
+    setStages(fetchedStages);
+  }, {
+    setLoading,
+    onError: (err) => {
+      console.error('Error loading stats data:', err);
+      showToast('Erreur de chargement des statistiques', 'error');
+    }
+  }));
 
   if (loading) {
     return (
@@ -67,17 +66,7 @@ export const Stats: React.FC = () => {
   const maxStageCount = Math.max(...funnelStages.map(f => f.count), 1);
 
   // Segment Split
-  const segmentStats = {
-    Media: { count: 0, val: 0 },
-    Retail: { count: 0, val: 0 },
-    Instit: { count: 0, val: 0 }
-  };
-  leads.forEach(l => {
-    if (segmentStats[l.segment]) {
-      segmentStats[l.segment].count += 1;
-      segmentStats[l.segment].val += l.deal_value;
-    }
-  });
+  const segmentStats = computeSegmentStats(leads);
 
   const totalSegmentCount = Object.values(segmentStats).reduce((acc, curr) => acc + curr.count, 0);
 

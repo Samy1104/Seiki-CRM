@@ -8,6 +8,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sendGeneratedEmailViaResend } from "../_shared/sendViaResend.ts";
+import { requireUser } from "../_shared/requireUser.ts";
 
 interface SendRequest {
   generatedEmailId: string;
@@ -36,6 +37,9 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const authError = await requireUser(req, supabase, corsHeaders(req));
+    if (authError) return authError;
 
     const outcome = await sendGeneratedEmailViaResend(supabase, body.generatedEmailId, {
       fromEmail: body.fromEmail,

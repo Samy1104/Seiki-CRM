@@ -22,6 +22,12 @@ export interface ProspectionSettings {
   archive_after_followups: number;
 }
 
+export interface SlaLimits {
+  Media: number;
+  Retail: number;
+  Instit: number;
+}
+
 export interface TeamMember {
   id: string;
   full_name: string;
@@ -61,6 +67,18 @@ export const settingsService = {
       followup_2_days: (find('followup_2_days')?.days as number) ?? 10,
       archive_after_followups: (find('archive_after_followups')?.count as number) ?? 2,
     };
+  },
+
+  /** Récupère les seuils SLA par segment (délai en jours avant alerte), avec fallback par défaut. */
+  async getSlaLimits(): Promise<SlaLimits> {
+    const all = await this.getSettings();
+    const limits: SlaLimits = { Media: 5, Retail: 7, Instit: 14 };
+    all.forEach((s) => {
+      if (s.key === 'sla_media' && s.value.days) limits.Media = s.value.days;
+      if (s.key === 'sla_retail' && s.value.days) limits.Retail = s.value.days;
+      if (s.key === 'sla_instit' && s.value.days) limits.Instit = s.value.days;
+    });
+    return limits;
   },
 
   async updateProspectionSettings(updates: Partial<ProspectionSettings>): Promise<void> {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead, MergeProposal } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
@@ -6,6 +6,10 @@ import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
+import { Modal } from '../components/ui/Modal';
+import { confirmAction } from '../utils/confirmAction';
+import { useLoadOnMount } from '../hooks/useLoadOnMount';
+import { withLoadingState } from '../utils/withLoadingState';
 
 interface LeadsProps {
   setView: (view: string) => void;
@@ -29,26 +33,23 @@ export const Leads: React.FC<LeadsProps> = () => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const loadLeadsData = async () => {
-    try {
-      const fetchedLeads = await leadsService.getLeads(archiveFilter);
-      const fetchedMembers = await settingsService.getTeamMembers();
-      const proposals = await leadsService.getMergeProposals();
+  const loadLeadsData = () => withLoadingState(async () => {
+    const fetchedLeads = await leadsService.getLeads(archiveFilter);
+    const fetchedMembers = await settingsService.getTeamMembers();
+    const proposals = await leadsService.getMergeProposals();
 
-      setLeads(fetchedLeads);
-      setTeamMembers(fetchedMembers);
-      setMergeProposals(proposals);
-    } catch (err) {
+    setLeads(fetchedLeads);
+    setTeamMembers(fetchedMembers);
+    setMergeProposals(proposals);
+  }, {
+    setLoading,
+    onError: (err) => {
       console.error('Error loading leads data:', err);
       showToast('Erreur lors du chargement', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  useEffect(() => {
-    loadLeadsData();
-  }, [archiveFilter]);
+  useLoadOnMount(loadLeadsData, [archiveFilter]);
 
   const handleOpenLead = async (leadId: string) => {
     try {
@@ -62,7 +63,7 @@ export const Leads: React.FC<LeadsProps> = () => {
   };
 
   const handleMergeApprove = async (proposalId: string) => {
-    if (window.confirm('Êtes-vous sûr de vouloir fusionner ces deux leads ? L\'historique et les tâches seront fusionnés.')) {
+    if (confirmAction('Êtes-vous sûr de vouloir fusionner ces deux leads ? L\'historique et les tâches seront fusionnés.')) {
       try {
         await leadsService.resolveMergeProposal(proposalId, 'approved');
         showToast('Leads fusionnés avec succès');
@@ -289,57 +290,56 @@ export const Leads: React.FC<LeadsProps> = () => {
       </div>
 
       {/* Quick modal fallback details */}
-      {modalOpen && selectedLead && (
-        <div className="modal-overlay open" onClick={() => setModalOpen(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <div className="modal-title">{selectedLead.company_name}</div>
-                <div className="modal-sub">
-                  {selectedLead.contact_name || '—'}
-                  {selectedLead.email ? ` · ${selectedLead.email}` : ''}
-                </div>
-                <div className="modal-badges-row" style={{ marginTop: '8px' }}>
-                  <span className={`badge badge-${selectedLead.segment.toLowerCase()}`}>{selectedLead.segment}</span>
-                  <span className="stage-pill">{selectedLead.stage?.name}</span>
-                  <span style={{ fontSize: '12px', fontWeight: '500', color: selectedLead.score >= 80 ? 'var(--green)' : selectedLead.score >= 60 ? 'var(--gold)' : 'var(--red)' }}>
-                    Score : {selectedLead.score}/100
-                  </span>
-                </div>
+      {selectedLead && (
+        <Modal
+          open={modalOpen}
+          onClose={() => setModalOpen(false)}
+          header={
+            <>
+              <div className="modal-title">{selectedLead.company_name}</div>
+              <div className="modal-sub">
+                {selectedLead.contact_name || '—'}
+                {selectedLead.email ? ` · ${selectedLead.email}` : ''}
               </div>
-              <button className="modal-close-btn" onClick={() => setModalOpen(false)}>✕</button>
+              <div className="modal-badges-row" style={{ marginTop: '8px' }}>
+                <span className={`badge badge-${selectedLead.segment.toLowerCase()}`}>{selectedLead.segment}</span>
+                <span className="stage-pill">{selectedLead.stage?.name}</span>
+                <span style={{ fontSize: '12px', fontWeight: '500', color: selectedLead.score >= 80 ? 'var(--green)' : selectedLead.score >= 60 ? 'var(--gold)' : 'var(--red)' }}>
+                  Score : {selectedLead.score}/100
+                </span>
+              </div>
+            </>
+          }
+        >
+          <div className="mtab-panel on" style={{ padding: '20px' }}>
+            <div className="detail-row">
+              <span className="detail-key">Email</span>
+              <span className="detail-val">{selectedLead.email || '—'}</span>
             </div>
-
-            <div className="mtab-panel on" style={{ padding: '20px' }}>
-              <div className="detail-row">
-                <span className="detail-key">Email</span>
-                <span className="detail-val">{selectedLead.email || '—'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-key">Téléphone</span>
-                <span className="detail-val">{selectedLead.phone || '—'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-key">LinkedIn</span>
-                <span className="detail-val">{selectedLead.linkedin_url || '—'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-key">Valeur</span>
-                <span className="detail-val">{selectedLead.deal_value}k€</span>
-              </div>
-              {selectedLead.note && (
-                <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                  <span className="detail-key" style={{ marginBottom: '4px' }}>Note</span>
-                  <span className="detail-val" style={{ textAlign: 'left', opacity: '0.8' }}>{selectedLead.note}</span>
-                </div>
-              )}
+            <div className="detail-row">
+              <span className="detail-key">Téléphone</span>
+              <span className="detail-val">{selectedLead.phone || '—'}</span>
             </div>
-
-            <div className="modal-footer" style={{ borderTop: '0.5px solid var(--border)', padding: '14px 20px', display: 'flex', justifyContent: 'flex-end' }}>
-              <button className="btn btn-sm" onClick={() => setModalOpen(false)}>Fermer</button>
+            <div className="detail-row">
+              <span className="detail-key">LinkedIn</span>
+              <span className="detail-val">{selectedLead.linkedin_url || '—'}</span>
             </div>
+            <div className="detail-row">
+              <span className="detail-key">Valeur</span>
+              <span className="detail-val">{selectedLead.deal_value}k€</span>
+            </div>
+            {selectedLead.note && (
+              <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
+                <span className="detail-key" style={{ marginBottom: '4px' }}>Note</span>
+                <span className="detail-val" style={{ textAlign: 'left', opacity: '0.8' }}>{selectedLead.note}</span>
+              </div>
+            )}
           </div>
-        </div>
+
+          <div className="modal-footer" style={{ borderTop: '0.5px solid var(--border)', padding: '14px 20px', display: 'flex', justifyContent: 'flex-end' }}>
+            <button className="btn btn-sm" onClick={() => setModalOpen(false)}>Fermer</button>
+          </div>
+        </Modal>
       )}
     </div>
   );

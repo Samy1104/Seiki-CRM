@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { sendGeneratedEmailViaResend } from "../_shared/sendViaResend.ts";
+import { requireUserOrServiceRole } from "../_shared/requireUser.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -21,6 +22,9 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const authError = await requireUserOrServiceRole(req, supabase, corsHeaders(req));
+    if (authError) return authError;
 
     const { data: modeSetting } = await supabase
       .from("app_settings").select("value").eq("key", "prospection_mode").single();

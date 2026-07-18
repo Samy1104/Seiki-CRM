@@ -9,9 +9,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
-
-// Réutilise la même clé/modèle que generate-email
-const GEMINI_MODEL = "gemini-2.5-flash";
+import { GEMINI_MODEL, callGemini } from "../_shared/geminiApi.ts";
+import { requireUser } from "../_shared/requireUser.ts";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -217,60 +216,26 @@ serve(async (req: Request) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    const authError = await requireUser(req, supabase, corsHeaders(req));
+    if (authError) return authError;
+
     const learnedRules = await fetchLearnedRules(supabase, voice);
 
     const systemPrompt = buildSystemPrompt(voice, language, learnedRules);
     const userPrompt = buildUserPrompt(body.brief);
 
-    const startMs = Date.now();
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
-
-    const geminiResponse = await fetch(geminiUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: systemPrompt }],
-        },
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: userPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.8,
-          responseMimeType: "application/json",
-        },
-      }),
+    const { rawText, generationMs, usageMetadata } = await callGemini(geminiKey, {
+      systemPrompt,
+      userPrompt,
+      temperature: 0.8,
     });
-
-    if (!geminiResponse.ok) {
-      const errBody = await geminiResponse.text();
-      throw new Error(`Gemini API error ${geminiResponse.status}: ${errBody}`);
-    }
-
-    const geminiData = await geminiResponse.json();
-    const generationMs = Date.now() - startMs;
-
-    const candidate = geminiData?.candidates?.[0];
-    const finishReason = candidate?.finishReason;
-
-    if (finishReason === "MAX_TOKENS") {
-      throw new Error("Gemini a atteint la limite de tokens — réponse tronquée. Augmenter maxOutputTokens.");
-    }
-
-    const rawText = candidate?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      const errDetail = JSON.stringify(geminiData?.candidates?.[0] ?? geminiData);
-      throw new Error(`Gemini n'a pas retourné de contenu. Détail : ${errDetail.substring(0, 300)}`);
-    }
 
     let post: LinkedInPostResponse;
     try {
       post = JSON.parse(rawText) as LinkedInPostResponse;
     } catch {
-      throw new Error(`JSON invalide retourné par Gemini (finishReason=${finishReason}) : ${rawText.substring(0, 300)}`);
+      throw new Error(`JSON invalide retourné par Gemini : ${rawText.substring(0, 300)}`);
     }
 
     if (!post.hook || !post.corps || !Array.isArray(post.hashtags)) {
@@ -286,7 +251,7 @@ serve(async (req: Request) => {
           voice,
           language,
           generationMs,
-          tokens: geminiData?.usageMetadata ?? null,
+          tokens: usageMetadata,
         },
       }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }

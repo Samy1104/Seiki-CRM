@@ -40,11 +40,13 @@ CREATE TABLE IF NOT EXISTS public.campaigns (
 COMMENT ON TABLE public.campaigns IS 'Campagnes de prospection email propulsées par IA';
 
 ALTER TABLE public.campaigns ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "authenticated_full_access" ON public.campaigns 
+DROP POLICY IF EXISTS "authenticated_full_access" ON public.campaigns;
+CREATE POLICY "authenticated_full_access" ON public.campaigns
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
-CREATE TRIGGER trg_campaigns_updated 
-  BEFORE UPDATE ON public.campaigns 
+DROP TRIGGER IF EXISTS trg_campaigns_updated ON public.campaigns;
+CREATE TRIGGER trg_campaigns_updated
+  BEFORE UPDATE ON public.campaigns
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ============================================================
@@ -74,13 +76,14 @@ CREATE TABLE IF NOT EXISTS public.generated_emails (
 COMMENT ON TABLE public.generated_emails IS 'Emails personnalisés générés par le LLM, en attente de validation ou envoyés';
 
 ALTER TABLE public.generated_emails ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "authenticated_full_access" ON public.generated_emails 
+DROP POLICY IF EXISTS "authenticated_full_access" ON public.generated_emails;
+CREATE POLICY "authenticated_full_access" ON public.generated_emails
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
-CREATE INDEX idx_gen_emails_lead     ON public.generated_emails(lead_id);
-CREATE INDEX idx_gen_emails_campaign ON public.generated_emails(campaign_id);
-CREATE INDEX idx_gen_emails_statut   ON public.generated_emails(statut_envoi);
-CREATE INDEX idx_gen_emails_created  ON public.generated_emails(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gen_emails_lead     ON public.generated_emails(lead_id);
+CREATE INDEX IF NOT EXISTS idx_gen_emails_campaign ON public.generated_emails(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_gen_emails_statut   ON public.generated_emails(statut_envoi);
+CREATE INDEX IF NOT EXISTS idx_gen_emails_created  ON public.generated_emails(created_at DESC);
 
 -- ============================================================
 -- 4. LIAISON email_logs → generated_emails
@@ -141,6 +144,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS trg_sync_campaign_sent ON public.generated_emails;
 CREATE TRIGGER trg_sync_campaign_sent
   AFTER UPDATE ON public.generated_emails
   FOR EACH ROW EXECUTE FUNCTION public.sync_campaign_counters();
@@ -174,6 +178,7 @@ END;
 $$;
 
 -- Trigger sur INSERT (génération) et sur UPDATE vers 'sent' (envoi)
+DROP TRIGGER IF EXISTS trg_log_generated_email_insert ON public.generated_emails;
 CREATE TRIGGER trg_log_generated_email_insert
   AFTER INSERT ON public.generated_emails
   FOR EACH ROW EXECUTE FUNCTION public.log_generated_email();

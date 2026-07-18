@@ -21,6 +21,10 @@ export interface Task {
   assignees?: TeamMember[];
 }
 
+interface TaskAssigneeRow {
+  team_members: TeamMember | null;
+}
+
 export const tasksService = {
   async getTasks(): Promise<Task[]> {
     const { data, error } = await supabase
@@ -37,7 +41,7 @@ export const tasksService = {
     if (error) throw error;
 
     return (data || []).map(task => {
-      const assignees = (task.task_assignees || []).map((ta: any) => ta.team_members).filter(Boolean);
+      const assignees = (task.task_assignees || []).map((ta: TaskAssigneeRow) => ta.team_members).filter(Boolean) as TeamMember[];
       return {
         ...task,
         assignees,
@@ -61,7 +65,7 @@ export const tasksService = {
     if (error) throw error;
 
     return (data || []).map(task => {
-      const assignees = (task.task_assignees || []).map((ta: any) => ta.team_members).filter(Boolean);
+      const assignees = (task.task_assignees || []).map((ta: TaskAssigneeRow) => ta.team_members).filter(Boolean) as TeamMember[];
       return {
         ...task,
         assignees,
@@ -88,6 +92,7 @@ export const tasksService = {
 
     if (error) throw error;
 
+    let assignees: TeamMember[] = [];
     if (assignee_ids && assignee_ids.length > 0) {
       const inserts = assignee_ids.map(memberId => ({
         task_id: data.id,
@@ -97,6 +102,15 @@ export const tasksService = {
         .from('task_assignees')
         .insert(inserts);
       if (assocError) throw assocError;
+
+      // One lightweight lookup instead of a full task-with-joins refetch —
+      // we already know the task/lead data from the insert result above.
+      const { data: members, error: membersError } = await supabase
+        .from('team_members')
+        .select('*')
+        .in('id', assignee_ids);
+      if (membersError) throw membersError;
+      assignees = members || [];
     }
 
     if (task.lead_id) {
@@ -110,23 +124,8 @@ export const tasksService = {
         }]);
     }
 
-    const { data: fullTask, error: fetchError } = await supabase
-      .from('tasks')
-      .select(`
-        *,
-        lead:leads!lead_id(company_name),
-        task_assignees(
-          team_members(*)
-        )
-      `)
-      .eq('id', data.id)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    const assignees = (fullTask.task_assignees || []).map((ta: any) => ta.team_members).filter(Boolean);
     return {
-      ...fullTask,
+      ...data,
       assignees,
       assignee: assignees[0] || null
     };
@@ -139,7 +138,7 @@ export const tasksService = {
       const isCompleted = otherUpdates.status === 'done';
       const completedAt = isCompleted ? new Date().toISOString() : (otherUpdates.status ? null : undefined);
 
-      const dataToUpdate: any = { ...otherUpdates };
+      const dataToUpdate: Partial<Task> = { ...otherUpdates };
       if (completedAt !== undefined) {
         dataToUpdate.completed_at = completedAt;
       }

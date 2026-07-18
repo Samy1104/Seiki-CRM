@@ -295,67 +295,20 @@ export const leadsService = {
       .eq('status', 'pending');
 
     if (error) throw error;
-    return (data || []) as any[];
+    return data || [];
   },
 
   async resolveMergeProposal(proposalId: string, status: 'approved' | 'rejected', resolverId: string | null = null): Promise<void> {
-    const { data: proposal, error: getError } = await supabase
-      .from('lead_merge_proposals')
-      .select('*')
-      .eq('id', proposalId)
-      .single();
+    // Runs as a single Postgres transaction (see resolve_merge_proposal in
+    // schema_leads_merge_addon.sql) — a failure partway through no longer
+    // leaves a lead half-merged (history/tasks reassigned but not archived,
+    // or vice versa), since it's all-or-nothing at the DB level.
+    const { error } = await supabase.rpc('resolve_merge_proposal', {
+      p_proposal_id: proposalId,
+      p_status: status,
+      p_resolver_id: resolverId,
+    });
 
-    if (getError) throw getError;
-
-    const { error: updateError } = await supabase
-      .from('lead_merge_proposals')
-      .update({
-        status,
-        resolved_by: resolverId,
-        resolved_at: new Date().toISOString()
-      })
-      .eq('id', proposalId);
-
-    if (updateError) throw updateError;
-
-    if (status === 'approved') {
-      // Execute the Merge!
-      // 1. Move source lead history to target lead
-      const { error: historyError } = await supabase
-        .from('history')
-        .update({ lead_id: proposal.target_lead_id })
-        .eq('lead_id', proposal.source_lead_id);
-
-      if (historyError) throw historyError;
-
-      // 2. Move source lead tasks to target lead
-      const { error: tasksError } = await supabase
-        .from('tasks')
-        .update({ lead_id: proposal.target_lead_id })
-        .eq('lead_id', proposal.source_lead_id);
-
-      if (tasksError) throw tasksError;
-
-      // 3. Mark source lead as merged and archive it
-      const { error: leadMergeError } = await supabase
-        .from('leads')
-        .update({
-          merged_into_id: proposal.target_lead_id,
-          is_archived: true
-        })
-        .eq('id', proposal.source_lead_id);
-
-      if (leadMergeError) throw leadMergeError;
-
-      // 4. Log merge action in target lead history
-      await supabase
-        .from('history')
-        .insert([{
-          lead_id: proposal.target_lead_id,
-          action_type: 'merge',
-          content: `Lead fusionné avec doublon détecté. Historique et tâches importés.`,
-          metadata: { merged_lead_id: proposal.source_lead_id }
-        }]);
-    }
+    if (error) throw error;
   }
 };

@@ -418,6 +418,22 @@ verify_jwt = false
 
 [functions.linkedin-oauth-callback]
 verify_jwt = false
+
+# track-email est chargée comme <img> pixel par les clients mail (Gmail...) —
+# aucun header Authorization possible sur ce type de requête.
+[functions.track-email]
+verify_jwt = false
+
+# calendar sert un flux iCal interrogé par des applications calendrier externes
+# (Google/Apple/Outlook) qui n'attachent pas de JWT Supabase.
+[functions.calendar]
+verify_jwt = false
+
+# resend-webhook est appelée serveur-à-serveur par Resend, qui n'a pas de JWT
+# Supabase — l'authenticité est garantie par la vérification de signature Svix
+# (RESEND_WEBHOOK_SECRET), pas par verify_jwt.
+[functions.resend-webhook]
+verify_jwt = false
 # Directory under `supabase/` where declarative files are written.
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.

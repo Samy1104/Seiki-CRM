@@ -8,6 +8,12 @@
 - **Phase courante** : Aucune (projet initialisé)
 - **Prochaine action** : `/gsd-plan-phase 1`
 
+> ⚠️ Ce fichier et ROADMAP.md n'ont pas été mis à jour depuis leur création
+> (2026-07-03) alors que le projet a beaucoup évolué depuis (voir
+> `docs/superpowers/` pour le travail réellement livré). Traiter les phases
+> ci-dessous comme un instantané de l'intention initiale, pas comme l'état
+> courant du projet.
+
 ## Phases
 
 | Phase | Titre | Statut |
@@ -28,6 +34,7 @@
 - RLS Supabase : politique `authenticated_full_access` sur toutes les tables → suffisant pour M1 en équipe restreinte.
 - Pas d'Edge Functions déployées pour l'instant → nécessaires en Phase 3 & 4.
 - Linter : Oxlint (très rapide, pas ESLint). Configs dans `.oxlintrc.json`.
+- Styling : deux systèmes coexistent — CSS global (classNames) pour les vues CRM historiques (Pipeline, Leads, Settings, Tasks...), Tailwind v4 (scopé, commit `23c89ed`) pour Contenu/Prospection qui avaient besoin d'itérer plus vite. Pas de plan de migration établi — nouvelles vues : suivre le style de la vue la plus proche plutôt que d'introduire un 3ème système.
 
 ## Notes & contexte
 

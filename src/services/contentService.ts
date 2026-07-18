@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { callEdgeFunction } from './edgeFunctions';
 
 export type ContentVoice = 'seiki' | 'jaafar';
 export type ContentLanguage = 'fr' | 'en';
@@ -34,46 +35,26 @@ export const contentService = {
     voice: ContentVoice,
     language: ContentLanguage
   ): Promise<LinkedInPost> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const data = await callEdgeFunction<GeneratePostResult & { error?: string }>(
+      'generate-linkedin-post',
+      { brief, voice, language }
+    );
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/generate-linkedin-post`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-      },
-      body: JSON.stringify({ brief, voice, language }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || `Erreur génération (${response.status})`);
+    if (!data.success) {
+      throw new Error(data.error || 'Erreur génération');
     }
 
-    return (data as GeneratePostResult).post;
+    return data.post;
   },
 
   async learnFromEdit(voice: ContentVoice, original: LinkedInPost, edited: LinkedInPost): Promise<void> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const data = await callEdgeFunction<{ success: boolean; error?: string }>(
+      'learn-linkedin-style',
+      { voice, original, edited }
+    );
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/learn-linkedin-style`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-      },
-      body: JSON.stringify({ voice, original, edited }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || `Erreur apprentissage (${response.status})`);
+    if (!data.success) {
+      throw new Error(data.error || 'Erreur apprentissage');
     }
   },
 

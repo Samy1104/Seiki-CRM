@@ -35,9 +35,11 @@ CREATE TABLE IF NOT EXISTS public.email_templates (
 COMMENT ON TABLE public.email_templates IS 'Samples d''email éditables, un par segment x étape (initial/relance_1/relance_2)';
 
 ALTER TABLE public.email_templates ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "authenticated_full_access" ON public.email_templates;
 CREATE POLICY "authenticated_full_access" ON public.email_templates
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
+DROP TRIGGER IF EXISTS trg_email_templates_updated ON public.email_templates;
 CREATE TRIGGER trg_email_templates_updated
   BEFORE UPDATE ON public.email_templates
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();

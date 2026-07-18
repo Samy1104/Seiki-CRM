@@ -1,5 +1,7 @@
 // ============================================================
 // _shared/linkedinApi.ts
+// (fetchWithTimeout import below caps every outbound call so a slow/hung
+// LinkedIn API response can't stall the calling function indefinitely.)
 // Helpers LinkedIn REST API (OAuth token exchange/refresh, upload
 // image, publication de post) partagés par linkedin-oauth-callback
 // et publish-linkedin-post.
@@ -8,7 +10,17 @@
 // Format YYYYMM (ex: "202607" pour juillet 2026). LinkedIn désactive les
 // versions de plus de ~12 mois — si les publications se remettent à échouer
 // avec NONEXISTENT_VERSION, bump ce défaut ou le secret LINKEDIN_API_VERSION.
+import { fetchWithTimeout } from "./fetchWithTimeout.ts";
+
 const LINKEDIN_API_VERSION = Deno.env.get("LINKEDIN_API_VERSION") || "202607";
+
+// Doit être identique à l'URI enregistrée dans l'app LinkedIn Developer et
+// utilisée à la fois par linkedin-oauth-start (autorisation) et
+// linkedin-oauth-callback (échange du code) — un seul endroit pour éviter
+// que les deux dérivent si la fonction est un jour renommée.
+export function buildRedirectUri(supabaseUrl: string): string {
+  return `${supabaseUrl}/functions/v1/linkedin-oauth-callback`;
+}
 
 interface TokenResponse {
   access_token: string;
@@ -21,7 +33,7 @@ async function requestToken(params: Record<string, string>): Promise<TokenRespon
   const clientSecret = Deno.env.get("LINKEDIN_CLIENT_SECRET")!;
   const body = new URLSearchParams({ ...params, client_id: clientId, client_secret: clientSecret });
 
-  const res = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+  const res = await fetchWithTimeout("https://www.linkedin.com/oauth/v2/accessToken", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body,
@@ -40,7 +52,7 @@ export function refreshAccessToken(refreshToken: string): Promise<TokenResponse>
 }
 
 export async function fetchMemberUrn(accessToken: string): Promise<string> {
-  const res = await fetch("https://api.linkedin.com/v2/userinfo", {
+  const res = await fetchWithTimeout("https://api.linkedin.com/v2/userinfo", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   const data = await res.json();
@@ -51,7 +63,7 @@ export async function fetchMemberUrn(accessToken: string): Promise<string> {
 // Renvoie l'URN de la première organisation où le compte est admin.
 // Nécessite le scope w_organization_social + accès Community Management API.
 export async function fetchAdminOrgUrn(accessToken: string): Promise<string> {
-  const res = await fetch(
+  const res = await fetchWithTimeout(
     "https://api.linkedin.com/rest/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED",
     {
       headers: {
@@ -69,7 +81,7 @@ export async function fetchAdminOrgUrn(accessToken: string): Promise<string> {
 }
 
 export async function uploadImage(accessToken: string, authorUrn: string, imageBytes: Uint8Array): Promise<string> {
-  const initRes = await fetch("https://api.linkedin.com/rest/images?action=initializeUpload", {
+  const initRes = await fetchWithTimeout("https://api.linkedin.com/rest/images?action=initializeUpload", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -85,7 +97,7 @@ export async function uploadImage(accessToken: string, authorUrn: string, imageB
   const uploadUrl = initData.value.uploadUrl as string;
   const imageUrn = initData.value.image as string;
 
-  const putRes = await fetch(uploadUrl, { method: "PUT", body: imageBytes });
+  const putRes = await fetchWithTimeout(uploadUrl, { method: "PUT", body: imageBytes }, 30000);
   if (!putRes.ok) throw new Error(`LinkedIn image upload failed: HTTP ${putRes.status}`);
 
   return imageUrn;
@@ -109,7 +121,7 @@ export async function publishPost(
     payload.content = { media: { id: imageUrn } };
   }
 
-  const res = await fetch("https://api.linkedin.com/rest/posts", {
+  const res = await fetchWithTimeout("https://api.linkedin.com/rest/posts", {
     method: "POST",
     headers: {
       Authorization: `Bearer ${accessToken}`,

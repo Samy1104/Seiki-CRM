@@ -9,6 +9,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { refreshAccessToken, uploadImage, publishPost } from "../_shared/linkedinApi.ts";
+import { requireServiceRole } from "../_shared/requireUser.ts";
 
 interface ScheduledPost {
   id: string;
@@ -31,6 +32,9 @@ serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders(req) });
   }
+
+  const authError = requireServiceRole(req, corsHeaders(req));
+  if (authError) return authError;
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

@@ -1,9 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { eventsService } from '../services/eventsService';
 import type { EventItem } from '../services/eventsService';
 import { useToast } from '../context/ToastContext';
 import { Plus, Calendar, MapPin, Target, Trash2, Download, Link2, Edit2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
+import { useLoadOnMount } from '../hooks/useLoadOnMount';
+import { withLoadingState } from '../utils/withLoadingState';
+import { confirmAction } from '../utils/confirmAction';
 
 // ── iCal helpers ─────────────────────────────────────────────────────────────
 
@@ -88,21 +91,18 @@ export const Agenda: React.FC = () => {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isFormCollapsed, setIsFormCollapsed] = useState(true);
 
-  const loadEvents = async () => {
-    try {
-      const fetched = await eventsService.getEvents();
-      setEvents(fetched);
-    } catch (err) {
+  const loadEvents = () => withLoadingState(async () => {
+    const fetched = await eventsService.getEvents();
+    setEvents(fetched);
+  }, {
+    setLoading,
+    onError: (err) => {
       console.error('Error loading events:', err);
       showToast('Erreur de chargement de l\'agenda', 'error');
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
+  useLoadOnMount(loadEvents);
 
   // ── iCal export: download all events as a .ics file ──────────────────────
   const handleExportIcal = () => {
@@ -134,9 +134,13 @@ export const Agenda: React.FC = () => {
       input.value = ICAL_FEED_URL;
       document.body.appendChild(input);
       input.select();
-      document.execCommand('copy');
+      const copied = document.execCommand('copy');
       document.body.removeChild(input);
-      showToast('URL copiée ✓');
+      if (copied) {
+        showToast('URL copiée ✓');
+      } else {
+        showToast("Impossible de copier l'URL — copiez-la manuellement", 'error');
+      }
     }
   };
 
@@ -146,7 +150,7 @@ export const Agenda: React.FC = () => {
     setNewDate(event.event_date);
     setNewEndDate(event.end_date || '');
     setNewLocation(event.location || '');
-    setNewSegment((event.segment as any) || '');
+    setNewSegment((event.segment as 'Media' | 'Retail' | 'Instit' | null) || '');
     setNewObjective(event.objective || '');
     setIsFormCollapsed(false);
     
@@ -204,7 +208,7 @@ export const Agenda: React.FC = () => {
   };
 
   const handleDeleteEvent = async (id: string) => {
-    if (window.confirm('Supprimer cet événement ?')) {
+    if (confirmAction('Supprimer cet événement ?')) {
       try {
         await eventsService.deleteEvent(id);
         showToast('Événement supprimé');
@@ -358,7 +362,7 @@ export const Agenda: React.FC = () => {
                 <div className="field-label">Segment ciblé</div>
                 <Select 
                   value={newSegment}
-                  onValueChange={val => setNewSegment(val as any)}
+                  onValueChange={val => setNewSegment(val as 'Media' | 'Retail' | 'Instit' | '')}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Tous les segments" />

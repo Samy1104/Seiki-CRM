@@ -5,6 +5,7 @@
 // ============================================================
 
 import { supabase } from './supabaseClient';
+import { callEdgeFunction } from './edgeFunctions';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -46,8 +47,10 @@ export interface SendResult {
 
 export const emailsService = {
 
-  /** Récupère tous les emails générés, filtrés optionnellement par statut */
-  async getGeneratedEmails(statut?: GeneratedEmail['statut_envoi']): Promise<GeneratedEmail[]> {
+  /** Récupère tous les emails générés, filtrés optionnellement par statut (un seul ou plusieurs) */
+  async getGeneratedEmails(
+    statut?: GeneratedEmail['statut_envoi'] | GeneratedEmail['statut_envoi'][]
+  ): Promise<GeneratedEmail[]> {
     let query = supabase
       .from('generated_emails')
       .select(`
@@ -56,7 +59,9 @@ export const emailsService = {
       `)
       .order('created_at', { ascending: false });
 
-    if (statut) {
+    if (Array.isArray(statut)) {
+      query = query.in('statut_envoi', statut);
+    } else if (statut) {
       query = query.eq('statut_envoi', statut);
     }
 
@@ -107,48 +112,21 @@ export const emailsService = {
     generatedEmailId: string,
     options?: { fromEmail?: string; fromName?: string }
   ): Promise<SendResult> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    const data = await callEdgeFunction<SendResult & { success: boolean; error?: string }>(
+      'send-email',
+      { generatedEmailId, ...options }
+    );
 
-    const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-      },
-      body: JSON.stringify({ generatedEmailId, ...options }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || `Erreur envoi (${response.status})`);
+    if (!data.success) {
+      throw new Error(data.error || 'Erreur envoi');
     }
 
-    return data as SendResult;
+    return data;
   },
 
   /** Déclenche la purge de la file d'envoi du jour (bouton manuel) */
   async flushSendQueue(): Promise<{ processed: number; sent: number; failed: number; skipped?: string }> {
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-    const response = await fetch(`${supabaseUrl}/functions/v1/flush-send-queue`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${supabaseKey}`,
-        'apikey': supabaseKey,
-      },
-      body: JSON.stringify({ triggeredBy: 'manual-button' }),
-    });
-
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error || `Erreur purge file (${response.status})`);
-    }
-    return data;
+    return callEdgeFunction('flush-send-queue', { triggeredBy: 'manual-button' });
   },
 
   /** Supprime un email généré */

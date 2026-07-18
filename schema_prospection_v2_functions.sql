@@ -59,6 +59,11 @@ BEGIN
       );
 
     EXIT WHEN v_used_today < v_quota;
+    -- Garde-fou indépendant de la validation UI (qui impose quota >= 1) :
+    -- si le quota est un jour à 0 (édition DB directe, futur appelant sans
+    -- la même contrainte...), v_used_today < 0 n'est jamais vrai et cette
+    -- boucle tournerait indéfiniment, bloquant le trigger d'insertion de lead.
+    EXIT WHEN v_day - CURRENT_DATE > 365;
     v_day := v_day + 1;
   END LOOP;
 

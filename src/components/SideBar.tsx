@@ -89,9 +89,6 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
           if (item.isCodir) {
             btnClass += ' nav-item-codir';
           }
-          if ((item as any).isAI) {
-            btnClass += ' nav-item-ai';
-          }
 
           return (
             <button 

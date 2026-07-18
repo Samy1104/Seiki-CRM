@@ -10,6 +10,15 @@ CREATE EXTENSION IF NOT EXISTS "unaccent";
 
 -- ============================================================
 -- NETTOYAGE (drop dans l'ordre des dépendances)
+--
+-- ⚠️  ATTENTION — INSTALLATION FRAÎCHE UNIQUEMENT.
+-- Ce bloc DROP TABLE ... CASCADE efface TOUTES les données des tables
+-- listées ci-dessous (leads, tasks, users, etc.) si elles existent déjà.
+-- Ne JAMAIS ré-exécuter ce fichier contre une base déjà provisionnée
+-- (production ou dev avec données réelles) : il n'y a aucune sauvegarde
+-- automatique, et les fichiers addon (schema_prospection_*.sql,
+-- schema_linkedin_scheduler_*.sql) dépendent des tables recréées ici via
+-- des clés étrangères — les rejouer après ce DROP les laisserait orphelins.
 -- ============================================================
 DROP TABLE IF EXISTS public.lead_merge_proposals CASCADE;
 DROP TABLE IF EXISTS public.email_logs CASCADE;

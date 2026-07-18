@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap, AtSign, Trash2 } from 'lucide-react';
+import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap, AtSign, Trash2, FileEdit } from 'lucide-react';
 import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost, type TagEntry } from '../services/contentService';
 import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../services/linkedinService';
 import { Prospection } from './Prospection';
@@ -286,8 +286,8 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
             className={`nav-item${contenuView === 'prospection' ? ' on' : ''} nav-item-ai`}
             onClick={() => setContenuView('prospection')}
           >
-            <Sparkles size={16} />
-            <span>Prospection IA</span>
+            <FileEdit size={16} />
+            <span>Prospection</span>
           </button>
         </nav>
 

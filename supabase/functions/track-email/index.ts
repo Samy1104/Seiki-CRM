@@ -43,24 +43,16 @@ serve(async (req: Request) => {
       const now = new Date().toISOString();
 
       if (eventType === "open") {
-        // Mise à jour du log email → status opened
+        // Mise à jour du log email → status opened (idempotent : un seul UPDATE,
+        // pas d'INSERT à chaque hit — les proxies image (Gmail...) déclenchent le
+        // pixel plusieurs fois par ouverture réelle, ce qui gonflait artificiellement
+        // le taux d'ouverture quand chaque hit créait sa propre ligne).
         await supabase
           .from("email_logs")
           .update({ status: "opened", opened_at: now })
           .eq("generated_email_id", generatedEmailId)
           .eq("direction", "outbound")
           .neq("status", "replied"); // Ne pas écraser un statut 'replied'
-
-        // Insérer un event dans email_logs (tracking fin-grained)
-        await supabase.from("email_logs").insert([{
-          lead_id: null, // Sera résolu via generated_email_id
-          direction: "outbound",
-          from_email: "system",
-          to_email: "system",
-          generated_email_id: generatedEmailId,
-          status: "opened",
-          opened_at: now,
-        }]).then(() => {}); // silencieux
       }
     } catch (err) {
       console.error("[track-email] Erreur (non bloquante) :", err);

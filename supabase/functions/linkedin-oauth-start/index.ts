@@ -7,6 +7,7 @@
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildRedirectUri } from "../_shared/linkedinApi.ts";
 
 serve((req: Request) => {
   const url = new URL(req.url);
@@ -19,7 +20,7 @@ serve((req: Request) => {
 
   const clientId = Deno.env.get("LINKEDIN_CLIENT_ID")!;
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-  const redirectUri = `${supabaseUrl}/functions/v1/linkedin-oauth-callback`;
+  const redirectUri = buildRedirectUri(supabaseUrl);
 
   const scope = target === "company"
     ? "openid profile w_member_social w_organization_social"
