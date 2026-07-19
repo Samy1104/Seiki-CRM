@@ -30,7 +30,7 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
       onClick={() => onOpen(lead.id)}
       whileHover={{ y: -2 }}
       transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`cursor-pointer rounded-md border border-line border-l-[3px] bg-elevated p-3 hover:shadow-hover ${borderClass}`}
+      className={`cursor-pointer rounded-surface border border-line border-l-[3px] bg-elevated p-3 hover:shadow-hover ${borderClass}`}
     >
       <div className="flex items-start justify-between text-[12.5px] font-bold text-ink">
         <span>{lead.company_name}</span>

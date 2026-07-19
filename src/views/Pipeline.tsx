@@ -123,7 +123,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
       </div>
 
       {slaBreaches.length > 0 && (
-        <div className="mb-6 flex items-start gap-3 rounded-md border border-danger/25 bg-danger/10 px-4 py-3">
+        <div className="mb-6 flex items-start gap-3 rounded-surface border border-danger/25 bg-danger/10 px-4 py-3">
           <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-danger" />
           <div className="flex flex-col gap-1">
             <span className="text-sm font-bold text-ink">
@@ -147,7 +147,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
 
           return (
-            <div key={st.id} className="flex w-64 flex-shrink-0 flex-col rounded-md border border-line bg-surface/40 p-3">
+            <div key={st.id} className="flex w-64 flex-shrink-0 flex-col rounded-surface border border-line bg-surface/40 p-3">
               <div
                 className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink"
                 style={{ borderBottomColor: st.color }}
@@ -169,7 +169,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
               </div>
 
               <button
-                className="mt-2.5 rounded-sm border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
+                className="mt-2.5 rounded-control border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
                 onClick={() => setView('add')}
               >
                 + Ajouter

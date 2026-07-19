@@ -28,7 +28,7 @@ export const Button: React.FC<ButtonProps> = ({
   ...rest
 }) => {
   const classes = [
-    'inline-flex items-center justify-center gap-1.5 rounded-sm font-ui font-semibold',
+    'inline-flex items-center justify-center gap-1.5 rounded-overlay font-ui font-semibold',
     'transition-colors duration-150 ease-out cursor-pointer disabled:cursor-not-allowed disabled:opacity-50',
     variantClasses[variant],
     sizeClasses[size],

@@ -18,7 +18,7 @@ const toneClasses: Record<BadgeTone, string> = {
 export const Badge: React.FC<BadgeProps> = ({ tone = 'neutral', children, className = '' }) => (
   <span
     className={[
-      'inline-flex items-center rounded-sm border px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide',
+      'inline-flex items-center rounded-control border px-2 py-0.5 text-[10.5px] font-semibold uppercase tracking-wide',
       toneClasses[tone],
       className,
     ].join(' ')}

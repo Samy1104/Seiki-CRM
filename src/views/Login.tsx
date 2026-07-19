@@ -28,7 +28,17 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-ui text-ink px-4">
+    <div
+      className="flex h-screen w-screen flex-col items-center justify-center font-ui text-ink px-4"
+      style={{
+        backgroundColor: 'var(--color-base)',
+        backgroundImage:
+          'radial-gradient(circle at 50% 30%, var(--color-amber-glow) 0%, transparent 50%),' +
+          'linear-gradient(to right, rgba(255,255,255,0.02) 1px, transparent 1px),' +
+          'linear-gradient(to bottom, rgba(255,255,255,0.02) 1px, transparent 1px)',
+        backgroundSize: '100% 100%, 40px 40px, 40px 40px',
+      }}
+    >
       <div className="mb-10 w-full max-w-md text-center">
         <img src="/grand_logo.png" className="mx-auto mb-8 h-16 w-auto" alt="Seiki Logo" />
         <h1 className="font-display text-4xl font-bold leading-tight text-ink">
@@ -37,7 +47,7 @@ export const Login: React.FC = () => {
         <p className="mt-3 text-sm text-ink-soft">CRM interne à Seiki</p>
       </div>
 
-      <div className="w-full max-w-96 rounded-lg border border-line-strong bg-surface p-10 shadow-modal">
+      <div className="w-full max-w-96 rounded-overlay border border-line-strong bg-surface p-10 shadow-modal">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="email"
@@ -47,7 +57,7 @@ export const Login: React.FC = () => {
             disabled={isSubmitting}
             autoFocus
             autoComplete="username"
-            className="w-full rounded-sm border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
+            className="w-full rounded-control border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
           />
           <input
             type="password"
@@ -56,7 +66,7 @@ export const Login: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)}
             disabled={isSubmitting}
             autoComplete="current-password"
-            className="w-full rounded-sm border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
+            className="w-full rounded-control border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
           />
 
           {error && <div className="text-center text-xs font-medium text-danger">{error}</div>}

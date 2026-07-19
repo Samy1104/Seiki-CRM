@@ -97,10 +97,14 @@
   --font-display: 'Sora', system-ui, sans-serif;
   --font-ui: 'General Sans', system-ui, sans-serif;
 
-  /* radius */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
+  /* radius — named to avoid colliding with Tailwind's own built-in default
+     radius scale (--radius-sm/md/lg etc. already exist internally); reusing
+     those names silently loses the override AND would leak into unrelated
+     Tailwind-based legacy components (e.g. Select.tsx) that rely on
+     Tailwind's stock values for their already-correct appearance. */
+  --radius-control: 8px;
+  --radius-surface: 12px;
+  --radius-overlay: 16px;
 
   /* elevation */
   --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.35);

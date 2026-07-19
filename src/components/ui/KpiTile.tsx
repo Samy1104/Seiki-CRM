@@ -42,7 +42,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
   }, [value, motionValue]);
 
   return (
-    <div className={`rounded-md border-t-2 bg-elevated border border-line p-4 ${accentBorder[accent]}`}>
+    <div className={`rounded-surface border-t-2 bg-elevated border border-line p-4 ${accentBorder[accent]}`}>
       <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">{label}</div>
       <motion.div
         data-testid="kpi-value"

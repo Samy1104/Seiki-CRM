@@ -77,7 +77,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
             key={item.id}
             onClick={() => handleNavClick(item.id)}
             className={[
-              'relative flex items-center gap-3 rounded-sm border border-transparent px-3 py-2.5 text-left font-ui text-[13px] font-medium transition-colors cursor-pointer',
+              'relative flex items-center gap-3 rounded-control border border-transparent px-3 py-2.5 text-left font-ui text-[13px] font-medium transition-colors cursor-pointer',
               isActive ? 'bg-amber-soft text-ink border-line-focus' : 'text-ink-soft hover:bg-hover hover:text-ink',
               showLabels ? '' : 'justify-center',
             ].join(' ')}
@@ -106,7 +106,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
 
       {setActiveApp && (
         <button
-          className="flex items-center justify-center gap-1.5 rounded-sm border border-line-strong py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-hover cursor-pointer"
+          className="flex items-center justify-center gap-1.5 rounded-control border border-line-strong py-1.5 text-[11px] text-ink-soft transition-colors hover:bg-hover cursor-pointer"
           onClick={() => setActiveApp('portal')}
         >
           <LayoutGrid size={14} />
@@ -115,7 +115,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
       )}
 
       <button
-        className="flex items-center justify-center gap-1.5 rounded-sm border border-line-strong py-1.5 text-[11px] text-ink-soft transition-colors hover:border-danger/30 hover:bg-danger/10 hover:text-danger cursor-pointer"
+        className="flex items-center justify-center gap-1.5 rounded-control border border-line-strong py-1.5 text-[11px] text-ink-soft transition-colors hover:border-danger/30 hover:bg-danger/10 hover:text-danger cursor-pointer"
         onClick={logout}
       >
         <LogOut size={14} />
@@ -128,7 +128,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
     <>
       {/* Mobile hamburger — visible only below md */}
       <button
-        className="fixed left-4 top-4 z-40 rounded-sm border border-line-strong bg-surface p-2 text-ink md:hidden cursor-pointer"
+        className="fixed left-4 top-4 z-40 rounded-control border border-line-strong bg-surface p-2 text-ink md:hidden cursor-pointer"
         onClick={() => setDrawerOpen(true)}
         aria-label="Ouvrir le menu"
       >
