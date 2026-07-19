@@ -28,8 +28,8 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-ui text-ink">
-      <div className="mb-10 max-w-md text-center">
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-ui text-ink px-4">
+      <div className="mb-10 w-full max-w-md text-center">
         <img src="/grand_logo.png" className="mx-auto mb-8 h-16 w-auto" alt="Seiki Logo" />
         <h1 className="font-display text-4xl font-bold leading-tight text-ink">
           Sharper decisions <br />with mobility data
@@ -37,7 +37,7 @@ export const Login: React.FC = () => {
         <p className="mt-3 text-sm text-ink-soft">CRM interne à Seiki</p>
       </div>
 
-      <div className="w-96 rounded-lg border border-line-strong bg-surface p-10 shadow-modal">
+      <div className="w-full max-w-96 rounded-lg border border-line-strong bg-surface p-10 shadow-modal">
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <input
             type="email"

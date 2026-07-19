@@ -8,6 +8,18 @@
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
 
+/* Tailwind utilities (w-*, p-*, border) assume border-box sizing, which
+   normally comes from Tailwind's preflight — skipped here on purpose (see
+   above). The legacy CSS declares `box-sizing: border-box` per-rule on
+   every class that needs it instead of a global reset, so this universal
+   rule is redundant-but-harmless there and the actual fix for anything
+   built with Tailwind utility classes (padding was silently adding to,
+   not eating into, declared widths — e.g. Login's card rendered at
+   464px instead of 384px). */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 @font-face {
   font-family: 'Sora';
   src: url('./assets/fonts/sora/Sora-600.woff2') format('woff2');
