@@ -11,6 +11,8 @@ import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
+import { Button } from '../components/ui/Button';
+import { KpiTile } from '../components/ui/KpiTile';
 
 interface PipelineProps {
   setView: (view: string) => void;
@@ -98,57 +100,35 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   }
 
   return (
-    <div className="view-section on">
-      {/* Page Header */}
-      <div className="page-header">
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="page-title">Pipeline</div>
-          <div className="page-sub">
+          <div className="font-heading text-xl font-bold text-ink">Pipeline</div>
+          <div className="mt-0.5 text-xs text-ink-soft">
             {leads.length} lead{leads.length !== 1 ? 's' : ''} · {totalVal}k€ de valeur totale
           </div>
         </div>
-        <button className="btn btn-grad" onClick={() => setView('add')}>
-          <Plus size={16} style={{ marginRight: '6px' }} />
+        <Button variant="primary" onClick={() => setView('add')}>
+          <Plus size={16} />
           Nouveau lead
-        </button>
+        </Button>
       </div>
 
-      {/* KPI metric Cards */}
-      <div className="kpi-grid">
-        <div className="kpi" style={{ borderTop: '2px solid var(--purple)' }}>
-          <div className="kpi-label">Deals actifs</div>
-          <div className="kpi-val">{activeLeads.length}</div>
-          <div className="kpi-sub">{wonLeads.length} closés gagnés</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--gold)' }}>
-          <div className="kpi-label">Pipeline</div>
-          <div className="kpi-val">{totalVal}k€</div>
-          <div className="kpi-sub">Valeur totale</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--green)' }}>
-          <div className="kpi-label">Score moyen</div>
-          <div className="kpi-val">{avgScore}/100</div>
-          <div className="kpi-sub">{hotCount} chauds ≥ 80</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--instit)' }}>
-          <div className="kpi-label">Closés Gagnés</div>
-          <div className="kpi-val">{wonVal}k€</div>
-          <div className="kpi-sub">Deals signés</div>
-        </div>
+      <div className="mb-6 grid grid-cols-4 gap-3">
+        <KpiTile label="Deals actifs" value={activeLeads.length} sub={`${wonLeads.length} closés gagnés`} accent="amber" />
+        <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => `${Math.round(v)}k€`} sub="Valeur totale" accent="neutral" />
+        <KpiTile label="Score moyen" value={avgScore} formatValue={(v) => `${Math.round(v)}/100`} sub={`${hotCount} chauds ≥ 80`} accent="success" />
+        <KpiTile label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub="Deals signés" accent="success" />
       </div>
 
-      {/* SLA breach alert banner */}
       {slaBreaches.length > 0 && (
-        <div className="sla-alert-banner">
-          <AlertTriangle size={18} className="sla-alert-icon" />
-          <div className="sla-alert-content">
-            <span className="sla-alert-title">
+        <div className="mb-6 flex items-start gap-3 rounded-md border border-danger/25 bg-danger/10 px-4 py-3">
+          <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-danger" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-bold text-ink">
               {slaBreaches.length} lead{slaBreaches.length > 1 ? 's' : ''} avec SLA dépassé — action requise aujourd'hui
             </span>
-            <div className="sla-alert-list">
+            <div className="text-xs text-ink-soft">
               {slaBreaches.map((l, i) => (
                 <span key={l.id}>
                   {l.company_name} (J+{l.days_in_stage}, max {slaLimits[l.segment] || 7}j)
