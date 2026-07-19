@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Copy, Check, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import { Field, inputClass } from './ui/Field';
+import { Badge } from './ui/Badge';
+import type { BadgeTone } from './ui/Badge';
 
 interface EmailGeneratorProps {
   /** Pre-fill from form context */
@@ -14,7 +17,7 @@ interface EmailGeneratorProps {
 function normalizeName(raw: string): { first: string; last: string } {
   const parts = raw
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')   // strip accents
+    .replace(/[̀-ͯ]/g, '')   // strip accents (combining diacritical marks left by NFD)
     .toLowerCase()
     .replace(/[^a-z\s'-]/g, '')
     .trim()
@@ -57,10 +60,10 @@ const PATTERNS: EmailPattern[] = [
   { id: 'info',     label: 'info@',               build: (_, __, d) => `info@${d}`,       confidence: 'low'   },
 ];
 
-const CONFIDENCE_CONFIG = {
-  high:   { label: 'Haute',   color: 'var(--green)',      bg: 'rgba(74,222,128,0.1)' },
-  medium: { label: 'Moyenne', color: 'var(--gold)',       bg: 'rgba(245,183,49,0.1)' },
-  low:    { label: 'Faible',  color: 'var(--text-muted)', bg: 'rgba(255,255,255,0.05)' },
+const CONFIDENCE_TONE: Record<EmailPattern['confidence'], { label: string; tone: BadgeTone }> = {
+  high:   { label: 'Haute',   tone: 'success' },
+  medium: { label: 'Moyenne', tone: 'warning' },
+  low:    { label: 'Faible',  tone: 'neutral' },
 };
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -105,47 +108,43 @@ export const EmailGenerator: React.FC<EmailGeneratorProps> = ({
   const rest = emails.filter(e => e.pattern.confidence !== 'high');
 
   return (
-    <div className="email-gen-panel">
-      <div className="email-gen-header">
-        <Mail size={14} style={{ color: 'var(--purple)' }} />
+    <div className="mt-4 rounded-surface border border-line bg-elevated p-4">
+      <div className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
+        <Mail size={14} className="text-amber" />
         <span>Générateur d'emails</span>
       </div>
 
-      {/* Inputs */}
-      <div className="email-gen-inputs">
-        <div className="email-gen-field">
-          <label>Nom complet</label>
+      <div className="mb-3 grid grid-cols-2 gap-3">
+        <Field label="Nom complet">
           <input
             type="text"
             placeholder="ex : Marie Évrard"
             value={inputName}
             onChange={e => setInputName(e.target.value)}
+            className={inputClass}
           />
-        </div>
-        <div className="email-gen-field">
-          <label>Domaine</label>
+        </Field>
+        <Field label="Domaine">
           <input
             type="text"
             placeholder="ex : lvmh.fr"
             value={inputDomain}
             onChange={e => setInputDomain(e.target.value)}
+            className={inputClass}
           />
-        </div>
+        </Field>
       </div>
 
-      {/* Not ready hint */}
       {!ready && (
-        <div className="email-gen-hint">
+        <div className="text-xs italic text-ink-faint">
           {!first || !last
             ? 'Entrez un prénom ET un nom pour générer les variantes.'
             : 'Entrez un domaine valide (ex : entreprise.com).'}
         </div>
       )}
 
-      {/* Results */}
       {ready && (
-        <div className="email-gen-results">
-          {/* High confidence first */}
+        <div className="flex flex-col gap-1.5">
           {highConfidence.map(({ pattern, email }) => (
             <EmailRow
               key={pattern.id}
@@ -157,11 +156,10 @@ export const EmailGenerator: React.FC<EmailGeneratorProps> = ({
             />
           ))}
 
-          {/* Toggle rest */}
           {rest.length > 0 && (
             <>
               <button
-                className="email-gen-toggle"
+                className="flex items-center gap-1 py-1 text-xs text-ink-soft transition-colors hover:text-ink cursor-pointer"
                 onClick={() => setShowAll(v => !v)}
               >
                 {showAll ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -197,23 +195,18 @@ interface EmailRowProps {
 }
 
 const EmailRow: React.FC<EmailRowProps> = ({ email, pattern, copiedId, onCopy, onSelect }) => {
-  const cfg = CONFIDENCE_CONFIG[pattern.confidence];
+  const cfg = CONFIDENCE_TONE[pattern.confidence];
   const isCopied = copiedId === pattern.id;
 
   return (
-    <div className="email-gen-row">
-      <span
-        className="email-gen-badge"
-        style={{ color: cfg.color, background: cfg.bg }}
-      >
-        {cfg.label}
-      </span>
-      <span className="email-gen-label">{pattern.label}</span>
-      <span className="email-gen-value">{email}</span>
-      <div className="email-gen-actions">
+    <div className="flex items-center gap-2.5 rounded-control border border-line bg-surface px-3 py-2 text-xs">
+      <Badge tone={cfg.tone} className="flex-shrink-0">{cfg.label}</Badge>
+      <span className="w-24 flex-shrink-0 text-ink-faint">{pattern.label}</span>
+      <span className="flex-1 truncate font-medium text-ink">{email}</span>
+      <div className="flex flex-shrink-0 items-center gap-1.5">
         {onSelect && (
           <button
-            className="email-gen-btn use"
+            className="rounded-control px-2 py-1 text-[11px] font-semibold text-ink-soft transition-colors hover:bg-hover hover:text-ink cursor-pointer"
             onClick={() => onSelect(email)}
             title="Utiliser cet email"
           >
@@ -221,11 +214,11 @@ const EmailRow: React.FC<EmailRowProps> = ({ email, pattern, copiedId, onCopy, o
           </button>
         )}
         <button
-          className="email-gen-btn copy"
+          className="rounded-control p-1.5 text-ink-faint transition-colors hover:bg-hover hover:text-ink cursor-pointer"
           onClick={() => onCopy(pattern.id, email)}
           title="Copier"
         >
-          {isCopied ? <Check size={12} color="var(--green)" /> : <Copy size={12} />}
+          {isCopied ? <Check size={12} className="text-success" /> : <Copy size={12} />}
         </button>
       </div>
     </div>

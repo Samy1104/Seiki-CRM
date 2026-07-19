@@ -57,7 +57,7 @@ describe('AddLead View', () => {
     fireEvent.change(input, { target: { value: 'Acme Corp' } });
 
     // Select Segment -> Media
-    const segmentField = screen.getByText('Segment *').closest('.form-field') as HTMLElement;
+    const segmentField = screen.getByText('Segment *').closest('div') as HTMLElement;
     const segmentTrigger = within(segmentField).getByRole('button');
     fireEvent.click(segmentTrigger);
     const mediaOption = screen.getByText('Media');
@@ -67,7 +67,7 @@ describe('AddLead View', () => {
     expect(segmentTrigger).toHaveTextContent('Media');
 
     // Select Source -> Événement
-    const sourceField = screen.getByText('Source').closest('.form-field') as HTMLElement;
+    const sourceField = screen.getByText('Source').closest('div') as HTMLElement;
     const sourceTrigger = within(sourceField).getByRole('button');
     fireEvent.click(sourceTrigger);
     const eventOption = screen.getByText('Événement');
@@ -89,7 +89,7 @@ describe('AddLead View', () => {
     expect(screen.getByText('0')).toBeInTheDocument();
 
     // Find "Taille entreprise" criteria item
-    const critItem = screen.getByText('Taille entreprise').closest('.crit-item') as HTMLElement;
+    const critItem = screen.getByText('Taille entreprise').closest('div') as HTMLElement;
     const trigger = within(critItem).getByText('— Sélectionner');
     fireEvent.click(trigger);
 
@@ -120,7 +120,7 @@ describe('AddLead View', () => {
     fireEvent.click(screen.getByText('Media'));
 
     // Score "Taille entreprise"
-    const sizeItem = screen.getByText('Taille entreprise').closest('.crit-item') as HTMLElement;
+    const sizeItem = screen.getByText('Taille entreprise').closest('div') as HTMLElement;
     fireEvent.click(within(sizeItem).getByText('— Sélectionner'));
     fireEvent.click(screen.getByText('50–500 (8pts)'));
 

@@ -6,6 +6,8 @@ import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { FileText, Award } from 'lucide-react';
 import { EmailGenerator } from '../components/EmailGenerator';
+import { Button } from '../components/ui/Button';
+import { Field, inputClass } from '../components/ui/Field';
 import {
   Select,
   SelectTrigger,
@@ -86,6 +88,13 @@ const CRITERIA = [
 interface AddLeadProps {
   setView: (view: string) => void;
 }
+
+const scoreClass = (value: number, max: number) => {
+  if (value <= 0) return 'text-ink-faint';
+  if (value >= max * 0.8) return 'text-success';
+  if (value >= max * 0.5) return 'text-amber';
+  return 'text-danger';
+};
 
 export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
   const { showToast } = useToast();
@@ -176,11 +185,11 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
   const totalScore = calculateTotalScore();
 
   const getRecommendation = () => {
-    if (totalScore >= 80) return { text: '→ Priorité haute — entrer en pipeline immédiatement', color: 'var(--green)' };
-    if (totalScore >= 60) return { text: '→ Qualifié — intégrer au pipeline sous 48h', color: 'var(--gold)' };
-    if (totalScore >= 40) return { text: '→ Potentiel — nurturing à 30 jours', color: 'var(--instit-tc)' };
-    if (totalScore > 0) return { text: '→ Hors cible — archiver', color: 'var(--red)' };
-    return { text: 'Remplissez les critères de scoring', color: 'var(--text-muted)' };
+    if (totalScore >= 80) return { text: '→ Priorité haute — entrer en pipeline immédiatement', className: 'text-success' };
+    if (totalScore >= 60) return { text: '→ Qualifié — intégrer au pipeline sous 48h', className: 'text-amber' };
+    if (totalScore >= 40) return { text: '→ Potentiel — nurturing à 30 jours', className: 'text-chart-neutral' };
+    if (totalScore > 0) return { text: '→ Hors cible — archiver', className: 'text-danger' };
+    return { text: 'Remplissez les critères de scoring', className: 'text-ink-faint' };
   };
 
   const recommendation = getRecommendation();
@@ -256,95 +265,89 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
   };
 
   return (
-    <div className="view-section on">
-      {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <div className="page-title">Ajouter un lead</div>
-          <div className="page-sub">Scorer avant d'entrer dans le pipeline</div>
-        </div>
+    <div className="p-6">
+      <div className="mb-6">
+        <div className="font-display text-xl font-bold text-ink">Ajouter un lead</div>
+        <div className="mt-0.5 text-xs text-ink-soft">Scorer avant d'entrer dans le pipeline</div>
       </div>
 
-      <div className="two-col">
+      <div className="grid grid-cols-2 gap-5">
         {/* Left Column: Form */}
-        <div className="card form-section" style={{ padding: '20px' }}>
-          <div className="form-title">
-            <FileText size={14} style={{ marginRight: '6px' }} />
+        <div className="rounded-surface border border-line bg-elevated p-5">
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
+            <FileText size={14} className="text-amber" />
             Informations du lead
           </div>
-          
+
           <form onSubmit={handleSubmit}>
-            <div className="form-grid">
-              <div className="form-field">
-                <div className="field-label">Société *</div>
-                <input 
-                  type="text" 
-                  placeholder="ex : LVMH" 
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Société *">
+                <input
+                  type="text"
+                  placeholder="ex : LVMH"
                   value={form.company_name}
                   onChange={e => setForm({ ...form, company_name: e.target.value })}
                   required
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Contact</div>
-                <input 
-                  type="text" 
-                  placeholder="ex : Dir. Mobilité" 
+              <Field label="Contact">
+                <input
+                  type="text"
+                  placeholder="ex : Dir. Mobilité"
                   value={form.contact_name}
                   onChange={e => setForm({ ...form, contact_name: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Email</div>
-                <input 
-                  type="email" 
-                  placeholder="contact@société.com" 
+              <Field label="Email">
+                <input
+                  type="email"
+                  placeholder="contact@société.com"
                   value={form.email}
                   onChange={e => setForm({ ...form, email: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Téléphone</div>
-                <input 
-                  type="text" 
-                  placeholder="ex : +33 6 00 00 00 00" 
+              <Field label="Téléphone">
+                <input
+                  type="text"
+                  placeholder="ex : +33 6 00 00 00 00"
                   value={form.phone}
                   onChange={e => setForm({ ...form, phone: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">LinkedIn</div>
-                <input 
-                  type="url" 
-                  placeholder="linkedin.com/in/..." 
+              <Field label="LinkedIn">
+                <input
+                  type="url"
+                  placeholder="linkedin.com/in/..."
                   value={form.linkedin_url}
                   onChange={e => setForm({ ...form, linkedin_url: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Site Web</div>
-                <input 
-                  type="url" 
-                  placeholder="www.entreprise.com" 
+              <Field label="Site Web">
+                <input
+                  type="url"
+                  placeholder="www.entreprise.com"
                   value={form.website}
                   onChange={e => setForm({ ...form, website: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Segment *</div>
+              <Field label="Segment *">
                 <Select
                   value={form.segment}
                   onValueChange={val => setForm({ ...form, segment: val as Lead['segment'] })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="— Choisir" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="— Choisir" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">— Choisir</SelectItem>
                     <SelectItem value="Media">Media</SelectItem>
@@ -352,27 +355,24 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                     <SelectItem value="Instit">Instit</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Valeur (k€)</div>
-                <input 
-                  type="number" 
-                  placeholder="ex : 45" 
+              <Field label="Valeur (k€)">
+                <input
+                  type="number"
+                  placeholder="ex : 45"
                   value={form.deal_value}
                   onChange={e => setForm({ ...form, deal_value: e.target.value })}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Source</div>
+              <Field label="Source">
                 <Select
                   value={form.source}
                   onValueChange={val => setForm({ ...form, source: val })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="LinkedIn" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="LinkedIn" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="LinkedIn">LinkedIn</SelectItem>
                     <SelectItem value="Événement">Événement</SelectItem>
@@ -383,17 +383,14 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                     <SelectItem value="Autre">Autre</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
-              <div className="form-field">
-                <div className="field-label">Étape initiale</div>
+              <Field label="Étape initiale">
                 <Select
                   value={form.stage_id}
                   onValueChange={val => setForm({ ...form, stage_id: val })}
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Auto (selon score)" />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Auto (selon score)" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="auto">Auto (selon score)</SelectItem>
                     {stages.map(st => (
@@ -401,54 +398,48 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </Field>
 
-              <div className="form-field full">
-                <div className="field-label">Note</div>
+              <Field label="Note" className="col-span-2">
                 <textarea
                   placeholder="Contexte, déclencheur, informations utiles..."
                   value={form.note}
                   onChange={e => setForm({ ...form, note: e.target.value })}
                   rows={3}
+                  className={inputClass}
                 />
-              </div>
+              </Field>
 
-              <div className="form-field full">
-                <div className="field-label">Champs personnalisés (utilisables dans les templates via {'{{custom.<clé>}}'})</div>
+              <Field label="Champs personnalisés (utilisables dans les templates via {{custom.<clé>}})" className="col-span-2">
                 {customFields.map((cf, i) => (
-                  <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                  <div key={i} className="mb-1.5 flex gap-2">
                     <input
                       type="text"
                       placeholder="clé (ex: evenement)"
                       value={cf.key}
                       onChange={(e) => updateCustomField(i, 'key', e.target.value)}
-                      style={{ flex: '1' }}
+                      className={`${inputClass} flex-1`}
                     />
                     <input
                       type="text"
                       placeholder="valeur (ex: Salon VivaTech)"
                       value={cf.value}
                       onChange={(e) => updateCustomField(i, 'value', e.target.value)}
-                      style={{ flex: '2' }}
+                      className={`${inputClass} flex-[2]`}
                     />
-                    <button type="button" className="btn" onClick={() => removeCustomField(i)}>×</button>
+                    <Button type="button" variant="ghost" size="sm" onClick={() => removeCustomField(i)}>×</Button>
                   </div>
                 ))}
-                <button type="button" className="btn" onClick={addCustomField}>+ Ajouter un champ</button>
-              </div>
+                <Button type="button" variant="ghost" size="sm" onClick={addCustomField}>+ Ajouter un champ</Button>
+              </Field>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-              <button type="submit" className="btn btn-grad" style={{ flex: '1' }}>
-                Ajouter au pipeline
-              </button>
-              <button type="button" className="btn" onClick={handleReset}>
-                Réinitialiser
-              </button>
+            <div className="mt-5 flex gap-2.5">
+              <Button type="submit" variant="primary" className="flex-1">Ajouter au pipeline</Button>
+              <Button type="button" variant="secondary" onClick={handleReset}>Réinitialiser</Button>
             </div>
           </form>
 
-          {/* Email Generator — below the form */}
           <EmailGenerator
             contactName={form.contact_name}
             website={form.website}
@@ -457,17 +448,17 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
         </div>
 
         {/* Right Column: Scoring ICP */}
-        <div className="card form-section" style={{ padding: '20px' }}>
-          <div className="form-title">
-            <Award size={14} style={{ marginRight: '6px' }} />
+        <div className="rounded-surface border border-line bg-elevated p-5">
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
+            <Award size={14} className="text-amber" />
             Scoring ICP — 6 critères
           </div>
 
-          <div className="score-criteria-list">
+          <div className="flex flex-col gap-2.5">
             {CRITERIA.map(c => (
-              <div key={c.id} className="crit-item">
-                <span className="crit-name">{c.label}</span>
-                <span className="crit-max">/{c.max}</span>
+              <div key={c.id} className="flex items-center gap-2.5">
+                <span className="w-32 flex-shrink-0 text-xs font-medium text-ink-soft">{c.label}</span>
+                <span className="w-8 flex-shrink-0 text-[10px] text-ink-faint">/{c.max}</span>
                 <Select
                   value={String(scores[c.id].value)}
                   onValueChange={valStr => {
@@ -476,9 +467,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                     handleScoreChange(c.id, val, opt ? opt.l : '');
                   }}
                 >
-                  <SelectTrigger className="crit-select" style={{ height: 'auto', padding: '4px 8px', fontSize: '11px' }}>
-                    <SelectValue placeholder="— Sélectionner" />
-                  </SelectTrigger>
+                  <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue placeholder="— Sélectionner" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="0">— Sélectionner</SelectItem>
                     {c.opts.map(o => (
@@ -486,37 +475,32 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                     ))}
                   </SelectContent>
                 </Select>
-                <span className="crit-pts" style={{ 
-                  color: scores[c.id].value > 0 ? (scores[c.id].value >= c.max * 0.8 ? 'var(--green)' : scores[c.id].value >= c.max * 0.5 ? 'var(--gold)' : 'var(--red)') : 'var(--text-muted)' 
-                }}>
+                <span className={`w-12 flex-shrink-0 text-right text-xs font-semibold tabular-nums ${scoreClass(scores[c.id].value, c.max)}`}>
                   {scores[c.id].value > 0 ? `${scores[c.id].value}pts` : '—'}
                 </span>
               </div>
             ))}
           </div>
 
-          <div className="score-result" style={{ marginTop: '24px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div className="mt-6 border-t border-line pt-5">
+            <div className="flex items-end justify-between">
               <div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '2px' }}>Score ICP</div>
-                <div className="score-big" style={{ color: totalScore >= 80 ? 'var(--green)' : totalScore >= 60 ? 'var(--gold)' : 'var(--red)' }}>
+                <div className="mb-0.5 text-[11px] text-ink-faint">Score ICP</div>
+                <div className={`font-display text-3xl font-bold tabular-nums ${scoreClass(totalScore, 100)}`}>
                   {totalScore}
                 </div>
               </div>
-              <div style={{ textAlign: 'right', fontSize: '11px', color: 'var(--text-muted)' }}>/100 pts</div>
-            </div>
-            
-            <div className="score-bar-wrap">
-              <div 
-                className="score-bar" 
-                style={{ 
-                  width: `${totalScore}%`, 
-                  background: totalScore >= 80 ? 'var(--green)' : totalScore >= 60 ? 'var(--gold)' : totalScore > 0 ? 'var(--red)' : 'var(--border)' 
-                }}
-              ></div>
+              <div className="text-[11px] text-ink-faint">/100 pts</div>
             </div>
 
-            <div className="score-recommendation" style={{ color: recommendation.color, fontWeight: '500' }}>
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-hover">
+              <div
+                className={`h-full transition-all ${totalScore >= 80 ? 'bg-success' : totalScore >= 60 ? 'bg-amber' : totalScore > 0 ? 'bg-danger' : 'bg-transparent'}`}
+                style={{ width: `${totalScore}%` }}
+              />
+            </div>
+
+            <div className={`mt-3 text-xs font-medium ${recommendation.className}`}>
               {recommendation.text}
             </div>
           </div>
