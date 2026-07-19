@@ -1,0 +1,93 @@
+/* ============================================================
+   Graphite Amber — Tailwind v4 theme tokens.
+   Theme + utilities layers only, no preflight — same technique as
+   src/views/prospection.css, so this can never override the legacy
+   plain-CSS views (unlayered CSS always wins over layered CSS,
+   regardless of import order). Safe to import globally.
+   ============================================================ */
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@font-face {
+  font-family: 'Sora';
+  src: url('./assets/fonts/sora/Sora-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sora';
+  src: url('./assets/fonts/sora/Sora-700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Sora';
+  src: url('./assets/fonts/sora/Sora-800.woff2') format('woff2');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('./assets/fonts/general-sans/GeneralSans-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('./assets/fonts/general-sans/GeneralSans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'General Sans';
+  src: url('./assets/fonts/general-sans/GeneralSans-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@theme {
+  /* surfaces */
+  --color-base: #0A0B0D;
+  --color-surface: #111214;
+  --color-elevated: #18191C;
+  --color-hover: #202126;
+
+  /* borders */
+  --color-line: rgba(255, 255, 255, 0.06);
+  --color-line-strong: rgba(255, 255, 255, 0.10);
+  --color-line-focus: rgba(245, 158, 11, 0.35);
+
+  /* text */
+  --color-ink: #F5F5F4;
+  --color-ink-soft: #9A9A93;
+  --color-ink-faint: #6B6B64;
+
+  /* accent */
+  --color-amber: #F59E0B;
+  --color-amber-soft: rgba(245, 158, 11, 0.14);
+  --color-amber-glow: rgba(245, 158, 11, 0.18);
+
+  /* semantic */
+  --color-success: #4ADE80;
+  --color-danger: #F87171;
+  --color-chart-neutral: #64748B;
+
+  /* type */
+  --font-heading: 'Sora', system-ui, sans-serif;
+  --font-body: 'General Sans', system-ui, sans-serif;
+
+  /* radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  /* elevation */
+  --shadow-hover: 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.4);
+}
