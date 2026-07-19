@@ -7,6 +7,8 @@ import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
 import { confirmAction } from '../utils/confirmAction';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
@@ -14,6 +16,8 @@ import { withLoadingState } from '../utils/withLoadingState';
 interface LeadsProps {
   setView: (view: string) => void;
 }
+
+const scoreClass = (score: number) => (score >= 80 ? 'text-success' : score >= 60 ? 'text-amber' : 'text-danger');
 
 export const Leads: React.FC<LeadsProps> = () => {
   const { showToast } = useToast();
@@ -115,63 +119,51 @@ export const Leads: React.FC<LeadsProps> = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Chargement des Leads...</div>
+        <div className="mt-3 text-ink-soft">Chargement des Leads...</div>
       </div>
     );
   }
 
   return (
-    <div className="view-section on">
-      {/* Page Header */}
-      <div className="page-header">
+    <div className="p-6">
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="page-title">Tous les leads</div>
-          <div className="page-sub">
+          <div className="font-display text-xl font-bold text-ink">Tous les leads</div>
+          <div className="mt-0.5 text-xs text-ink-soft">
             {filteredLeads.length} de {leads.length} lead{leads.length !== 1 ? 's' : ''} affiché{filteredLeads.length !== 1 ? 's' : ''}
           </div>
         </div>
-        
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button 
-            className={`btn btn-sm ${!archiveFilter ? 'btn-grad' : ''}`}
-            onClick={() => setArchiveFilter(false)}
-          >
+
+        <div className="flex gap-2">
+          <Button variant={!archiveFilter ? 'primary' : 'ghost'} size="sm" onClick={() => setArchiveFilter(false)}>
             Actifs
-          </button>
-          <button 
-            className={`btn btn-sm ${archiveFilter ? 'btn-grad' : ''}`}
-            onClick={() => setArchiveFilter(true)}
-          >
+          </Button>
+          <Button variant={archiveFilter ? 'primary' : 'ghost'} size="sm" onClick={() => setArchiveFilter(true)}>
             Archivés
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Duplicate / Merge Proposals */}
       {mergeProposals.length > 0 && !archiveFilter && (
-        <div className="merge-alert-container">
-          <div className="merge-alert-header">
-            <Layers size={16} className="merge-alert-icon" />
+        <div className="mb-6 rounded-surface border border-line-focus bg-amber-soft/40 p-4">
+          <div className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
+            <Layers size={16} className="text-amber" />
             <span>{mergeProposals.length} proposition{mergeProposals.length > 1 ? 's' : ''} de fusion (doublons détectés par domaine email)</span>
           </div>
-          <div className="merge-proposals-list">
+          <div className="flex flex-col gap-2">
             {mergeProposals.map(p => (
-              <div key={p.id} className="merge-prop-card">
-                <div>
-                  <strong>{p.source_lead?.company_name}</strong> ({p.source_lead?.contact_name}) 
-                  <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>⇄</span>
-                  <strong>{p.target_lead?.company_name}</strong> ({p.target_lead?.contact_name})
-                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px' }}>
+              <div key={p.id} className="flex items-center justify-between gap-4 rounded-control border border-line bg-surface p-3">
+                <div className="text-xs text-ink-soft">
+                  <strong className="text-ink">{p.source_lead?.company_name}</strong> ({p.source_lead?.contact_name})
+                  <span className="mx-2 text-ink-faint">⇄</span>
+                  <strong className="text-ink">{p.target_lead?.company_name}</strong> ({p.target_lead?.contact_name})
+                  <div className="mt-0.5 text-[10px] text-ink-faint">
                     Raison : Même nom de domaine email ({p.source_lead?.email?.split('@')[1]})
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <button className="btn btn-sm btn-grad" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleMergeApprove(p.id)}>
-                    Fusionner
-                  </button>
-                  <button className="btn btn-sm" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => handleMergeReject(p.id)}>
-                    Ignorer
-                  </button>
+                <div className="flex flex-shrink-0 gap-1.5">
+                  <Button variant="primary" size="sm" onClick={() => handleMergeApprove(p.id)}>Fusionner</Button>
+                  <Button variant="ghost" size="sm" onClick={() => handleMergeReject(p.id)}>Ignorer</Button>
                 </div>
               </div>
             ))}
@@ -179,25 +171,23 @@ export const Leads: React.FC<LeadsProps> = () => {
         </div>
       )}
 
-      {/* Filters Box */}
-      <div className="leads-filters-container">
-        <div className="search-box-wrap">
-          <Search size={14} className="search-box-icon" />
-          <input 
-            type="text" 
-            placeholder="Rechercher par société, contact, note..." 
+      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-surface border border-line bg-elevated p-3">
+        <div className="relative flex min-w-[240px] flex-1 items-center">
+          <Search size={14} className="pointer-events-none absolute left-3 text-ink-faint" />
+          <input
+            type="text"
+            placeholder="Rechercher par société, contact, note..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
+            className="w-full rounded-control border border-line-strong bg-base py-2 pl-9 pr-3 text-sm text-ink outline-none transition-colors focus:border-line-focus"
           />
         </div>
 
-        <div className="filters-group-wrap">
-          <div className="filter-item-wrap">
-            <Filter size={12} className="filter-icon" />
+        <div className="flex flex-wrap gap-2.5">
+          <div className="flex items-center gap-1.5">
+            <Filter size={12} className="flex-shrink-0 text-ink-faint" />
             <Select value={segmentFilter} onValueChange={val => setSegmentFilter(val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tous les segments" />
-              </SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Tous les segments" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Tous les segments</SelectItem>
                 <SelectItem value="Media">Media</SelectItem>
@@ -207,12 +197,10 @@ export const Leads: React.FC<LeadsProps> = () => {
             </Select>
           </div>
 
-          <div className="filter-item-wrap">
-            <Filter size={12} className="filter-icon" />
+          <div className="flex items-center gap-1.5">
+            <Filter size={12} className="flex-shrink-0 text-ink-faint" />
             <Select value={scoreFilter} onValueChange={val => setScoreFilter(val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tous les scores" />
-              </SelectTrigger>
+              <SelectTrigger className="w-44"><SelectValue placeholder="Tous les scores" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Tous les scores</SelectItem>
                 <SelectItem value="hot">Chauds (≥ 80)</SelectItem>
@@ -222,12 +210,10 @@ export const Leads: React.FC<LeadsProps> = () => {
             </Select>
           </div>
 
-          <div className="filter-item-wrap">
-            <Filter size={12} className="filter-icon" />
+          <div className="flex items-center gap-1.5">
+            <Filter size={12} className="flex-shrink-0 text-ink-faint" />
             <Select value={ownerFilter} onValueChange={val => setOwnerFilter(val)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Tous les propriétaires" />
-              </SelectTrigger>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Tous les propriétaires" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Tous les propriétaires</SelectItem>
                 {teamMembers.map(m => (
@@ -239,48 +225,43 @@ export const Leads: React.FC<LeadsProps> = () => {
         </div>
       </div>
 
-      {/* Leads Table List */}
-      <div className="leads-table-container">
-        <table className="leads-table">
+      <div className="overflow-hidden rounded-surface border border-line">
+        <table className="w-full border-collapse text-left text-[12.5px]">
           <thead>
-            <tr>
-              <th>Société</th>
-              <th>Contact</th>
-              <th>Segment</th>
-              <th>Étape</th>
-              <th>Score ICP</th>
-              <th>Valeur</th>
-              <th>Propriétaire</th>
-              <th>Créé le</th>
+            <tr className="border-b border-line bg-elevated text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">
+              <th className="px-4 py-3">Société</th>
+              <th className="px-4 py-3">Contact</th>
+              <th className="px-4 py-3">Segment</th>
+              <th className="px-4 py-3">Étape</th>
+              <th className="px-4 py-3">Score ICP</th>
+              <th className="px-4 py-3">Valeur</th>
+              <th className="px-4 py-3">Propriétaire</th>
+              <th className="px-4 py-3">Créé le</th>
             </tr>
           </thead>
           <tbody>
             {filteredLeads.length > 0 ? (
-              filteredLeads.map(l => {
-                const scoreColor = l.score >= 80 ? 'var(--green)' : l.score >= 60 ? 'var(--gold)' : 'var(--red)';
-                
-                return (
-                  <tr key={l.id} className="lead-row" onClick={() => handleOpenLead(l.id)}>
-                    <td className="company-cell">{l.company_name}</td>
-                    <td>{l.contact_name || '—'}</td>
-                    <td>
-                      <span className={`badge badge-${l.segment.toLowerCase()}`}>{l.segment}</span>
-                    </td>
-                    <td>
-                      <span className="stage-cell">{l.stage?.name || 'Prospect'}</span>
-                    </td>
-                    <td style={{ color: scoreColor, fontWeight: '700' }}>{l.score}</td>
-                    <td style={{ fontWeight: '500' }}>{l.deal_value}k€</td>
-                    <td>{l.owner ? l.owner.full_name : '—'}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '11px' }}>
-                      {new Date(l.created_at).toLocaleDateString('fr-FR')}
-                    </td>
-                  </tr>
-                );
-              })
+              filteredLeads.map(l => (
+                <tr
+                  key={l.id}
+                  onClick={() => handleOpenLead(l.id)}
+                  className="cursor-pointer border-b border-line bg-surface transition-colors last:border-b-0 hover:bg-hover"
+                >
+                  <td className="px-4 py-3 font-semibold text-ink">{l.company_name}</td>
+                  <td className="px-4 py-3 text-ink-soft">{l.contact_name || '—'}</td>
+                  <td className="px-4 py-3"><Badge tone="neutral">{l.segment}</Badge></td>
+                  <td className="px-4 py-3 text-ink-soft">{l.stage?.name || 'Prospect'}</td>
+                  <td className={`px-4 py-3 font-bold tabular-nums ${scoreClass(l.score)}`}>{l.score}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums text-ink">{l.deal_value}k€</td>
+                  <td className="px-4 py-3 text-ink-soft">{l.owner ? l.owner.full_name : '—'}</td>
+                  <td className="px-4 py-3 text-[11px] text-ink-faint">
+                    {new Date(l.created_at).toLocaleDateString('fr-FR')}
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan={8} style={{ textAlign: 'center', padding: '24px', color: 'var(--text-muted)' }}>
+                <td colSpan={8} className="px-4 py-8 text-center text-ink-faint">
                   Aucun lead ne correspond aux critères
                 </td>
               </tr>
@@ -289,55 +270,54 @@ export const Leads: React.FC<LeadsProps> = () => {
         </table>
       </div>
 
-      {/* Quick modal fallback details */}
       {selectedLead && (
         <Modal
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           header={
             <>
-              <div className="modal-title">{selectedLead.company_name}</div>
-              <div className="modal-sub">
+              <div className="font-display text-base font-bold text-ink">{selectedLead.company_name}</div>
+              <div className="mt-0.5 text-xs text-ink-soft">
                 {selectedLead.contact_name || '—'}
                 {selectedLead.email ? ` · ${selectedLead.email}` : ''}
               </div>
-              <div className="modal-badges-row" style={{ marginTop: '8px' }}>
-                <span className={`badge badge-${selectedLead.segment.toLowerCase()}`}>{selectedLead.segment}</span>
-                <span className="stage-pill">{selectedLead.stage?.name}</span>
-                <span style={{ fontSize: '12px', fontWeight: '500', color: selectedLead.score >= 80 ? 'var(--green)' : selectedLead.score >= 60 ? 'var(--gold)' : 'var(--red)' }}>
+              <div className="mt-2 flex items-center gap-2">
+                <Badge tone="neutral">{selectedLead.segment}</Badge>
+                <Badge tone="neutral">{selectedLead.stage?.name}</Badge>
+                <span className={`text-xs font-semibold ${scoreClass(selectedLead.score)}`}>
                   Score : {selectedLead.score}/100
                 </span>
               </div>
             </>
           }
         >
-          <div className="mtab-panel on" style={{ padding: '20px' }}>
-            <div className="detail-row">
-              <span className="detail-key">Email</span>
-              <span className="detail-val">{selectedLead.email || '—'}</span>
+          <div className="flex flex-col gap-3 p-6">
+            <div className="flex justify-between border-b border-line pb-3 text-sm">
+              <span className="text-ink-soft">Email</span>
+              <span className="text-ink">{selectedLead.email || '—'}</span>
             </div>
-            <div className="detail-row">
-              <span className="detail-key">Téléphone</span>
-              <span className="detail-val">{selectedLead.phone || '—'}</span>
+            <div className="flex justify-between border-b border-line pb-3 text-sm">
+              <span className="text-ink-soft">Téléphone</span>
+              <span className="text-ink">{selectedLead.phone || '—'}</span>
             </div>
-            <div className="detail-row">
-              <span className="detail-key">LinkedIn</span>
-              <span className="detail-val">{selectedLead.linkedin_url || '—'}</span>
+            <div className="flex justify-between border-b border-line pb-3 text-sm">
+              <span className="text-ink-soft">LinkedIn</span>
+              <span className="text-ink">{selectedLead.linkedin_url || '—'}</span>
             </div>
-            <div className="detail-row">
-              <span className="detail-key">Valeur</span>
-              <span className="detail-val">{selectedLead.deal_value}k€</span>
+            <div className="flex justify-between pb-1 text-sm">
+              <span className="text-ink-soft">Valeur</span>
+              <span className="font-semibold text-ink">{selectedLead.deal_value}k€</span>
             </div>
             {selectedLead.note && (
-              <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start' }}>
-                <span className="detail-key" style={{ marginBottom: '4px' }}>Note</span>
-                <span className="detail-val" style={{ textAlign: 'left', opacity: '0.8' }}>{selectedLead.note}</span>
+              <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
+                <span className="text-ink-soft">Note</span>
+                <span className="text-ink-soft">{selectedLead.note}</span>
               </div>
             )}
           </div>
 
-          <div className="modal-footer" style={{ borderTop: '0.5px solid var(--border)', padding: '14px 20px', display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn btn-sm" onClick={() => setModalOpen(false)}>Fermer</button>
+          <div className="flex justify-end border-t border-line px-6 py-4">
+            <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Fermer</Button>
           </div>
         </Modal>
       )}
