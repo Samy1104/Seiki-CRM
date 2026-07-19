@@ -78,9 +78,12 @@
   --color-danger: #F87171;
   --color-chart-neutral: #64748B;
 
-  /* type */
-  --font-heading: 'Sora', system-ui, sans-serif;
-  --font-body: 'General Sans', system-ui, sans-serif;
+  /* type — named to avoid colliding with the legacy --font-heading/--font-body
+     custom properties already declared (unlayered) in src/index.css, which
+     always win the cascade over anything in this @theme block regardless of
+     import order (unlayered CSS beats layered CSS unconditionally) */
+  --font-display: 'Sora', system-ui, sans-serif;
+  --font-ui: 'General Sans', system-ui, sans-serif;
 
   /* radius */
   --radius-sm: 8px;

@@ -46,7 +46,7 @@ export const KpiTile: React.FC<KpiTileProps> = ({
       <div className="text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">{label}</div>
       <motion.div
         data-testid="kpi-value"
-        className="mt-1.5 font-heading text-2xl font-bold text-ink tabular-nums"
+        className="mt-1.5 font-display text-2xl font-bold text-ink tabular-nums"
       >
         {display}
       </motion.div>

@@ -104,7 +104,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="font-heading text-xl font-bold text-ink">Pipeline</div>
+          <div className="font-display text-xl font-bold text-ink">Pipeline</div>
           <div className="mt-0.5 text-xs text-ink-soft">
             {leads.length} lead{leads.length !== 1 ? 's' : ''} · {totalVal}k€ de valeur totale
           </div>
@@ -149,7 +149,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           return (
             <div key={st.id} className="flex w-64 flex-shrink-0 flex-col rounded-md border border-line bg-surface/40 p-3">
               <div
-                className="mb-3 flex items-center justify-between border-b-2 pb-2 font-heading text-[13.5px] font-bold text-ink"
+                className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink"
                 style={{ borderBottomColor: st.color }}
               >
                 {st.name}

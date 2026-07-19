@@ -28,10 +28,10 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-body text-ink">
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-ui text-ink">
       <div className="mb-10 max-w-md text-center">
         <img src="/grand_logo.png" className="mx-auto mb-8 h-16 w-auto" alt="Seiki Logo" />
-        <h1 className="font-heading text-4xl font-bold leading-tight text-ink">
+        <h1 className="font-display text-4xl font-bold leading-tight text-ink">
           Sharper decisions <br />with mobility data
         </h1>
         <p className="mt-3 text-sm text-ink-soft">CRM interne à Seiki</p>

@@ -77,7 +77,7 @@ export const SideBar: React.FC<SideBarProps> = ({ currentView, setView, setActiv
             key={item.id}
             onClick={() => handleNavClick(item.id)}
             className={[
-              'relative flex items-center gap-3 rounded-sm border border-transparent px-3 py-2.5 text-left font-body text-[13px] font-medium transition-colors cursor-pointer',
+              'relative flex items-center gap-3 rounded-sm border border-transparent px-3 py-2.5 text-left font-ui text-[13px] font-medium transition-colors cursor-pointer',
               isActive ? 'bg-amber-soft text-ink border-line-focus' : 'text-ink-soft hover:bg-hover hover:text-ink',
               showLabels ? '' : 'justify-center',
             ].join(' ')}
