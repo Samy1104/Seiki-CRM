@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { Trash2, GripVertical } from 'lucide-react';
 import type { Task } from '../../services/tasksService';
 import { AssigneeWidget, DatePickerWidget, PriorityWidget, LeadWidget } from './TaskWidgets';
 import type { TaskWidgetHandlers } from './TaskWidgets';
@@ -32,6 +32,12 @@ interface TaskListViewProps {
   widgets: TaskWidgetHandlers;
 }
 
+const sectionAccent: Record<'todo' | 'in_progress' | 'done', string> = {
+  todo: 'border-l-danger text-danger',
+  in_progress: 'border-l-amber text-amber',
+  done: 'border-l-success text-success',
+};
+
 export const TaskListView: React.FC<TaskListViewProps> = ({
   todoTasks, inProgressTasks, doneTasks,
   colWidths, onStartResize,
@@ -41,7 +47,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 }) => {
   const renderTableRows = (tasksList: Task[], statusKey: 'todo' | 'in_progress' | 'done') => (
     <div
-      className={`clickup-section-body ${dragOverStatus === statusKey ? 'drag-over' : ''}`}
+      className={`flex flex-col rounded-b-surface border border-t-0 border-line transition-colors ${dragOverStatus === statusKey ? 'bg-amber-soft/10' : 'bg-surface'}`}
       onDragOver={(e) => onDragOver(e, statusKey)}
       onDragLeave={onDragLeave}
       onDrop={(e) => onDrop(e, statusKey)}
@@ -50,32 +56,32 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
         tasksList.map(task => (
           <div
             key={task.id}
-            className={`clickup-task-row${dragOverTaskId === task.id && draggedTaskId !== task.id ? ' drag-insert-before' : ''}`}
+            className={`flex items-center border-b border-line px-2 py-2 last:border-b-0 hover:bg-hover ${dragOverTaskId === task.id && draggedTaskId !== task.id ? 'border-t-2 border-t-amber' : ''}`}
             draggable="true"
             onDragStart={(e) => onDragStart(e, task.id)}
             onDragOver={(e) => onDragOverTask(e, task.id, statusKey)}
             onDragLeave={onDragLeaveTask}
           >
-            <div className="clickup-cell clickup-cell-drag" style={{ width: 32, flexGrow: 0, flexShrink: 0 }}>
-              <div className="drag-handle">⋮⋮</div>
+            <div className="flex flex-shrink-0 items-center justify-center text-ink-faint" style={{ width: 32 }}>
+              <GripVertical size={14} className="cursor-grab" />
             </div>
 
-            <div className="clickup-cell clickup-cell-check" style={{ width: 36, flexGrow: 0, flexShrink: 0 }}>
+            <div className="flex flex-shrink-0 items-center justify-center" style={{ width: 36 }}>
               <div
-                className={`task-check ${task.status === 'done' ? 'done' : ''}`}
+                className={`flex h-5 w-5 cursor-pointer items-center justify-center rounded-control border text-[11px] transition-colors ${task.status === 'done' ? 'border-success bg-success/15 text-success' : 'border-line-strong text-transparent hover:border-line-focus'}`}
                 onClick={() => onToggleStatus(task.id, task.status)}
               >
                 {task.status === 'done' ? '✓' : ''}
               </div>
             </div>
 
-            <div className="clickup-cell clickup-cell-name" style={{ width: colWidths.name, flexGrow: 0, flexShrink: 1 }}>
-              <span className={`task-text ${task.status === 'done' ? 'done' : ''}`}>
+            <div className="flex-shrink-0 overflow-hidden text-ellipsis whitespace-nowrap px-1" style={{ width: colWidths.name }}>
+              <span className={`text-[13px] ${task.status === 'done' ? 'text-ink-faint line-through' : 'text-ink'}`}>
                 {task.description}
               </span>
             </div>
 
-            <div className="clickup-cell clickup-cell-assignee" style={{ width: colWidths.assignee, flexGrow: 0, flexShrink: 1 }}>
+            <div className="flex-shrink-0 px-1" style={{ width: colWidths.assignee }}>
               <AssigneeWidget
                 task={task}
                 teamMembers={widgets.teamMembers}
@@ -86,11 +92,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               />
             </div>
 
-            <div className="clickup-cell clickup-cell-date" style={{ width: colWidths.date, flexGrow: 0, flexShrink: 1 }}>
+            <div className="flex-shrink-0 px-1" style={{ width: colWidths.date }}>
               <DatePickerWidget task={task} onUpdateDueDate={widgets.onUpdateDueDate} />
             </div>
 
-            <div className="clickup-cell clickup-cell-priority" style={{ width: colWidths.priority, flexGrow: 0, flexShrink: 1 }}>
+            <div className="flex-shrink-0 px-1" style={{ width: colWidths.priority }}>
               <PriorityWidget
                 task={task}
                 onUpdatePriority={widgets.onUpdatePriority}
@@ -100,7 +106,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               />
             </div>
 
-            <div className="clickup-cell clickup-cell-lead" style={{ width: colWidths.lead, flexGrow: 0, flexShrink: 1 }}>
+            <div className="flex-shrink-0 px-1" style={{ width: colWidths.lead }}>
               <LeadWidget
                 task={task}
                 leads={widgets.leads}
@@ -111,76 +117,72 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               />
             </div>
 
-            <div className="clickup-cell clickup-cell-actions" style={{ width: 50, flexGrow: 0, flexShrink: 0 }}>
-              <button className="btn-icon-del" onClick={() => onDeleteTask(task.id)}>
-                <Trash2 size={16} />
+            <div className="flex flex-shrink-0 items-center justify-center" style={{ width: 50 }}>
+              <button
+                className="rounded-control p-1.5 text-ink-faint transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                onClick={() => onDeleteTask(task.id)}
+              >
+                <Trash2 size={15} />
               </button>
             </div>
           </div>
         ))
       ) : (
-        <div className="clickup-row-empty">Aucune tâche dans cette section</div>
+        <div className="px-4 py-6 text-center text-xs text-ink-faint">Aucune tâche dans cette section</div>
       )}
     </div>
   );
 
+  const header = (
+    <div className="flex items-center rounded-t-surface border border-line bg-elevated px-2 py-2.5 text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">
+      <div className="flex-shrink-0" style={{ width: 32 }}></div>
+      <div className="flex-shrink-0" style={{ width: 36 }}></div>
+
+      <div className="relative flex-shrink-0 px-1" style={{ width: colWidths.name }}>
+        Tâche
+        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-line-focus" onMouseDown={(e) => onStartResize(e, 'name')} />
+      </div>
+
+      <div className="relative flex-shrink-0 px-1" style={{ width: colWidths.assignee }}>
+        Assignés
+        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-line-focus" onMouseDown={(e) => onStartResize(e, 'assignee')} />
+      </div>
+
+      <div className="relative flex-shrink-0 px-1" style={{ width: colWidths.date }}>
+        Échéance
+        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-line-focus" onMouseDown={(e) => onStartResize(e, 'date')} />
+      </div>
+
+      <div className="relative flex-shrink-0 px-1" style={{ width: colWidths.priority }}>
+        Priorité
+        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-line-focus" onMouseDown={(e) => onStartResize(e, 'priority')} />
+      </div>
+
+      <div className="relative flex-shrink-0 px-1" style={{ width: colWidths.lead }}>
+        Lead associé
+        <div className="absolute right-0 top-0 h-full w-1 cursor-col-resize hover:bg-line-focus" onMouseDown={(e) => onStartResize(e, 'lead')} />
+      </div>
+
+      <div className="flex-shrink-0" style={{ width: 50 }}></div>
+    </div>
+  );
+
+  const section = (title: string, tasksList: Task[], statusKey: 'todo' | 'in_progress' | 'done', extraClass = '') => (
+    <div className={extraClass}>
+      <div className={`flex items-center gap-2 rounded-control border-l-4 bg-elevated px-3 py-2 ${sectionAccent[statusKey]}`}>
+        <span className="text-[11px] font-bold uppercase tracking-wide">{title}</span>
+        <span className="rounded-full bg-hover px-1.5 py-0.5 text-[10px] font-semibold text-ink-soft">{tasksList.length}</span>
+      </div>
+      {renderTableRows(tasksList, statusKey)}
+    </div>
+  );
+
   return (
-    <div className="clickup-list-container">
-      <div className="clickup-table-header">
-        <div className="clickup-hdr-cell clickup-cell-drag" style={{ width: 32, flexGrow: 0, flexShrink: 0 }}></div>
-        <div className="clickup-hdr-cell clickup-cell-check" style={{ width: 36, flexGrow: 0, flexShrink: 0 }}></div>
-
-        <div className="clickup-hdr-cell clickup-cell-name" style={{ width: colWidths.name, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-          Tâche
-          <div className="clickup-col-resizer" onMouseDown={(e) => onStartResize(e, 'name')} />
-        </div>
-
-        <div className="clickup-hdr-cell clickup-cell-assignee" style={{ width: colWidths.assignee, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-          Assignés
-          <div className="clickup-col-resizer" onMouseDown={(e) => onStartResize(e, 'assignee')} />
-        </div>
-
-        <div className="clickup-hdr-cell clickup-cell-date" style={{ width: colWidths.date, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-          Échéance
-          <div className="clickup-col-resizer" onMouseDown={(e) => onStartResize(e, 'date')} />
-        </div>
-
-        <div className="clickup-hdr-cell clickup-cell-priority" style={{ width: colWidths.priority, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-          Priorité
-          <div className="clickup-col-resizer" onMouseDown={(e) => onStartResize(e, 'priority')} />
-        </div>
-
-        <div className="clickup-hdr-cell clickup-cell-lead" style={{ width: colWidths.lead, flexGrow: 0, flexShrink: 1, position: 'relative' }}>
-          Lead associé
-          <div className="clickup-col-resizer" onMouseDown={(e) => onStartResize(e, 'lead')} />
-        </div>
-
-        <div className="clickup-hdr-cell clickup-cell-actions" style={{ width: 50, flexGrow: 0, flexShrink: 0 }}></div>
-      </div>
-
-      <div className="clickup-section">
-        <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--red)' }}>
-          <span className="sect-title" style={{ color: 'var(--red)' }}>À FAIRE</span>
-          <span className="sect-count">{todoTasks.length}</span>
-        </div>
-        {renderTableRows(todoTasks, 'todo')}
-      </div>
-
-      <div className="clickup-section" style={{ marginTop: '20px' }}>
-        <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--gold)' }}>
-          <span className="sect-title" style={{ color: 'var(--gold)' }}>EN COURS</span>
-          <span className="sect-count">{inProgressTasks.length}</span>
-        </div>
-        {renderTableRows(inProgressTasks, 'in_progress')}
-      </div>
-
-      <div className="clickup-section" style={{ marginTop: '20px' }}>
-        <div className="clickup-section-header" style={{ borderLeft: '4px solid var(--green)' }}>
-          <span className="sect-title" style={{ color: 'var(--green)' }}>TERMINÉES</span>
-          <span className="sect-count">{doneTasks.length}</span>
-        </div>
-        {renderTableRows(doneTasks, 'done')}
-      </div>
+    <div className="flex flex-col gap-5">
+      {header}
+      {section('À faire', todoTasks, 'todo')}
+      {section('En cours', inProgressTasks, 'in_progress', 'mt-5')}
+      {section('Terminées', doneTasks, 'done', 'mt-5')}
     </div>
   );
 };

@@ -1,9 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import type { Lead } from '../../services/leadsService';
 import type { TeamMember } from '../../services/settingsService';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
+import { Modal } from '../../components/ui/Modal';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 import type { ActiveDropdown } from './TaskWidgets';
 
 interface NewTaskModalProps {
@@ -36,141 +39,121 @@ export const NewTaskModal: React.FC<NewTaskModalProps> = ({
   const isAssigneeDropdownOpen = activeDropdown?.taskId === 'new-task' && activeDropdown?.type === 'assignee';
 
   return (
-    <div className="modal-overlay open" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>Nouvelle tâche</h2>
-          <button className="btn-icon" onClick={onClose}><X size={16} /></button>
-        </div>
-        <form onSubmit={onSubmit} className="modal-form">
-          <div className="gen-field-group">
-            <label className="gen-label">Description *</label>
+    <Modal open onClose={onClose} header="Nouvelle tâche">
+      <form onSubmit={onSubmit} className="flex flex-col gap-4 p-6">
+        <Field label="Description *">
+          <input
+            className={inputClass}
+            placeholder="Écrire une tâche à faire..."
+            value={desc}
+            onChange={e => onDescChange(e.target.value)}
+            required
+            autoFocus
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Échéance">
             <input
-              className="gen-input"
-              placeholder="Écrire une tâche à faire..."
-              value={desc}
-              onChange={e => onDescChange(e.target.value)}
-              required
-              autoFocus
+              className={inputClass}
+              type="date"
+              value={dueDate}
+              onChange={e => onDueDateChange(e.target.value)}
             />
-          </div>
-
-          <div className="gen-field-row">
-            <div className="gen-field-group">
-              <label className="gen-label">Échéance</label>
-              <input
-                className="gen-input"
-                type="date"
-                value={dueDate}
-                onChange={e => onDueDateChange(e.target.value)}
-              />
-            </div>
-            <div className="gen-field-group">
-              <label className="gen-label">Priorité</label>
-              <Select
-                value={priority}
-                onValueChange={val => onPriorityChange(val as 'high' | 'medium' | 'low')}
-              >
-                <SelectTrigger className="gen-select">
-                  <SelectValue placeholder="Moyenne" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="high">Haute</SelectItem>
-                  <SelectItem value="medium">Moyenne</SelectItem>
-                  <SelectItem value="low">Basse</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="gen-field-row">
-            <div className="gen-field-group">
-              <label className="gen-label">Assignés</label>
-              <div className="clickup-inline-dropdown-wrap">
-                <button
-                  type="button"
-                  className="gen-select"
-                  onClick={(e) => {
-                    if (isAssigneeDropdownOpen) { setActiveDropdown(null); return; }
-                    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-                    setActiveDropdown({ taskId: 'new-task', type: 'assignee', x: r.left, y: r.bottom + 4 });
-                  }}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', textAlign: 'left' }}
-                >
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {assigneeIds.length === 0 ? 'Assigner' : `${assigneeIds.length} assigné(s)`}
-                  </span>
-                  <span style={{ fontSize: '10px' }}>▼</span>
-                </button>
-
-                {isAssigneeDropdownOpen && createPortal(
-                  <div
-                    ref={dropdownWrapperRef}
-                    className="clickup-dropdown-menu"
-                    style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
-                  >
-                    <div className="clickup-dropdown-title">Assigner à...</div>
-                    {teamMembers.map(m => {
-                      const isSelected = assigneeIds.includes(m.id);
-                      return (
-                        <div
-                          key={m.id}
-                          className={`clickup-dropdown-item ${isSelected ? 'selected' : ''}`}
-                          onClick={() => onToggleAssigneeId(m.id)}
-                        >
-                          <div className="clickup-dropdown-checkbox">{isSelected ? '✓' : ''}</div>
-                          <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
-                          <span>{m.full_name}</span>
-                        </div>
-                      );
-                    })}
-                  </div>,
-                  document.body
-                )}
-              </div>
-            </div>
-            <div className="gen-field-group">
-              <label className="gen-label">Lead lié</label>
-              <Select value={leadId} onValueChange={onLeadIdChange}>
-                <SelectTrigger className="gen-select">
-                  <SelectValue placeholder="— Aucun" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">— Aucun</SelectItem>
-                  {leads.map(l => (
-                    <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="gen-field-group">
-            <label className="gen-label">Statut</label>
-            <Select
-              value={status}
-              onValueChange={val => onStatusChange(val as 'todo' | 'in_progress' | 'done')}
-            >
-              <SelectTrigger className="gen-select">
-                <SelectValue placeholder="À faire" />
-              </SelectTrigger>
+          </Field>
+          <Field label="Priorité">
+            <Select value={priority} onValueChange={val => onPriorityChange(val as 'high' | 'medium' | 'low')}>
+              <SelectTrigger><SelectValue placeholder="Moyenne" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="todo">À faire</SelectItem>
-                <SelectItem value="in_progress">En cours</SelectItem>
-                <SelectItem value="done">Terminé</SelectItem>
+                <SelectItem value="high">Haute</SelectItem>
+                <SelectItem value="medium">Moyenne</SelectItem>
+                <SelectItem value="low">Basse</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </Field>
+        </div>
 
-          <div className="modal-footer">
-            <button type="button" className="btn-ghost-sm" onClick={onClose}>Annuler</button>
-            <button type="submit" className="btn-primary-sm">
-              <Plus size={13} />
-              Créer la tâche
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Assignés">
+            <div className="relative">
+              <button
+                type="button"
+                className={`${inputClass} flex cursor-pointer items-center justify-between text-left`}
+                onClick={(e) => {
+                  if (isAssigneeDropdownOpen) { setActiveDropdown(null); return; }
+                  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                  setActiveDropdown({ taskId: 'new-task', type: 'assignee', x: r.left, y: r.bottom + 4 });
+                }}
+              >
+                <span className="truncate">
+                  {assigneeIds.length === 0 ? 'Assigner' : `${assigneeIds.length} assigné(s)`}
+                </span>
+                <span className="text-[10px] text-ink-faint">▼</span>
+              </button>
+
+              {isAssigneeDropdownOpen && createPortal(
+                <div
+                  ref={dropdownWrapperRef}
+                  className="rounded-surface border border-line-strong bg-surface p-1.5 shadow-modal min-w-[200px]"
+                  style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
+                >
+                  <div className="px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">Assigner à...</div>
+                  {teamMembers.map(m => {
+                    const isSelected = assigneeIds.includes(m.id);
+                    return (
+                      <div
+                        key={m.id}
+                        className={`flex items-center rounded-control px-2 py-1.5 text-xs cursor-pointer transition-colors ${isSelected ? 'bg-amber-soft text-ink' : 'text-ink-soft hover:bg-hover hover:text-ink'}`}
+                        onClick={() => onToggleAssigneeId(m.id)}
+                      >
+                        <div className="w-4 flex-shrink-0 text-amber">{isSelected ? '✓' : ''}</div>
+                        <div
+                          className="mr-2 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                          style={{ background: m.color }}
+                        >
+                          {m.initials}
+                        </div>
+                        <span className="truncate">{m.full_name}</span>
+                      </div>
+                    );
+                  })}
+                </div>,
+                document.body
+              )}
+            </div>
+          </Field>
+          <Field label="Lead lié">
+            <Select value={leadId} onValueChange={onLeadIdChange}>
+              <SelectTrigger><SelectValue placeholder="— Aucun" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Aucun</SelectItem>
+                {leads.map(l => (
+                  <SelectItem key={l.id} value={l.id}>{l.company_name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+
+        <Field label="Statut">
+          <Select value={status} onValueChange={val => onStatusChange(val as 'todo' | 'in_progress' | 'done')}>
+            <SelectTrigger><SelectValue placeholder="À faire" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todo">À faire</SelectItem>
+              <SelectItem value="in_progress">En cours</SelectItem>
+              <SelectItem value="done">Terminé</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+
+        <div className="flex justify-end gap-2.5 border-t border-line pt-4">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Annuler</Button>
+          <Button type="submit" variant="primary" size="sm">
+            <Plus size={13} />
+            Créer la tâche
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 };

@@ -32,6 +32,13 @@ export interface TaskWidgetHandlers {
   onUpdateLead: (taskId: string, leadId: string | null) => void;
 }
 
+const dropdownMenuClass = 'rounded-surface border border-line-strong bg-surface p-1.5 shadow-modal min-w-[180px]';
+const dropdownTitleClass = 'px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint';
+const dropdownItemClass = (selected: boolean) =>
+  `flex items-center rounded-control px-2 py-1.5 text-xs cursor-pointer transition-colors ${
+    selected ? 'bg-amber-soft text-ink' : 'text-ink-soft hover:bg-hover hover:text-ink'
+  }`;
+
 interface AssigneeWidgetProps extends DropdownProps {
   task: Task;
   teamMembers: TeamMember[];
@@ -45,22 +52,21 @@ export const AssigneeWidget: React.FC<AssigneeWidgetProps> = ({
   const taskAssignees = task.assignees || [];
 
   return (
-    <div className="clickup-inline-dropdown-wrap">
+    <div className="relative inline-block">
       <div
         onClick={(e) => {
           if (isDropdownOpen) { setActiveDropdown(null); return; }
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
           setActiveDropdown({ taskId: task.id, type: 'assignee', x: r.left, y: r.bottom + 4 });
         }}
-        className="clickup-assignees-trigger-list"
-        style={{ cursor: 'pointer' }}
+        className="cursor-pointer"
       >
         {taskAssignees.length > 0 ? (
-          <div className="assignees-overlapping-list">
+          <div className="flex items-center">
             {taskAssignees.slice(0, 3).map((a, idx) => (
               <div
                 key={a.id}
-                className="member-avatar small-avatar"
+                className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-elevated text-[9px] font-bold text-white"
                 style={{ background: a.color, zIndex: 10 - idx, marginLeft: idx > 0 ? '-6px' : '0px' }}
                 title={a.full_name}
               >
@@ -69,8 +75,8 @@ export const AssigneeWidget: React.FC<AssigneeWidgetProps> = ({
             ))}
             {taskAssignees.length > 3 && (
               <div
-                className="member-avatar small-avatar count"
-                style={{ background: '#334155', zIndex: 5, marginLeft: '-6px' }}
+                className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-elevated bg-chart-neutral text-[9px] font-bold text-white"
+                style={{ zIndex: 5, marginLeft: '-6px' }}
                 title={`${taskAssignees.length} personnes assignées`}
               >
                 +{taskAssignees.length - 3}
@@ -78,7 +84,10 @@ export const AssigneeWidget: React.FC<AssigneeWidgetProps> = ({
             )}
           </div>
         ) : (
-          <div className="avatar-placeholder-btn" title="Assigner des membres">
+          <div
+            className="flex h-6 w-6 items-center justify-center rounded-full border border-dashed border-line-strong text-ink-faint"
+            title="Assigner des membres"
+          >
             <User size={12} />
           </div>
         )}
@@ -87,21 +96,26 @@ export const AssigneeWidget: React.FC<AssigneeWidgetProps> = ({
       {isDropdownOpen && createPortal(
         <div
           ref={dropdownWrapperRef}
-          className="clickup-dropdown-menu"
+          className={dropdownMenuClass}
           style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
         >
-          <div className="clickup-dropdown-title">Assigner des membres...</div>
+          <div className={dropdownTitleClass}>Assigner des membres...</div>
           {teamMembers.map(m => {
             const isAssigned = taskAssignees.some(a => a.id === m.id);
             return (
               <div
                 key={m.id}
-                className={`clickup-dropdown-item ${isAssigned ? 'selected' : ''}`}
+                className={dropdownItemClass(isAssigned)}
                 onClick={() => onToggleAssignee(task, m.id)}
               >
-                <div className="clickup-dropdown-checkbox">{isAssigned ? '✓' : ''}</div>
-                <div className="member-avatar small-avatar" style={{ background: m.color, marginRight: '8px' }}>{m.initials}</div>
-                <span>{m.full_name}</span>
+                <div className="w-4 flex-shrink-0 text-amber">{isAssigned ? '✓' : ''}</div>
+                <div
+                  className="mr-2 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-[9px] font-bold text-white"
+                  style={{ background: m.color }}
+                >
+                  {m.initials}
+                </div>
+                <span className="truncate">{m.full_name}</span>
               </div>
             );
           })}
@@ -121,28 +135,24 @@ export const DatePickerWidget: React.FC<DatePickerWidgetProps> = ({ task, onUpda
   const isOverdue = task.due_date && task.due_date < new Date().toISOString().slice(0, 10) && task.status !== 'done';
   const isToday = task.due_date === new Date().toISOString().slice(0, 10) && task.status !== 'done';
 
-  let dueClass = 'card-icon-btn';
-  if (task.due_date) {
-    dueClass += ' active';
-    if (isOverdue) dueClass += ' overdue';
-    else if (isToday) dueClass += ' today';
-  }
+  const toneClass = isOverdue ? 'text-danger bg-danger/10' : isToday ? 'text-amber bg-amber-soft' : task.due_date ? 'text-ink-soft bg-hover' : 'text-ink-faint';
 
   return (
-    <div className="clickup-inline-date-picker-wrap">
-      <button className={dueClass} title={task.due_date ? `Échéance : ${task.due_date}` : "Définir l'échéance"}>
-        <Calendar size={13} style={{ marginRight: task.due_date ? '4px' : '0' }} />
+    <div className="relative inline-block">
+      <button
+        className={`inline-flex items-center gap-1 rounded-control px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-hover cursor-pointer ${toneClass}`}
+        title={task.due_date ? `Échéance : ${task.due_date}` : "Définir l'échéance"}
+      >
+        <Calendar size={13} />
         {task.due_date ? (
-          <span style={{ fontSize: '11px', fontWeight: '700' }}>
-            {new Date(task.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-          </span>
+          <span>{new Date(task.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
         ) : (
-          <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgba(255,255,255,0.3)' }}>—</span>
+          <span>—</span>
         )}
       </button>
       <input
         type="date"
-        className="clickup-hidden-date-input"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
         value={task.due_date || ''}
         onChange={(e) => onUpdateDueDate(task.id, e.target.value || null)}
       />
@@ -162,47 +172,46 @@ export const PriorityWidget: React.FC<PriorityWidgetProps> = ({
   const prio = getPriorityInfo(task.priority);
 
   return (
-    <div className="clickup-inline-dropdown-wrap">
+    <div className="relative inline-block">
       <div
         onClick={(e) => {
           if (isDropdownOpen) { setActiveDropdown(null); return; }
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
           setActiveDropdown({ taskId: task.id, type: 'priority', x: r.left, y: r.bottom + 4 });
         }}
-        className={`card-icon-btn ${task.priority ? 'active' : ''}`}
-        style={{ gap: '6px' }}
+        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-control px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-hover ${task.priority ? 'text-ink-soft' : 'text-ink-faint'}`}
         title={`Priorité : ${prio.label}`}
       >
-        <Flag size={13} style={{ color: task.priority ? prio.color : 'inherit' }} />
-        <span style={{ fontSize: '11px', fontWeight: '600' }}>{prio.label}</span>
+        <Flag size={13} style={{ color: task.priority ? prio.color : 'currentColor' }} />
+        <span>{prio.label}</span>
       </div>
 
       {isDropdownOpen && createPortal(
         <div
           ref={dropdownWrapperRef}
-          className="clickup-dropdown-menu"
+          className={dropdownMenuClass}
           style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
         >
-          <div className="clickup-dropdown-title">Priorité</div>
+          <div className={dropdownTitleClass}>Priorité</div>
           <div
-            className={`clickup-dropdown-item ${task.priority === 'high' ? 'selected' : ''}`}
+            className={dropdownItemClass(task.priority === 'high')}
             onClick={() => { onUpdatePriority(task.id, 'high'); setActiveDropdown(null); }}
           >
-            <Flag size={12} style={{ color: 'var(--red)', marginRight: '8px' }} />
+            <Flag size={12} className="mr-2 text-danger" />
             Urgent
           </div>
           <div
-            className={`clickup-dropdown-item ${task.priority === 'medium' ? 'selected' : ''}`}
+            className={dropdownItemClass(task.priority === 'medium')}
             onClick={() => { onUpdatePriority(task.id, 'medium'); setActiveDropdown(null); }}
           >
-            <Flag size={12} style={{ color: 'var(--gold)', marginRight: '8px' }} />
+            <Flag size={12} className="mr-2 text-amber" />
             Normal
           </div>
           <div
-            className={`clickup-dropdown-item ${task.priority === 'low' ? 'selected' : ''}`}
+            className={dropdownItemClass(task.priority === 'low')}
             onClick={() => { onUpdatePriority(task.id, 'low'); setActiveDropdown(null); }}
           >
-            <Flag size={12} style={{ color: 'var(--green)', marginRight: '8px' }} />
+            <Flag size={12} className="mr-2 text-success" />
             Basse
           </div>
         </div>,
@@ -259,42 +268,39 @@ export const LeadWidget: React.FC<LeadWidgetProps> = ({
   const isDropdownOpen = activeDropdown?.taskId === task.id && activeDropdown?.type === 'lead';
 
   return (
-    <div className="clickup-inline-dropdown-wrap">
+    <div className="relative inline-block">
       <div
         onClick={(e) => {
           if (isDropdownOpen) { setActiveDropdown(null); return; }
           const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
           setActiveDropdown({ taskId: task.id, type: 'lead', x: r.left, y: r.bottom + 4 });
         }}
-        className={`card-icon-btn ${task.lead_id ? 'active' : ''}`}
-        style={{ gap: '6px' }}
+        className={`inline-flex max-w-[140px] cursor-pointer items-center gap-1.5 rounded-control px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-hover ${task.lead_id ? 'text-ink-soft' : 'text-ink-faint'}`}
         title={task.lead ? `Lead : ${task.lead.company_name}` : "Associer un Lead"}
       >
-        <Tag size={13} style={{ color: task.lead_id ? 'var(--purple)' : 'inherit' }} />
-        <span style={{ fontSize: '11px', fontWeight: '600' }}>
-          {task.lead ? task.lead.company_name : 'Lier lead'}
-        </span>
+        <Tag size={13} className={task.lead_id ? 'flex-shrink-0 text-amber' : 'flex-shrink-0'} />
+        <span className="truncate">{task.lead ? task.lead.company_name : 'Lier lead'}</span>
       </div>
 
       {isDropdownOpen && createPortal(
         <div
           ref={dropdownWrapperRef}
-          className="clickup-dropdown-menu scrollable"
+          className={`${dropdownMenuClass} max-h-60 overflow-y-auto`}
           style={{ position: 'fixed', top: activeDropdown!.y, left: activeDropdown!.x, zIndex: 9999, transform: 'none' }}
         >
-          <div className="clickup-dropdown-title">Lier à un lead...</div>
+          <div className={dropdownTitleClass}>Lier à un lead...</div>
           {leads.map(l => (
             <div
               key={l.id}
-              className={`clickup-dropdown-item ${task.lead_id === l.id ? 'selected' : ''}`}
+              className={dropdownItemClass(task.lead_id === l.id)}
               onClick={() => { onUpdateLead(task.id, l.id); setActiveDropdown(null); }}
             >
-              <span>{l.company_name}</span>
+              <span className="truncate">{l.company_name}</span>
             </div>
           ))}
           {task.lead_id && (
             <div
-              className="clickup-dropdown-item clear-btn"
+              className="mt-1 cursor-pointer rounded-control border-t border-line px-2 py-1.5 pt-2.5 text-xs text-danger transition-colors hover:bg-danger/10"
               onClick={() => { onUpdateLead(task.id, null); setActiveDropdown(null); }}
             >
               Retirer le lead

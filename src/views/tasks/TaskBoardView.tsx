@@ -23,11 +23,11 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
   dragOverStatus, onDragOver, onDragLeave, onDrop, onDragStart, onAddTask,
   onUpdateStatus, onDeleteTask, widgets,
 }) => (
-  <div className="pipe-wrap" style={{ gap: '16px' }}>
+  <div className="flex flex-1 gap-4 overflow-x-auto pb-3">
     <KanbanColumn
       status="todo"
       label="À faire"
-      borderColor="var(--red)"
+      borderColor="var(--color-danger)"
       tasks={todoTasks}
       dragOverStatus={dragOverStatus}
       onDragOver={onDragOver}
@@ -38,8 +38,8 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
       widgets={widgets}
       renderCardActions={(task) => (
         <>
-          <button className="hist-btn" onClick={() => onUpdateStatus(task.id, 'in_progress')}>En cours →</button>
-          <button className="hist-btn del" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
+          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'in_progress')}>En cours →</button>
+          <button className="transition-colors hover:text-danger cursor-pointer" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
         </>
       )}
     />
@@ -47,7 +47,7 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
     <KanbanColumn
       status="in_progress"
       label="En cours"
-      borderColor="var(--gold)"
+      borderColor="var(--color-amber)"
       tasks={inProgressTasks}
       dragOverStatus={dragOverStatus}
       onDragOver={onDragOver}
@@ -58,8 +58,8 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
       widgets={widgets}
       renderCardActions={(task) => (
         <>
-          <button className="hist-btn" onClick={() => onUpdateStatus(task.id, 'todo')}>← À faire</button>
-          <button className="hist-btn" onClick={() => onUpdateStatus(task.id, 'done')}>Fini ✓</button>
+          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'todo')}>← À faire</button>
+          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'done')}>Fini ✓</button>
         </>
       )}
     />
@@ -67,7 +67,7 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
     <KanbanColumn
       status="done"
       label="Terminé"
-      borderColor="var(--green)"
+      borderColor="var(--color-success)"
       tasks={doneTasks}
       dragOverStatus={dragOverStatus}
       onDragOver={onDragOver}
@@ -80,8 +80,8 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
       descriptionStyle={{ textDecoration: 'line-through' }}
       renderCardActions={(task) => (
         <>
-          <button className="hist-btn" onClick={() => onUpdateStatus(task.id, 'in_progress')}>← Ouvrir</button>
-          <button className="hist-btn del" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
+          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'in_progress')}>← Ouvrir</button>
+          <button className="transition-colors hover:text-danger cursor-pointer" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
         </>
       )}
     />

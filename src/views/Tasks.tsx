@@ -9,6 +9,7 @@ import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { List, Kanban, Calendar, X, SlidersHorizontal, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
+import { Button } from '../components/ui/Button';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
 import { confirmAction } from '../utils/confirmAction';
@@ -531,60 +532,42 @@ export const Tasks: React.FC = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Chargement des tâches...</div>
+        <div className="mt-3 text-ink-soft">Chargement des tâches...</div>
       </div>
     );
   }
 
   return (
-    <div className={`view-section on ${viewMode === 'board' ? 'tasks-board-fullscreen' : ''}`}>
-      {/* Page Header */}
-      <div className="page-header">
+    <div className={viewMode === 'board' ? 'flex h-full flex-col p-6' : 'p-6'}>
+      <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="page-title">Tâches</div>
-          <div className="page-sub">Gestion des tâches</div>
+          <div className="font-display text-xl font-bold text-ink">Tâches</div>
+          <div className="mt-0.5 text-xs text-ink-soft">Gestion des tâches</div>
         </div>
 
-        {/* Toggle view mode */}
-        <div className="tab-buttons">
-          <button
-            className={`btn btn-sm ${viewMode === 'list' ? 'btn-grad' : ''}`}
-            onClick={() => setViewMode('list')}
-          >
-            <List size={14} style={{ marginRight: '4px' }} />
+        <div className="flex gap-2">
+          <Button variant={viewMode === 'list' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('list')}>
+            <List size={14} />
             Liste
-          </button>
-          <button
-            className={`btn btn-sm ${viewMode === 'board' ? 'btn-grad' : ''}`}
-            onClick={() => setViewMode('board')}
-          >
-            <Kanban size={14} style={{ marginRight: '4px' }} />
+          </Button>
+          <Button variant={viewMode === 'board' ? 'primary' : 'ghost'} size="sm" onClick={() => setViewMode('board')}>
+            <Kanban size={14} />
             Tableau
-          </button>
-          <button
-            className="btn btn-sm btn-grad"
-            onClick={() => openTaskModal('todo')}
-          >
-            <Plus size={14} style={{ marginRight: '4px' }} />
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => openTaskModal('todo')}>
+            <Plus size={14} />
             Nouvelle tâche
-          </button>
+          </Button>
         </div>
       </div>
 
-      {/* Filter Bar */}
-      <div className="tasks-filter-bar">
-        <div className="tasks-filter-bar-inner">
-          <SlidersHorizontal size={13} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-          <span className="tasks-filter-label">Filtres</span>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-surface border border-line bg-elevated p-3">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <SlidersHorizontal size={13} className="flex-shrink-0 text-ink-faint" />
+          <span className="text-xs font-semibold text-ink-soft">Filtres</span>
 
-          {/* Priority filter */}
-          <Select
-            value={filterPriority}
-            onValueChange={val => setFilterPriority(val as 'high' | 'medium' | 'low' | '')}
-          >
-            <SelectTrigger className="tasks-filter-select">
-              <SelectValue placeholder="Priorité — Toutes" />
-            </SelectTrigger>
+          <Select value={filterPriority} onValueChange={val => setFilterPriority(val as 'high' | 'medium' | 'low' | '')}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Priorité — Toutes" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">Priorité — Toutes</SelectItem>
               <SelectItem value="high">Urgent</SelectItem>
@@ -593,14 +576,8 @@ export const Tasks: React.FC = () => {
             </SelectContent>
           </Select>
 
-          {/* Lead filter */}
-          <Select
-            value={filterLeadId}
-            onValueChange={val => setFilterLeadId(val)}
-          >
-            <SelectTrigger className="tasks-filter-select">
-              <SelectValue placeholder="Lead — Tous" />
-            </SelectTrigger>
+          <Select value={filterLeadId} onValueChange={val => setFilterLeadId(val)}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Lead — Tous" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">Lead — Tous</SelectItem>
               {leads.map(l => (
@@ -609,14 +586,8 @@ export const Tasks: React.FC = () => {
             </SelectContent>
           </Select>
 
-          {/* Assignee filter */}
-          <Select
-            value={filterAssigneeId}
-            onValueChange={val => setFilterAssigneeId(val)}
-          >
-            <SelectTrigger className="tasks-filter-select">
-              <SelectValue placeholder="Assigné — Tous" />
-            </SelectTrigger>
+          <Select value={filterAssigneeId} onValueChange={val => setFilterAssigneeId(val)}>
+            <SelectTrigger className="w-40"><SelectValue placeholder="Assigné — Tous" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="">Assigné — Tous</SelectItem>
               {teamMembers.map(m => (
@@ -625,9 +596,8 @@ export const Tasks: React.FC = () => {
             </SelectContent>
           </Select>
 
-          {/* Due date sort toggle */}
           <button
-            className={`tasks-filter-sort-btn ${sortByDue === 'asc' ? 'active' : ''}`}
+            className={`inline-flex items-center gap-1.5 rounded-control border px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${sortByDue === 'asc' ? 'border-line-focus bg-amber-soft text-ink' : 'border-line-strong text-ink-soft hover:bg-hover'}`}
             onClick={() => setSortByDue(v => v === 'asc' ? '' : 'asc')}
             title="Trier par échéance (plus proche en premier)"
           >
@@ -635,10 +605,9 @@ export const Tasks: React.FC = () => {
             Échéance {sortByDue === 'asc' ? '↑' : ''}
           </button>
 
-          {/* Reset button — show only when filters active */}
           {activeFilterCount > 0 && (
             <button
-              className="tasks-filter-reset"
+              className="inline-flex items-center gap-1 rounded-control px-2 py-1.5 text-xs text-ink-faint transition-colors hover:text-danger cursor-pointer"
               onClick={() => {
                 setFilterPriority('');
                 setFilterLeadId('');
@@ -653,9 +622,8 @@ export const Tasks: React.FC = () => {
           )}
         </div>
 
-        {/* Results count */}
         {activeFilterCount > 0 && (
-          <span className="tasks-filter-count">
+          <span className="text-xs text-ink-faint">
             {filteredTasks.length} / {tasks.length} tâche{filteredTasks.length !== 1 ? 's' : ''}
           </span>
         )}
