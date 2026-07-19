@@ -13,6 +13,7 @@ import { AlertTriangle, Plus } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
 import { Button } from '../components/ui/Button';
 import { KpiTile } from '../components/ui/KpiTile';
+import { DealCard } from './pipeline/DealCard';
 
 interface PipelineProps {
   setView: (view: string) => void;
@@ -140,58 +141,37 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
         </div>
       )}
 
-      {/* Kanban Board columns */}
-      <div className="pipe-wrap">
+      <div className="flex flex-1 gap-3 overflow-x-auto pb-3">
         {stages.map(st => {
           const stageLeads = leads.filter(l => l.stage_id === st.id);
           const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
 
           return (
-            <div key={st.id} className="pipe-col">
-              <div className="pipe-head" style={{ borderBottomColor: st.color }}>
+            <div key={st.id} className="flex w-64 flex-shrink-0 flex-col rounded-md border border-line bg-surface/40 p-3">
+              <div
+                className="mb-3 flex items-center justify-between border-b-2 pb-2 font-heading text-[13.5px] font-bold text-ink"
+                style={{ borderBottomColor: st.color }}
+              >
                 {st.name}
-                <span>{stageLeads.length} · {stageVal}k€</span>
+                <span className="text-[11px] font-normal text-ink-soft">{stageLeads.length} · {stageVal}k€</span>
               </div>
 
-              <div className="pipe-cards-container">
-                {stageLeads.map(l => {
-                  const slaBreached = isSlaBreached(l, slaLimits);
-                  const isTaskOverdue = getLeadPriorityTask(l.id);
-
-                  let cardClass = 'deal-card';
-                  if (slaBreached) cardClass += ' sla-warn';
-                  else if (isTaskOverdue) cardClass += ' task-due';
-
-                  const scoreColor = l.score >= 80 ? 'var(--green)' : l.score >= 60 ? 'var(--gold)' : 'var(--red)';
-
-                  return (
-                    <div
-                      key={l.id}
-                      className={cardClass}
-                      onClick={() => handleOpenLead(l.id)}
-                    >
-                      <div className="deal-name">
-                        <span>{l.company_name}</span>
-                        <span style={{ color: scoreColor, fontWeight: '700' }}>{l.score}</span>
-                      </div>
-
-                      <div className="deal-meta">{l.contact_name || '—'}</div>
-                      <div className="deal-meta" style={{ margin: '2px 0', fontWeight: '500', color: 'var(--text)' }}>
-                        {l.deal_value}k€
-                      </div>
-
-                      <div className="deal-card-footer">
-                        <span className={`badge badge-${l.segment.toLowerCase()}`}>{l.segment}</span>
-                        <span className="deal-age-indicator" style={{ color: slaBreached ? 'var(--red)' : 'var(--text-muted)' }}>
-                          J+{l.days_in_stage}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
+                {stageLeads.map(l => (
+                  <DealCard
+                    key={l.id}
+                    lead={l}
+                    slaBreached={isSlaBreached(l, slaLimits)}
+                    isTaskOverdue={getLeadPriorityTask(l.id)}
+                    onOpen={handleOpenLead}
+                  />
+                ))}
               </div>
 
-              <button className="btn-add-pipe-card" onClick={() => setView('add')}>
+              <button
+                className="mt-2.5 rounded-sm border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
+                onClick={() => setView('add')}
+              >
                 + Ajouter
               </button>
             </div>
