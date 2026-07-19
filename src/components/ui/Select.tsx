@@ -292,7 +292,7 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-panel)] px-3 py-2 text-sm text-[var(--text-primary)] hover:bg-white/[0.04] focus:outline-none focus:border-[var(--border-active)] disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 cursor-pointer",
+          "flex h-10 w-full items-center justify-between rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink hover:bg-hover focus:outline-none focus:border-line-focus disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 cursor-pointer",
           className
         )}
       >
@@ -302,8 +302,8 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
         <ChevronDown
           size={16}
           className={cn(
-            "text-[var(--text-muted)] transition-transform duration-200 flex-shrink-0 ml-2",
-            open && "transform rotate-180 text-[var(--text-primary)]"
+            "text-ink-faint transition-transform duration-200 flex-shrink-0 ml-2",
+            open && "transform rotate-180 text-ink"
           )}
         />
       </button>
@@ -380,7 +380,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
             exit={{ opacity: 0, y: -4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              "absolute z-50 mt-1.5 max-h-60 min-w-full w-max overflow-y-auto overflow-x-hidden rounded-lg border border-[var(--border-subtle)] bg-[#0c0c16]/95 backdrop-blur-lg p-1 shadow-2xl focus:outline-none scrollbar-thin top-full left-0",
+              "absolute z-50 mt-1.5 max-h-60 min-w-full w-max overflow-y-auto overflow-x-hidden rounded-control border border-line bg-surface p-1 shadow-modal focus:outline-none scrollbar-thin top-full left-0",
               className
             )}
             style={{
@@ -485,15 +485,15 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
         onKeyDown={onKeyDown}
         onMouseEnter={onMouseEnter}
         className={cn(
-          "relative flex w-full cursor-pointer select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm text-[var(--text-primary)] outline-none transition-colors duration-150",
+          "relative flex w-full cursor-pointer select-none items-center rounded-control py-1.5 pl-8 pr-2 text-sm text-ink outline-none transition-colors duration-150",
           disabled && "pointer-events-none opacity-50 cursor-not-allowed",
-          isHighlighted && "bg-white/[0.06] text-white",
-          isSelected && "bg-[var(--purple-glow)] text-white font-medium",
+          isHighlighted && "bg-hover text-ink",
+          isSelected && "bg-amber-soft text-ink font-medium",
           className
         )}
       >
         {isSelected && (
-          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-[var(--purple)]">
+          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-amber">
             <Check size={14} strokeWidth={3} />
           </span>
         )}
@@ -529,7 +529,7 @@ export const SelectLabel = React.forwardRef<HTMLDivElement, SelectLabelProps>(
       <div
         ref={ref}
         className={cn(
-          "py-1.5 pl-8 pr-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider",
+          "py-1.5 pl-8 pr-2 text-xs font-semibold text-ink-faint uppercase tracking-wider",
           className
         )}
         {...props}
