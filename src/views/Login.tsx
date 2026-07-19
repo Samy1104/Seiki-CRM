@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { Button } from '../components/ui/Button';
 
 export const Login: React.FC = () => {
   const { login } = useAuth();
@@ -27,52 +28,42 @@ export const Login: React.FC = () => {
   };
 
   return (
-    <div className="lock-screen-container">
-      {/* Hero Section styled exactly like Seiki.co */}
-      <div className="lock-screen-hero">
-        <img src="/grand_logo.png" className="lock-logo-large" alt="Seiki Logo" />
-        <h1>Sharper decisions <br />with mobility data</h1>
-        <p>CRM interne à Seiki</p>
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-base font-body text-ink">
+      <div className="mb-10 max-w-md text-center">
+        <img src="/grand_logo.png" className="mx-auto mb-8 h-16 w-auto" alt="Seiki Logo" />
+        <h1 className="font-heading text-4xl font-bold leading-tight text-ink">
+          Sharper decisions <br />with mobility data
+        </h1>
+        <p className="mt-3 text-sm text-ink-soft">CRM interne à Seiki</p>
       </div>
 
-      {/* Glassmorphic Credentials Card */}
-      <div className="lock-screen-card">
-        <form onSubmit={handleSubmit} className="lock-screen-form">
-          <div className="lock-input-wrapper">
-            <input
-              type="email"
-              id="email-input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={isSubmitting}
-              autoFocus
-              autoComplete="username"
-              className="lock-input"
-            />
-          </div>
-          <div className="lock-input-wrapper">
-            <input
-              type="password"
-              id="pwd-input"
-              placeholder="Mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              disabled={isSubmitting}
-              autoComplete="current-password"
-              className="lock-input"
-            />
-          </div>
-
-          {error && <div className="lock-error">{error}</div>}
-
-          <button
-            type="submit"
+      <div className="w-96 rounded-lg border border-line-strong bg-surface p-10 shadow-modal">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             disabled={isSubmitting}
-            className="lock-btn"
-          >
+            autoFocus
+            autoComplete="username"
+            className="w-full rounded-sm border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
+          />
+          <input
+            type="password"
+            placeholder="Mot de passe"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            disabled={isSubmitting}
+            autoComplete="current-password"
+            className="w-full rounded-sm border border-line-strong bg-base px-4 py-3 text-center text-sm text-ink outline-none transition-colors focus:border-line-focus"
+          />
+
+          {error && <div className="text-center text-xs font-medium text-danger">{error}</div>}
+
+          <Button type="submit" variant="primary" disabled={isSubmitting} className="mt-2 w-full py-3">
             {isSubmitting ? 'Connexion en cours...' : 'Accéder au CRM'}
-          </button>
+          </Button>
         </form>
       </div>
     </div>
