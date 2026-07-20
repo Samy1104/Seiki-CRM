@@ -14,6 +14,7 @@ import { LeadDetailModal } from './pipeline/LeadDetailModal';
 import { Button } from '../components/ui/Button';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DealCard } from './pipeline/DealCard';
+import { SeikiKanbanBoard } from '../components/ui/SeikiKanbanBoard';
 
 interface PipelineProps {
   setView: (view: string) => void;
@@ -141,43 +142,47 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
         </div>
       )}
 
-      <div className="flex flex-1 gap-3 overflow-x-auto pb-3">
-        {stages.map(st => {
-          const stageLeads = leads.filter(l => l.stage_id === st.id);
+      <SeikiKanbanBoard<Lead, PipelineStage>
+        columns={stages}
+        cards={leads}
+        getColumnId={(st) => st.id}
+        getColumnTitle={(st) => st.name}
+        getColumnColor={(st) => st.color}
+        getCardId={(l) => l.id}
+        getCardColumnId={(l) => l.stage_id}
+        renderColumnHeaderExtra={(st, count) => {
+          const stageLeads = leads.filter((l) => l.stage_id === st.id);
           const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
-
           return (
-            <div key={st.id} className="flex w-64 flex-shrink-0 flex-col rounded-surface border border-line bg-surface/40 p-3">
-              <div
-                className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink"
-                style={{ borderBottomColor: st.color }}
-              >
-                {st.name}
-                <span className="text-[11px] font-normal text-ink-soft">{stageLeads.length} · {stageVal}k€</span>
-              </div>
-
-              <div className="flex flex-1 flex-col gap-2.5 overflow-y-auto pr-1">
-                {stageLeads.map(l => (
-                  <DealCard
-                    key={l.id}
-                    lead={l}
-                    slaBreached={isSlaBreached(l, slaLimits)}
-                    isTaskOverdue={getLeadPriorityTask(l.id)}
-                    onOpen={handleOpenLead}
-                  />
-                ))}
-              </div>
-
-              <button
-                className="mt-2.5 rounded-control border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
-                onClick={() => setView('add')}
-              >
-                + Ajouter
-              </button>
-            </div>
+            <span className="text-[11px] font-normal text-ink-soft">
+              {count} · {stageVal}k€
+            </span>
           );
-        })}
-      </div>
+        }}
+        renderCard={(lead) => (
+          <DealCard
+            lead={lead}
+            slaBreached={isSlaBreached(lead, slaLimits)}
+            isTaskOverdue={getLeadPriorityTask(lead.id)}
+            onOpen={handleOpenLead}
+          />
+        )}
+        renderColumnFooter={() => (
+          <button
+            className="mt-2.5 w-full rounded-control border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
+            onClick={() => setView('add')}
+          >
+            + Ajouter
+          </button>
+        )}
+        onCardMove={async (leadId, _fromCol, toCol) => {
+          await leadsService.updateLead(leadId, { stage_id: toCol });
+          setLeads((prev) =>
+            prev.map((l) => (l.id === leadId ? { ...l, stage_id: toCol } : l))
+          );
+        }}
+        onCardClick={(lead) => handleOpenLead(lead.id)}
+      />
 
       {/* LEAD MODAL DETAILS */}
       {modalOpen && selectedLead && (
