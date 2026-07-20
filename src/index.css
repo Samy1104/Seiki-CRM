@@ -1,5 +1,5 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
 
 
 @font-face {
@@ -440,6 +440,21 @@ body {
 @keyframes pulse-red {
   0% { box-shadow: 0 0 4px rgba(248, 113, 113, 0.1); }
   100% { box-shadow: 0 0 12px rgba(248, 113, 113, 0.2); }
+}
+
+/* ============================================================
+   REACT-KANBAN-KIT THEME OVERRIDES
+   Shared by SeikiKanbanBoard.tsx (Pipeline.tsx + TaskBoardView.tsx).
+   The library ships default white drag-shadow placeholders
+   (.rkk-column-shadow, .rkk-card-shadow: #ffffffb7 / #fff) with no
+   React style prop to override them, and its CSS is injected via a
+   runtime <style> tag whose load order relative to this file isn't
+   guaranteed — !important makes the override reliable either way.
+   ============================================================ */
+.rkk-column-shadow,
+.rkk-card-shadow {
+  background-color: rgba(13, 13, 13, 0.7) !important;
+  border: 1px solid rgba(200, 184, 154, 0.3) !important;
 }
 
 /* ============================================================
