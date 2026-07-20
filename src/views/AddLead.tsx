@@ -267,8 +267,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <div className="font-display text-xl font-bold text-ink">Ajouter un lead</div>
-        <div className="mt-0.5 text-xs text-ink-soft">Scorer avant d'entrer dans le pipeline</div>
+        <div className="font-display text-3xl font-bold text-ink">Ajouter un lead</div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

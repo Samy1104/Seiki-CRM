@@ -275,12 +275,9 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
       <main className="main-content p-8" style={{ overflowY: 'auto' }}>
         <div className="max-w-3xl mx-auto space-y-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-heading)' }}>
+            <h1 className="text-4xl font-bold tracking-tight text-[var(--text-primary)]" style={{ fontFamily: 'var(--font-heading)' }}>
               Générateur de posts LinkedIn
             </h1>
-            <p className="text-[var(--text-secondary)] mt-1">
-              Décris le sujet, choisis la voix et la langue — l'agent écrit dans le style Seiki.
-            </p>
           </div>
 
           <div className="space-y-4 p-6 rounded-2xl border" style={panelStyle}>

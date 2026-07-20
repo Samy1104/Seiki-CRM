@@ -105,10 +105,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="font-display text-xl font-bold text-ink">Pipeline</div>
-          <div className="mt-0.5 text-xs text-ink-soft">
-            {leads.length} lead{leads.length !== 1 ? 's' : ''} · {totalVal}k€ de valeur totale
-          </div>
+          <div className="font-display text-3xl font-bold text-ink">Pipeline</div>
         </div>
         <Button variant="primary" onClick={() => setView('add')}>
           <Plus size={16} />

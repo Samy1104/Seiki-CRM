@@ -44,14 +44,11 @@ export const Prospection: React.FC = () => {
       {/* Header */}
       <div className="prospection-header">
         <div className="prospection-title">
-          <FileEdit size={20} style={{ color: 'var(--color-amber)' }} />
-          <h1>Prospection</h1>
+          <FileEdit size={24} style={{ color: 'var(--color-amber)' }} />
+          <h1 className="text-3xl font-bold">Prospection</h1>
           <span className="prospection-badge">Templates + fusion</span>
         </div>
         <ProspectionModeToggle mode={mode} onChange={handleModeChange} />
-        <p className="prospection-subtitle">
-          Générez et envoyez des emails ultra-personnalisés en quelques clics.
-        </p>
       </div>
 
       {/* Tabs */}

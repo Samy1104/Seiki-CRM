@@ -73,8 +73,7 @@ export const Stats: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <div className="font-display text-xl font-bold text-ink">Statistiques</div>
-        <div className="mt-0.5 text-xs text-ink-soft">Indicateurs de performance commerciale</div>
+        <div className="font-display text-3xl font-bold text-ink">Statistiques</div>
       </div>
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">

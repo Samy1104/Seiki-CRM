@@ -128,10 +128,7 @@ export const Leads: React.FC<LeadsProps> = () => {
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <div className="font-display text-xl font-bold text-ink">Tous les leads</div>
-          <div className="mt-0.5 text-xs text-ink-soft">
-            {filteredLeads.length} de {leads.length} lead{leads.length !== 1 ? 's' : ''} affiché{filteredLeads.length !== 1 ? 's' : ''}
-          </div>
+          <div className="font-display text-3xl font-bold text-ink">Tous les leads</div>
         </div>
 
         <div className="flex gap-2">

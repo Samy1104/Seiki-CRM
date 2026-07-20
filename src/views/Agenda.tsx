@@ -318,8 +318,7 @@ export const Agenda: React.FC = () => {
     <div className="p-6">
       <div className="mb-5 flex items-center justify-between">
         <div>
-          <div className="font-display text-xl font-bold text-ink">Agenda</div>
-          <div className="mt-0.5 text-xs text-ink-soft">Événements de prospection et salons professionnels</div>
+          <div className="font-display text-3xl font-bold text-ink">Agenda</div>
         </div>
         <div className="flex gap-2">
           <Button variant="secondary" size="sm" onClick={handleExportIcal} title="Télécharger tous les événements en fichier .ics">
@@ -331,14 +330,6 @@ export const Agenda: React.FC = () => {
             Copier l'URL d'abonnement
           </Button>
         </div>
-      </div>
-
-      <div className="mb-5 flex items-center gap-3 rounded-surface border border-line-focus bg-amber-soft/30 px-4 py-3 text-xs text-ink-soft">
-        <Calendar size={15} className="flex-shrink-0 text-amber" />
-        <span>
-          <strong className="text-ink">Synchronisation calendrier :</strong>{' '}
-          Cliquez sur <em>Exporter .ics</em> pour un import ponctuel, ou <em>Copier l'URL d'abonnement</em> pour une synchronisation live dans Google Calendar, Apple Calendar ou Outlook (Ajouter un calendrier → Via URL).
-        </span>
       </div>
 
       <div className="mb-5 overflow-hidden rounded-surface border border-line">

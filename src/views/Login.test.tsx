@@ -15,15 +15,27 @@ describe('Login', () => {
   it('renders the email/password form', () => {
     vi.mocked(useAuth).mockReturnValue({ login: vi.fn(), logout: vi.fn(), isAuthenticated: false, user: null, loading: false });
     render(<Login />);
-    expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Mot de passe')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('vous@exemple.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
   });
 
   it('shows a validation error when submitted empty', () => {
     vi.mocked(useAuth).mockReturnValue({ login: vi.fn(), logout: vi.fn(), isAuthenticated: false, user: null, loading: false });
     render(<Login />);
-    fireEvent.click(screen.getByRole('button', { name: 'Accéder au portail' }));
+    fireEvent.click(screen.getByRole('button', { name: /se connecter/i }));
     expect(screen.getByText('Veuillez entrer votre email et votre mot de passe')).toBeInTheDocument();
+  });
+
+  it('toggles password visibility when eye icon button is clicked', () => {
+    vi.mocked(useAuth).mockReturnValue({ login: vi.fn(), logout: vi.fn(), isAuthenticated: false, user: null, loading: false });
+    render(<Login />);
+    const passwordInput = screen.getByPlaceholderText('••••••••');
+    const toggleBtn = screen.getByRole('button', { name: /afficher le mot de passe/i });
+    expect(passwordInput).toHaveAttribute('type', 'password');
+    fireEvent.click(toggleBtn);
+    expect(passwordInput).toHaveAttribute('type', 'text');
+    fireEvent.click(screen.getByRole('button', { name: /masquer le mot de passe/i }));
+    expect(passwordInput).toHaveAttribute('type', 'password');
   });
 
   it('calls login with the entered credentials', async () => {
@@ -31,9 +43,9 @@ describe('Login', () => {
     vi.mocked(useAuth).mockReturnValue({ login, logout: vi.fn(), isAuthenticated: false, user: null, loading: false });
     render(<Login />);
 
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'a@seiki.co' } });
-    fireEvent.change(screen.getByPlaceholderText('Mot de passe'), { target: { value: 'secret' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Accéder au portail' }));
+    fireEvent.change(screen.getByPlaceholderText('vous@exemple.com'), { target: { value: 'a@seiki.co' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'secret' } });
+    fireEvent.click(screen.getByRole('button', { name: /se connecter/i }));
 
     await waitFor(() => expect(login).toHaveBeenCalledWith('a@seiki.co', 'secret'));
   });
@@ -43,9 +55,9 @@ describe('Login', () => {
     vi.mocked(useAuth).mockReturnValue({ login, logout: vi.fn(), isAuthenticated: false, user: null, loading: false });
     render(<Login />);
 
-    fireEvent.change(screen.getByPlaceholderText('Email'), { target: { value: 'a@seiki.co' } });
-    fireEvent.change(screen.getByPlaceholderText('Mot de passe'), { target: { value: 'wrong' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Accéder au portail' }));
+    fireEvent.change(screen.getByPlaceholderText('vous@exemple.com'), { target: { value: 'a@seiki.co' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByRole('button', { name: /se connecter/i }));
 
     await waitFor(() => expect(screen.getByText('Email ou mot de passe incorrect')).toBeInTheDocument());
   });

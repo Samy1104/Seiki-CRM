@@ -105,8 +105,7 @@ export const Codir: React.FC = () => {
     <div className="print-section p-6">
       <div className="no-print mb-6 flex items-center justify-between">
         <div>
-          <div className="font-display text-xl font-bold text-ink">Dashboard CODIR</div>
-          <div className="mt-0.5 text-xs text-ink-soft">Rapport stratégique de la direction</div>
+          <div className="font-display text-3xl font-bold text-ink">Dashboard CODIR</div>
         </div>
 
         <div className="flex gap-2">

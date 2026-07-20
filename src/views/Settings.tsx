@@ -253,8 +253,7 @@ export const Settings: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-5">
-        <div className="font-display text-xl font-bold text-ink">Paramètres</div>
-        <div className="mt-0.5 text-xs text-ink-soft">Configuration globale de l'espace de travail</div>
+        <div className="font-display text-3xl font-bold text-ink">Paramètres</div>
       </div>
 
       <div className="mb-5 flex gap-1 border-b border-line">
