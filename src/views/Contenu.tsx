@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { LayoutGrid, LogOut, Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap, AtSign, Trash2, FileEdit } from 'lucide-react';
+import { Copy, Check, Sparkles, Loader2, Link2, Image as ImageIcon, X, RotateCcw, GraduationCap, AtSign, Trash2 } from 'lucide-react';
 import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost, type TagEntry } from '../services/contentService';
 import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../services/linkedinService';
+import { Sidebar } from '../components/Sidebar';
 import { Prospection } from './Prospection';
 
 type MentionField = 'hook' | 'corps';
@@ -20,7 +20,6 @@ const inputStyle: React.CSSProperties = {
 };
 
 export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
-  const { logout } = useAuth();
   const { showToast } = useToast();
 
   const [contenuView, setContenuView] = useState<'linkedin' | 'prospection'>('linkedin');
@@ -266,49 +265,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
 
   return (
     <div className="app-container">
-      <aside className="sidebar">
-        <div className="logo">
-          <div className="logo-mark-wrap">
-            <img src="/grand_logo.png" alt="Seiki" className="logo-mark" />
-          </div>
-          <div className="logo-sub">CONTENU — IA PREDICtive</div>
-        </div>
-
-        <nav className="nav">
-          <button
-            className={`nav-item${contenuView === 'linkedin' ? ' on' : ''}`}
-            onClick={() => setContenuView('linkedin')}
-          >
-            <LayoutGrid size={16} />
-            <span>Générateur LinkedIn</span>
-          </button>
-          <button
-            className={`nav-item${contenuView === 'prospection' ? ' on' : ''} nav-item-ai`}
-            onClick={() => setContenuView('prospection')}
-          >
-            <FileEdit size={16} />
-            <span>Prospection</span>
-          </button>
-        </nav>
-
-        <div className="sidebar-footer">
-          <button className="btn-logout" style={{ marginBottom: '8px' }} onClick={() => setActiveApp('portal')}>
-            <LayoutGrid size={14} style={{ marginRight: '6px' }} />
-            Retour Portail
-          </button>
-
-          <button className="btn-logout" onClick={logout}>
-            <LogOut size={14} style={{ marginRight: '6px' }} />
-            Déconnexion
-          </button>
-
-          <div className="powered-by-seiki-footer">
-            <span className="powered-text">Powered by</span>
-            <img src="/seiki_logo_large.png" className="seiki-footer-logo" alt="Seiki Logo" />
-            <span className="seiki-footer-name">Seiki</span>
-          </div>
-        </div>
-      </aside>
+      <Sidebar section="contenu" contenuView={contenuView} setContenuView={setContenuView} setActiveApp={setActiveApp} />
 
       {contenuView === 'prospection' ? (
         <main className="main-content">

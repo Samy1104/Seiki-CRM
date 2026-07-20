@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { SideBar } from './components/SideBar';
+import { Sidebar } from './components/Sidebar';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Login } from './views/Login';
 import { Pipeline } from './views/Pipeline';
@@ -45,7 +45,7 @@ const AppContent: React.FC = () => {
   return (
     <div className="app-container">
       {/* Sidebar navigation */}
-      <SideBar currentView={currentView} setView={setView} setActiveApp={setActiveApp} />
+      <Sidebar section="crm" currentView={currentView} setView={setView} setActiveApp={setActiveApp} />
 
       {/* Main workspace area */}
       <main className="main-content">
