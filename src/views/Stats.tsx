@@ -77,14 +77,14 @@ export const Stats: React.FC = () => {
         <div className="mt-0.5 text-xs text-ink-soft">Indicateurs de performance commerciale</div>
       </div>
 
-      <div className="mb-5 grid grid-cols-4 gap-3">
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiTile label="Panier Moyen" value={averageDealValue} formatValue={(v) => `${Math.round(v)}k€`} sub="Valeur moyenne de deal" accent="neutral" />
         <KpiTile label="Taux de conversion" value={conversionRate} formatValue={(v) => `${Math.round(v)}%`} sub="Deals gagnés / Total" accent="success" />
         <KpiTile label="Deals actifs" value={activeLeads.length} sub="Opportunités en cours" accent="amber" />
         <KpiTile label="Total Gagné" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${wonLeads.length} contrats signés`} accent="success" />
       </div>
 
-      <div className="mb-5 grid grid-cols-[1.2fr_1fr] gap-5">
+      <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_1fr]">
         <div className="rounded-surface border border-line bg-elevated p-5">
           <div className="flex items-center gap-2 text-sm font-bold text-ink">
             <TrendingUp size={14} className="text-amber" />
@@ -138,7 +138,7 @@ export const Stats: React.FC = () => {
           <Award size={14} className="text-amber" />
           Répartition des leads par segment d'activité
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-4">
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
           {(['Media', 'Retail', 'Instit'] as const).map(seg => {
             const data = segmentStats[seg];
             const pct = totalSegmentCount ? Math.round((data.count / totalSegmentCount) * 100) : 0;

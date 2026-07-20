@@ -29,7 +29,7 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
     <div className="mb-3.5 text-sm font-bold text-ink">Quota d'envoi et relances</div>
 
     <form onSubmit={onSubmit}>
-      <div className="mb-6 grid grid-cols-2 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="Quota d'envoi quotidien">
           <input type="number" value={dailyQuota} onChange={(e) => onDailyQuotaChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
           <span className="text-[10px] text-ink-faint">

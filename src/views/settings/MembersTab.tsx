@@ -33,7 +33,7 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   onCancelEdit,
   onDelete,
 }) => (
-  <div className="grid grid-cols-[1.5fr_1fr] gap-5">
+  <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.5fr_1fr]">
     <div className="rounded-surface border border-line bg-elevated p-5">
       <div className="mb-3.5 text-sm font-bold text-ink">Membres actifs</div>
 

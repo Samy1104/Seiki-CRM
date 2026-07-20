@@ -360,7 +360,7 @@ export const Agenda: React.FC = () => {
 
         {!isFormCollapsed && (
           <form onSubmit={handleAddEvent} className="border-t border-line bg-surface p-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Nom de l'événement *">
                 <input
                   type="text"
@@ -413,7 +413,7 @@ export const Agenda: React.FC = () => {
                 </Select>
               </Field>
 
-              <Field label="Objectif / Action clé" className="col-span-2">
+              <Field label="Objectif / Action clé" className="sm:col-span-2">
                 <input
                   type="text"
                   placeholder="ex : Rencontre 5 prospects et qualification"
@@ -423,7 +423,7 @@ export const Agenda: React.FC = () => {
                 />
               </Field>
 
-              <div className="col-span-2 flex justify-end gap-2.5">
+              <div className="sm:col-span-2 flex justify-end gap-2.5">
                 {editingEventId && (
                   <Button type="button" variant="secondary" onClick={handleCancelEdit}>Annuler</Button>
                 )}
@@ -437,7 +437,7 @@ export const Agenda: React.FC = () => {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <div className="flex flex-col gap-3.5">
           <div className="border-b border-line-focus pb-1.5 text-[15px] font-bold text-ink">
             À VENIR ({upcomingEvents.length})

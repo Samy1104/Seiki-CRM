@@ -271,7 +271,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
         <div className="mt-0.5 text-xs text-ink-soft">Scorer avant d'entrer dans le pipeline</div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {/* Left Column: Form */}
         <div className="rounded-surface border border-line bg-elevated p-5">
           <div className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
@@ -280,7 +280,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
           </div>
 
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field label="Société *">
                 <input
                   type="text"
@@ -400,7 +400,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                 </Select>
               </Field>
 
-              <Field label="Note" className="col-span-2">
+              <Field label="Note" className="sm:col-span-2">
                 <textarea
                   placeholder="Contexte, déclencheur, informations utiles..."
                   value={form.note}
@@ -410,7 +410,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
                 />
               </Field>
 
-              <Field label="Champs personnalisés (utilisables dans les templates via {{custom.<clé>}})" className="col-span-2">
+              <Field label="Champs personnalisés (utilisables dans les templates via {{custom.<clé>}})" className="sm:col-span-2">
                 {customFields.map((cf, i) => (
                   <div key={i} className="mb-1.5 flex gap-2">
                     <input

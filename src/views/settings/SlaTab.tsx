@@ -29,7 +29,7 @@ export const SlaTab: React.FC<SlaTabProps> = ({
     <div className="mb-3.5 text-sm font-bold text-ink">Règles SLA et automatisation</div>
 
     <form onSubmit={onSubmit}>
-      <div className="mb-6 grid grid-cols-2 gap-4">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="SLA Segment Media (jours maximum)">
           <input
             type="number"
@@ -69,7 +69,7 @@ export const SlaTab: React.FC<SlaTabProps> = ({
           </span>
         </Field>
 
-        <div className="col-span-2 mt-2 flex items-center justify-between border-t border-line pt-4">
+        <div className="sm:col-span-2 mt-2 flex items-center justify-between border-t border-line pt-4">
           <div>
             <div className="text-[13px] font-semibold text-ink">Enrichissement et scoring automatique</div>
             <div className="mt-0.5 text-[11px] text-ink-faint">

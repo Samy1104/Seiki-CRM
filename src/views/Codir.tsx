@@ -135,7 +135,7 @@ export const Codir: React.FC = () => {
         </div>
       </div>
 
-      <div className="codir-kpi-grid mb-5 grid grid-cols-5 gap-3">
+      <div className="codir-kpi-grid mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <KpiTile className="codir-kpi" label="Pipeline total" value={totalVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${leads.length} opportunités`} accent="neutral" />
         <KpiTile className="codir-kpi" label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${wonLeads.length} deals signés`} accent="success" />
         <KpiTile className="codir-kpi" label="Deals Chauds" value={hotDeals.length} sub="ICP score ≥ 80" accent="amber" />
@@ -143,7 +143,7 @@ export const Codir: React.FC = () => {
         <KpiTile className="codir-kpi" label="Alertes SLA" value={slaBreaches.length} sub="Retards critiques" accent={slaBreaches.length > 0 ? 'danger' : 'neutral'} />
       </div>
 
-      <div className="codir-two-col mb-5 grid grid-cols-[1.2fr_1fr] gap-5">
+      <div className="codir-two-col mb-5 grid grid-cols-1 gap-5 lg:grid-cols-[1.2fr_1fr]">
         <div className="flex flex-col gap-5">
           <div className="codir-card rounded-surface border border-line bg-elevated p-5">
             <div className="codir-section-title flex items-center gap-2 text-sm font-bold text-ink">
@@ -259,7 +259,7 @@ export const Codir: React.FC = () => {
           Prochains événements & Salons professionnels ciblés
         </div>
 
-        <div className="mt-3 grid grid-cols-4 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {upcomingEvents.length > 0 ? (
             upcomingEvents.map(e => (
               <div key={e.id} className="codir-event-small-card rounded-control border border-line bg-surface p-3">
@@ -274,7 +274,7 @@ export const Codir: React.FC = () => {
               </div>
             ))
           ) : (
-            <div className="col-span-4 py-3 text-center text-xs text-ink-faint">
+            <div className="col-span-2 py-3 text-center text-xs text-ink-faint lg:col-span-4">
               Aucun salon professionnel prévu à l'agenda
             </div>
           )}
