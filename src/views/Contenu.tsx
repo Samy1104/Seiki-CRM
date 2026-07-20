@@ -36,7 +36,8 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
   const [accounts, setAccounts] = useState<LinkedinAccount[]>([]);
   const [queue, setQueue] = useState<ScheduledPost[]>([]);
   const [targetAccountId, setTargetAccountId] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('09:00');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [scheduling, setScheduling] = useState(false);
 
@@ -211,7 +212,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
       showToast('Choisis un compte LinkedIn connecté.', 'error');
       return;
     }
-    if (!scheduledAt) {
+    if (!scheduledDate || !scheduledTime) {
       showToast('Choisis une date et une heure.', 'error');
       return;
     }
@@ -221,20 +222,22 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
       if (imageFile) {
         imagePath = await linkedinService.uploadImage(imageFile);
       }
+      const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
       await linkedinService.schedulePost({
         hook: post.hook,
         corps: post.corps,
         hashtags: post.hashtags,
         imagePath,
         targetAccountId,
-        scheduledAt: new Date(scheduledAt).toISOString(),
+        scheduledAt: scheduledDateTime,
       });
       showToast('Post programmé.', 'success');
       setPost(null);
       setOriginalPost(null);
       setBrief('');
       setImageFile(null);
-      setScheduledAt('');
+      setScheduledDate('');
+      setScheduledTime('09:00');
       loadQueue();
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la programmation', 'error');
@@ -485,8 +488,13 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-2 text-[var(--text-secondary)]">Date et heure</label>
-                  <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="rounded-lg p-2 text-sm" style={inputStyle} />
+                  <label className="block text-sm mb-2 text-[var(--text-secondary)]">Date</label>
+                  <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="rounded-lg p-2 text-sm" style={inputStyle} />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-2 text-[var(--text-secondary)]">Heure</label>
+                  <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="rounded-lg p-2 text-sm" style={inputStyle} />
                 </div>
 
                 <div>
