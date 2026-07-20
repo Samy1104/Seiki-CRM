@@ -103,21 +103,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
     .slice(0, 2) || "JD";
 
   const submenuItems = (isFloating: boolean) => (
-    <div style={isFloating ? { fontFamily: "'Inter', sans-serif" } : {}}>
+    <div style={{ fontFamily: "'Inter', sans-serif" }}>
       {isFloating && <div style={{ height: "4px" }} />}
       <button
-        className="flex items-center gap-3 w-full text-left transition-colors duration-150 cursor-pointer"
-        style={{ color: "#b0afa8", padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          width: "100%",
+          textAlign: "left",
+          color: "#b0afa8",
+          padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontFamily: "'Inter', sans-serif",
+          transition: "color 0.15s ease",
+        }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#f2ede4")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#b0afa8")}
         onClick={() => { setProfileOpen(false); setActiveApp("portal"); }}
       >
         <ArrowLeft size={14} strokeWidth={1.5} />
-        <span className="text-[13px] tracking-wide whitespace-nowrap">Retour au portail</span>
+        <span style={{ whiteSpace: "nowrap" }}>Retour au portail</span>
       </button>
       <button
-        className="flex items-center gap-3 w-full text-left transition-colors duration-150 cursor-pointer"
-        style={{ color: "#b0afa8", padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          width: "100%",
+          textAlign: "left",
+          color: "#b0afa8",
+          padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontFamily: "'Inter', sans-serif",
+          transition: "color 0.15s ease",
+        }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#f2ede4")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#b0afa8")}
         onClick={() => {
@@ -127,18 +153,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }}
       >
         <Settings size={14} strokeWidth={1.5} />
-        <span className="text-[13px] tracking-wide whitespace-nowrap">Paramètres</span>
+        <span style={{ whiteSpace: "nowrap" }}>Paramètres</span>
       </button>
       <div style={{ height: "1px", background: "rgba(242, 237, 228, 0.06)", margin: "4px 0" }} />
       <button
-        className="flex items-center gap-3 w-full text-left transition-colors duration-150 cursor-pointer"
-        style={{ color: "#b0afa8", padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem" }}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          width: "100%",
+          textAlign: "left",
+          color: "#b0afa8",
+          padding: isFloating ? "0.6rem 1rem" : "0.6rem 0.75rem",
+          background: "transparent",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "13px",
+          fontFamily: "'Inter', sans-serif",
+          transition: "color 0.15s ease",
+        }}
         onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#e05252")}
         onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#b0afa8")}
         onClick={() => { setProfileOpen(false); logout(); }}
       >
         <LogOut size={14} strokeWidth={1.5} />
-        <span className="text-[13px] tracking-wide whitespace-nowrap">Se déconnecter</span>
+        <span style={{ whiteSpace: "nowrap" }}>Se déconnecter</span>
       </button>
       {isFloating && <div style={{ height: "4px" }} />}
     </div>
@@ -146,9 +185,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside
-      className="flex flex-col h-full shrink-0 relative overflow-hidden"
       style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100vh",
         width: collapsed ? "56px" : "220px",
+        flexShrink: 0,
+        position: "relative",
+        overflow: "hidden",
+        boxSizing: "border-box",
         transition: "width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
         background: "#0d0d0d",
         borderRight: "1px solid rgba(242, 237, 228, 0.08)",
@@ -157,25 +202,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
     >
       {/* Logo + collapse toggle */}
       <div
-        className="flex items-center shrink-0"
         style={{
-          borderBottom: "1px solid rgba(242, 237, 228, 0.06)",
-          padding: collapsed ? "1.5rem 0 1.25rem" : "1.5rem 1.25rem 1.25rem",
+          display: "flex",
+          alignItems: "center",
           justifyContent: collapsed ? "center" : "space-between",
+          padding: collapsed ? "1.25rem 0 1.25rem" : "1.25rem 1.25rem",
+          borderBottom: "1px solid rgba(242, 237, 228, 0.06)",
           transition: "padding 0.3s ease",
+          flexShrink: 0,
         }}
       >
         {!collapsed && (
           <img
             src="/grand_logo.png"
             alt="Company logo"
-            className="h-8 w-auto object-contain"
+            style={{ height: "32px", width: "auto", objectFit: "contain" }}
           />
         )}
         <button
           onClick={() => { setCollapsed((v) => !v); setProfileOpen(false); }}
-          className="shrink-0 transition-colors duration-150 cursor-pointer"
-          style={{ color: "#b0afa8", lineHeight: 0 }}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            color: "#b0afa8",
+            lineHeight: 0,
+            padding: "4px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "color 0.15s ease",
+          }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#f2ede4")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#b0afa8")}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -189,8 +246,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Nav items */}
       <nav
-        className="flex-1 flex flex-col gap-0.5 overflow-y-auto overflow-x-hidden"
-        style={{ padding: collapsed ? "1rem 8px 0" : "1rem 0.75rem 0" }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: "4px",
+          padding: collapsed ? "1rem 8px 0" : "1rem 0.75rem 0",
+          flex: 1,
+          overflowY: "auto",
+          overflowX: "hidden",
+        }}
       >
         {navItems.map((item) => {
           const active = activeId === item.id;
@@ -199,12 +263,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.id}
               onClick={() => handleNavClick(item.id)}
               title={collapsed ? item.label : undefined}
-              className="w-full flex items-center gap-3 py-3 text-left transition-all duration-150 rounded-sm cursor-pointer"
               style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                width: "100%",
                 padding: collapsed ? "0.75rem 0" : "0.75rem 0.75rem",
                 justifyContent: collapsed ? "center" : "flex-start",
                 background: active ? "rgba(242, 237, 228, 0.06)" : "transparent",
                 color: active ? "#f2ede4" : "#b0afa8",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                textAlign: "left",
+                fontFamily: "'Inter', sans-serif",
+                transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
                 if (!active) (e.currentTarget as HTMLElement).style.color = "#f2ede4";
@@ -213,14 +286,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 if (!active) (e.currentTarget as HTMLElement).style.color = "#b0afa8";
               }}
             >
-              <span className="shrink-0" style={{ color: active ? accentColor : "inherit" }}>{item.icon}</span>
+              <span style={{ display: "flex", alignItems: "center", flexShrink: 0, color: active ? accentColor : "inherit" }}>
+                {item.icon}
+              </span>
               {!collapsed && (
-                <span className="text-[14px] tracking-wide whitespace-nowrap">{item.label}</span>
+                <span style={{ fontSize: "14px", fontWeight: active ? 500 : 400, letterSpacing: "0.01em", whiteSpace: "nowrap" }}>
+                  {item.label}
+                </span>
               )}
               {!collapsed && active && (
                 <span
-                  className="ml-auto block w-1 h-1 rounded-full shrink-0"
-                  style={{ background: accentColor }}
+                  style={{
+                    marginLeft: "auto",
+                    display: "block",
+                    width: "4px",
+                    height: "4px",
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: accentColor,
+                  }}
                 />
               )}
             </button>
@@ -229,13 +313,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       {/* Bottom */}
-      <div className="mt-auto shrink-0" style={{ borderTop: "1px solid rgba(242, 237, 228, 0.06)" }}>
+      <div style={{ marginTop: "auto", flexShrink: 0, borderTop: "1px solid rgba(242, 237, 228, 0.06)" }}>
 
         {/* Inline submenu (expanded state) */}
         {profileOpen && !collapsed && (
           <div
-            className="px-3 pb-1"
-            style={{ borderBottom: "1px solid rgba(242, 237, 228, 0.06)" }}
+            style={{ padding: "0 12px 4px", borderBottom: "1px solid rgba(242, 237, 228, 0.06)" }}
           >
             {submenuItems(false)}
           </div>
@@ -244,11 +327,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Profile row */}
         <button
           ref={avatarRef}
-          className="w-full flex items-center gap-3 py-4 transition-colors duration-150 cursor-pointer"
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            width: "100%",
             padding: collapsed ? "1rem 0" : "1rem 1.25rem",
             justifyContent: collapsed ? "center" : "flex-start",
             color: profileOpen ? "#f2ede4" : "#b0afa8",
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            textAlign: "left",
+            transition: "color 0.15s ease",
           }}
           title={collapsed ? displayName : undefined}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#f2ede4")}
@@ -258,21 +349,34 @@ export const Sidebar: React.FC<SidebarProps> = ({
           onClick={handleAvatarClick}
         >
           <div
-            className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-medium"
-            style={{ background: "rgba(242, 237, 228, 0.1)", color: "#f2ede4" }}
+            style={{
+              width: "28px",
+              height: "28px",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              fontSize: "11px",
+              fontWeight: 500,
+              background: "rgba(242, 237, 228, 0.1)",
+              color: "#f2ede4",
+            }}
           >
             {initials}
           </div>
           {!collapsed && (
             <>
-              <div className="flex-1 text-left overflow-hidden">
-                <div className="text-[13px] tracking-wide text-[#f2ede4] whitespace-nowrap capitalize">{displayName}</div>
+              <div style={{ flex: 1, textAlign: "left", overflow: "hidden" }}>
+                <div style={{ fontSize: "13px", fontWeight: 500, color: "#f2ede4", whiteSpace: "nowrap", textTransform: "capitalize", letterSpacing: "0.01em" }}>
+                  {displayName}
+                </div>
               </div>
               <ChevronUp
                 size={12}
                 strokeWidth={1.5}
-                className="shrink-0"
                 style={{
+                  flexShrink: 0,
                   transform: profileOpen ? "rotate(0deg)" : "rotate(180deg)",
                   transition: "transform 0.2s ease",
                 }}
@@ -283,8 +387,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Powered by */}
         {!collapsed && (
-          <div className="pb-4 text-center" style={{ color: "#c8b89a" }}>
-            <span className="text-[10px] tracking-[0.15em] uppercase">Powered by Seiki</span>
+          <div style={{ paddingBottom: "16px", textAlign: "center", color: "#c8b89a" }}>
+            <span style={{ fontSize: "10px", letterSpacing: "0.15em", textTransform: "uppercase", fontWeight: 500 }}>
+              Powered by Seiki
+            </span>
           </div>
         )}
       </div>
@@ -292,8 +398,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Floating submenu portal (collapsed state) */}
       {profileOpen && collapsed && createPortal(
         <div
-          className="fixed overflow-hidden"
           style={{
+            position: "fixed",
+            overflow: "hidden",
             bottom: `calc(100vh - ${menuPos.top}px)`,
             left: menuPos.left,
             width: "200px",
