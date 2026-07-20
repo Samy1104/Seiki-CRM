@@ -38,7 +38,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
   onCardMove,
   onColumnMove,
   onCardClick,
-  allowColumnDrag = false,
+  allowColumnDrag = true,
   cardsGap = 10,
 }: SeikiKanbanBoardProps<TCard, TColumn>) {
   // Map lookup for rapid card/col retrieval
@@ -152,6 +152,62 @@ export function SeikiKanbanBoard<TCard, TColumn>({
       onCardMove={handleCardMove}
       onColumnMove={handleColumnMove}
       rootClassName="rkk-seiki-board"
+      renderCardDragPreview={(card) => {
+        const cardObj = cardMap.get(card.id) || (card.content as TCard);
+        const colObj = columnMap.get(card.parentId || '') || ({} as TColumn);
+        return (
+          <div
+            style={{
+              backgroundColor: '#141414',
+              borderRadius: '8px',
+              border: '1px solid #c8b89a',
+              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.6)',
+              transform: 'rotate(4deg)',
+              padding: '8px',
+              pointerEvents: 'none',
+            }}
+          >
+            {cardObj && renderCard(cardObj, colObj)}
+          </div>
+        );
+      }}
+      renderCardDragIndicator={() => (
+        <div
+          style={{
+            height: 3,
+            backgroundColor: '#c8b89a',
+            borderRadius: 2,
+            margin: '4px 0',
+            boxShadow: '0 0 8px rgba(200, 184, 154, 0.6)',
+          }}
+        />
+      )}
+      renderColumnDragPreview={(column) => (
+        <div
+          style={{
+            backgroundColor: '#141414',
+            borderRadius: '10px',
+            padding: '12px 16px',
+            border: '1px solid #c8b89a',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.7)',
+            transform: 'rotate(3deg)',
+          }}
+        >
+          <div className="font-display font-bold text-sm text-[#f2ede4]">{column.title}</div>
+          <div className="text-xs text-[#c8b89a]">{column.totalChildrenCount} éléments</div>
+        </div>
+      )}
+      renderColumnDragIndicator={(_column, info) => (
+        <div
+          style={{
+            width: 4,
+            height: info?.height || '100%',
+            backgroundColor: '#c8b89a',
+            borderRadius: 4,
+            boxShadow: '0 0 10px rgba(200, 184, 154, 0.8)',
+          }}
+        />
+      )}
       renderColumnHeader={(colItem) => {
         const colObj = columnMap.get(colItem.id);
         const colCardsCount = colItem.children?.length || 0;
@@ -159,7 +215,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
 
         return (
           <div
-            className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink"
+            className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink cursor-grab active:cursor-grabbing select-none"
             style={{ borderBottomColor: borderCol }}
           >
             <span>{colItem.title}</span>
@@ -185,3 +241,4 @@ export function SeikiKanbanBoard<TCard, TColumn>({
     />
   );
 }
+
