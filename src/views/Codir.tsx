@@ -12,6 +12,11 @@ import { Maximize2, FileDown, Target, ShieldAlert, Award, Calendar, AlertTriangl
 import { isSlaBreached, computeSegmentStats } from '../utils/leadMetrics';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
+import { KpiTile } from '../components/ui/KpiTile';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+
+const scoreClass = (score: number) => (score >= 80 ? 'text-success' : score >= 60 ? 'text-amber' : 'text-danger');
 
 export const Codir: React.FC = () => {
   const { showToast } = useToast();
@@ -60,10 +65,8 @@ export const Codir: React.FC = () => {
     window.print();
   };
 
-  // Helper SLA status checker
   const getSlaStatus = (lead: Lead) => isSlaBreached(lead, slaLimits);
 
-  // Calculations
   const activeLeads = leads.filter(l => !l.is_archived && l.stage?.name !== 'Gagné');
   const wonLeads = leads.filter(l => l.stage?.is_closed_won);
   const totalVal = leads.reduce((acc, l) => acc + l.deal_value, 0);
@@ -73,18 +76,19 @@ export const Codir: React.FC = () => {
   const overdueTasks = pendingTasks.filter(t => t.due_date && t.due_date < new Date().toISOString().slice(0, 10));
   const slaBreaches = activeLeads.filter(l => getSlaStatus(l));
 
-  // Top Deals
   const topDeals = [...leads]
     .filter(l => !l.is_archived && l.stage?.name !== 'Gagné')
     .sort((a, b) => b.score - a.score)
     .slice(0, 5);
 
-  // Segment Split
   const segmentStats = computeSegmentStats(leads);
-
   const totalSegmentVal = Object.values(segmentStats).reduce((acc, curr) => acc + curr.val, 0);
+  const segmentOpacity: Record<'Media' | 'Retail' | 'Instit', string> = {
+    Media: 'bg-amber',
+    Retail: 'bg-amber/70',
+    Instit: 'bg-amber/40',
+  };
 
-  // Events
   const todayStr = new Date().toISOString().slice(0, 10);
   const upcomingEvents = events.filter(e => e.event_date >= todayStr).slice(0, 4);
 
@@ -92,29 +96,28 @@ export const Codir: React.FC = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Génération du Dashboard CODIR...</div>
+        <div className="mt-3 text-ink-soft">Génération du Dashboard CODIR...</div>
       </div>
     );
   }
 
   return (
-    <div className="view-section on print-section">
-      {/* Page Header */}
-      <div className="page-header no-print">
+    <div className="print-section p-6">
+      <div className="no-print mb-6 flex items-center justify-between">
         <div>
-          <div className="page-title">Dashboard CODIR</div>
-          <div className="page-sub">Rapport stratégique de la direction</div>
+          <div className="font-display text-xl font-bold text-ink">Dashboard CODIR</div>
+          <div className="mt-0.5 text-xs text-ink-soft">Rapport stratégique de la direction</div>
         </div>
-        
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button className="btn btn-sm" onClick={toggleFullscreen}>
-            <Maximize2 size={12} style={{ marginRight: '6px' }} />
+
+        <div className="flex gap-2">
+          <Button variant="secondary" size="sm" onClick={toggleFullscreen}>
+            <Maximize2 size={12} />
             {isFullscreen ? 'Quitter Plein écran' : 'Plein écran'}
-          </button>
-          <button className="btn btn-sm btn-grad" onClick={handlePrint}>
-            <FileDown size={12} style={{ marginRight: '6px' }} />
+          </Button>
+          <Button variant="primary" size="sm" onClick={handlePrint}>
+            <FileDown size={12} />
             Export PDF
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -132,68 +135,36 @@ export const Codir: React.FC = () => {
         </div>
       </div>
 
-      {/* KPI Row (5 columns) */}
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
-        <div className="kpi" style={{ borderTop: '2px solid var(--purple)' }}>
-          <div className="kpi-label">Pipeline total</div>
-          <div className="kpi-val">{totalVal}k€</div>
-          <div className="kpi-sub">{leads.length} opportunités</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--green)' }}>
-          <div className="kpi-label">Closés Gagnés</div>
-          <div className="kpi-val">{wonVal}k€</div>
-          <div className="kpi-sub">{wonLeads.length} deals signés</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--gold)' }}>
-          <div className="kpi-label">Deals Chauds</div>
-          <div className="kpi-val">{hotDeals.length}</div>
-          <div className="kpi-sub">ICP score ≥ 80</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--instit)' }}>
-          <div className="kpi-label">Tâches en cours</div>
-          <div className="kpi-val">{pendingTasks.length}</div>
-          <div className="kpi-sub" style={{ color: overdueTasks.length > 0 ? 'var(--red)' : '' }}>
-            {overdueTasks.length} en retard
-          </div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: `2px solid ${slaBreaches.length > 0 ? 'var(--red)' : 'var(--border)'}` }}>
-          <div className="kpi-label">Alertes SLA</div>
-          <div className="kpi-val" style={{ color: slaBreaches.length > 0 ? 'var(--red)' : '' }}>
-            {slaBreaches.length}
-          </div>
-          <div className="kpi-sub">Retards critiques</div>
-        </div>
+      <div className="codir-kpi-grid mb-5 grid grid-cols-5 gap-3">
+        <KpiTile className="codir-kpi" label="Pipeline total" value={totalVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${leads.length} opportunités`} accent="neutral" />
+        <KpiTile className="codir-kpi" label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${wonLeads.length} deals signés`} accent="success" />
+        <KpiTile className="codir-kpi" label="Deals Chauds" value={hotDeals.length} sub="ICP score ≥ 80" accent="amber" />
+        <KpiTile className="codir-kpi" label="Tâches en cours" value={pendingTasks.length} sub={`${overdueTasks.length} en retard`} accent={overdueTasks.length > 0 ? 'danger' : 'neutral'} />
+        <KpiTile className="codir-kpi" label="Alertes SLA" value={slaBreaches.length} sub="Retards critiques" accent={slaBreaches.length > 0 ? 'danger' : 'neutral'} />
       </div>
 
-      {/* Layout Grid */}
-      <div className="two-col" style={{ gap: '20px', marginBottom: '20px' }}>
-        {/* Left Column: Pipeline stages & Segments */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1.2' }}>
-          {/* Pipeline stages */}
-          <div className="card" style={{ padding: '20px' }}>
-            <div className="form-title">
-              <Target size={14} style={{ marginRight: '6px' }} />
+      <div className="codir-two-col mb-5 grid grid-cols-[1.2fr_1fr] gap-5">
+        <div className="flex flex-col gap-5">
+          <div className="codir-card rounded-surface border border-line bg-elevated p-5">
+            <div className="codir-section-title flex items-center gap-2 text-sm font-bold text-ink">
+              <Target size={14} className="text-amber" />
               Valeur du pipeline par étape
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '14px' }}>
+
+            <div className="mt-4 flex flex-col gap-2.5">
               {stages.map(st => {
                 const stageLeads = leads.filter(l => l.stage_id === st.id);
                 const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
                 const pct = totalVal ? Math.round((stageVal / totalVal) * 100) : 0;
 
                 return (
-                  <div key={st.id} className="bar-row">
-                    <span className="bar-label" style={{ width: '110px' }}>{st.name}</span>
-                    <div className="bar-track" style={{ flex: '1' }}>
-                      <div className="bar-fill" style={{ width: `${pct}%`, background: st.color }}></div>
+                  <div key={st.id} className="flex items-center gap-3">
+                    <span className="codir-bar-label w-28 flex-shrink-0 text-xs text-ink-soft">{st.name}</span>
+                    <div className="codir-bar-track h-2 flex-1 overflow-hidden rounded-full bg-hover">
+                      <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, background: st.color }}></div>
                     </div>
-                    <span className="bar-val" style={{ width: '90px', textAlign: 'right' }}>
-                      {stageLeads.length} deal{stageLeads.length !== 1 ? 's' : ''} · <strong>{stageVal}k€</strong>
+                    <span className="codir-bar-val w-32 flex-shrink-0 text-right text-xs text-ink-soft">
+                      {stageLeads.length} deal{stageLeads.length !== 1 ? 's' : ''} · <strong className="text-ink">{stageVal}k€</strong>
                     </span>
                   </div>
                 );
@@ -201,30 +172,25 @@ export const Codir: React.FC = () => {
             </div>
           </div>
 
-          {/* Segment Split */}
-          <div className="card" style={{ padding: '20px' }}>
-            <div className="form-title">
-              <Award size={14} style={{ marginRight: '6px' }} />
+          <div className="codir-card rounded-surface border border-line bg-elevated p-5">
+            <div className="codir-section-title flex items-center gap-2 text-sm font-bold text-ink">
+              <Award size={14} className="text-amber" />
               Répartition par segment
             </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '14px' }}>
+
+            <div className="mt-4 flex flex-col gap-3">
               {(['Media', 'Retail', 'Instit'] as const).map(seg => {
                 const data = segmentStats[seg];
                 const pct = totalSegmentVal ? Math.round((data.val / totalSegmentVal) * 100) : 0;
-                
-                let color = 'var(--purple)';
-                if (seg === 'Retail') color = 'var(--gold)';
-                else if (seg === 'Instit') color = 'var(--instit-tc)';
 
                 return (
-                  <div key={seg} className="bar-row">
-                    <span className="bar-label" style={{ width: '80px' }}>{seg}</span>
-                    <div className="bar-track" style={{ flex: '1' }}>
-                      <div className="bar-fill" style={{ width: `${pct}%`, background: color }}></div>
+                  <div key={seg} className="flex items-center gap-3">
+                    <span className="codir-bar-label w-20 flex-shrink-0 text-xs text-ink-soft">{seg}</span>
+                    <div className="codir-bar-track h-2 flex-1 overflow-hidden rounded-full bg-hover">
+                      <div className={`h-full rounded-full transition-all duration-700 ${segmentOpacity[seg]}`} style={{ width: `${pct}%` }}></div>
                     </div>
-                    <span className="bar-val" style={{ width: '100px', textAlign: 'right' }}>
-                      {pct}% · <strong>{data.val}k€</strong>
+                    <span className="codir-bar-val w-28 flex-shrink-0 text-right text-xs text-ink-soft">
+                      {pct}% · <strong className="text-ink">{data.val}k€</strong>
                     </span>
                   </div>
                 );
@@ -233,58 +199,52 @@ export const Codir: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column: Top Deals & SLA Warnings */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: '1' }}>
-          {/* Top Deals */}
-          <div className="card" style={{ padding: '20px', flex: '1' }}>
-            <div className="form-title">
-              <Award size={14} style={{ marginRight: '6px' }} />
+        <div className="flex flex-col gap-5">
+          <div className="codir-card flex-1 rounded-surface border border-line bg-elevated p-5">
+            <div className="codir-section-title flex items-center gap-2 text-sm font-bold text-ink">
+              <Award size={14} className="text-amber" />
               Top Deals — Priorité Haute
             </div>
 
-            <div className="top-deals-list" style={{ marginTop: '12px' }}>
+            <div className="mt-3 flex flex-col">
               {topDeals.length > 0 ? (
-                topDeals.map(l => {
-                  const scoreColor = l.score >= 80 ? 'var(--green)' : l.score >= 60 ? 'var(--gold)' : 'var(--red)';
-                  return (
-                    <div key={l.id} className="top-deal-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '0.5px solid var(--border)' }}>
-                      <div>
-                        <div style={{ fontWeight: '600', color: 'var(--text-h)', fontSize: '13px' }}>{l.company_name}</div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>{l.contact_name}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span className={`badge badge-${l.segment.toLowerCase()}`} style={{ fontSize: '9px', padding: '2px 6px' }}>{l.segment}</span>
-                        <span style={{ fontSize: '11px', fontWeight: '500' }}>{l.deal_value}k€</span>
-                        <strong style={{ color: scoreColor, fontSize: '12px' }}>{l.score}/100</strong>
-                      </div>
+                topDeals.map(l => (
+                  <div key={l.id} className="codir-top-deal flex items-center justify-between border-b border-line py-2 last:border-b-0">
+                    <div>
+                      <div className="text-[13px] font-semibold text-ink">{l.company_name}</div>
+                      <div className="text-[10px] text-ink-faint">{l.contact_name}</div>
                     </div>
-                  );
-                })
+                    <div className="flex items-center gap-2.5">
+                      <Badge tone="neutral">{l.segment}</Badge>
+                      <span className="text-[11px] font-medium text-ink-soft">{l.deal_value}k€</span>
+                      <strong className={`text-xs ${scoreClass(l.score)}`}>{l.score}/100</strong>
+                    </div>
+                  </div>
+                ))
               ) : (
-                <div style={{ color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0' }}>Aucun deal actif</div>
+                <div className="py-3 text-xs text-ink-faint">Aucun deal actif</div>
               )}
             </div>
           </div>
 
-          {/* SLA Alerts details */}
-          <div className="card" style={{ padding: '20px' }}>
-            <div className="form-title" style={{ color: slaBreaches.length > 0 ? 'var(--red)' : '' }}>
-              <ShieldAlert size={14} style={{ marginRight: '6px' }} />
+          <div className="codir-card rounded-surface border border-line bg-elevated p-5">
+            <div className={`codir-section-title flex items-center gap-2 text-sm font-bold ${slaBreaches.length > 0 ? 'text-danger' : 'text-ink'}`}>
+              <ShieldAlert size={14} />
               Risques & Actions prioritaires
             </div>
 
-            <div className="codir-alerts-list" style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <div className="mt-3 flex flex-col gap-2">
               {slaBreaches.length > 0 ? (
                 slaBreaches.map(l => (
-                  <div key={l.id} className="codir-alert-box">
-                    <AlertTriangle size={12} style={{ color: 'var(--red)', marginRight: '6px' }} />
-                    <span style={{ fontSize: '12px' }}>
-                      <strong>{l.company_name}</strong> dépasse de {l.days_in_stage - (slaLimits[l.segment] || 7)}j le SLA {l.segment}
+                  <div key={l.id} className="flex items-start gap-2 rounded-control border border-danger/20 bg-danger/10 px-3 py-2">
+                    <AlertTriangle size={12} className="mt-0.5 flex-shrink-0 text-danger" />
+                    <span className="text-xs text-ink-soft">
+                      <strong className="text-ink">{l.company_name}</strong> dépasse de {l.days_in_stage - (slaLimits[l.segment] || 7)}j le SLA {l.segment}
                     </span>
                   </div>
                 ))
               ) : (
-                <div style={{ color: 'var(--green)', fontSize: '12px', padding: '8px 0', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <div className="flex items-center gap-1.5 py-1 text-xs text-success">
                   <span>✓</span> Aucun dépassement de SLA dans le pipeline.
                 </div>
               )}
@@ -293,38 +253,35 @@ export const Codir: React.FC = () => {
         </div>
       </div>
 
-      {/* Row 2: Upcoming events */}
-      <div className="card" style={{ padding: '20px' }}>
-        <div className="form-title">
-          <Calendar size={14} style={{ marginRight: '6px' }} />
+      <div className="codir-card rounded-surface border border-line bg-elevated p-5">
+        <div className="codir-section-title flex items-center gap-2 text-sm font-bold text-ink">
+          <Calendar size={14} className="text-amber" />
           Prochains événements & Salons professionnels ciblés
         </div>
-        
-        <div className="codir-events-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginTop: '12px' }}>
+
+        <div className="mt-3 grid grid-cols-4 gap-3">
           {upcomingEvents.length > 0 ? (
             upcomingEvents.map(e => (
-              <div key={e.id} className="codir-event-small-card" style={{ padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '6px', border: '0.5px solid var(--border)' }}>
-                <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-h)', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.name}</div>
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <div key={e.id} className="codir-event-small-card rounded-control border border-line bg-surface p-3">
+                <div className="truncate text-xs font-semibold text-ink">{e.name}</div>
+                <div className="mt-1 text-[10px] text-ink-faint">
                   {new Date(e.event_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
                   {e.location ? ` · ${e.location}` : ''}
                 </div>
                 {e.segment && (
-                  <span className={`badge badge-${e.segment.toLowerCase()}`} style={{ fontSize: '8px', padding: '1px 4px', marginTop: '6px', display: 'inline-block' }}>
-                    {e.segment}
-                  </span>
+                  <Badge tone="neutral" className="mt-1.5">{e.segment}</Badge>
                 )}
               </div>
             ))
           ) : (
-            <div style={{ gridColumn: 'span 4', color: 'var(--text-muted)', fontSize: '12px', padding: '12px 0', textAlign: 'center' }}>
+            <div className="col-span-4 py-3 text-center text-xs text-ink-faint">
               Aucun salon professionnel prévu à l'agenda
             </div>
           )}
         </div>
       </div>
 
-      <div className="codir-footer" style={{ textAlign: 'center', fontSize: '10px', color: 'var(--text-muted)', marginTop: '24px' }}>
+      <div className="mt-6 text-center text-[10px] text-ink-faint">
         Ce dashboard stratégique se met à jour en temps réel selon les modifications du pipeline de l'équipe commerciale.
       </div>
     </div>

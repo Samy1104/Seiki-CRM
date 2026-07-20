@@ -2211,16 +2211,22 @@ input:checked + .toggle-slider:before {
   display: none;
 }
 
+/* Note: these selectors are intentionally scoped to Codir-only marker
+   classes (codir-*), not the shared .kpi/.card/.two-col classnames those
+   elements used to carry — Codir.tsx now uses Tailwind utilities for its
+   on-screen Graphite Amber look, and unlayered CSS (this file) always wins
+   the cascade over Tailwind's layered utilities, so reusing those generic
+   names here would have silently overridden the new on-screen styling. */
 @media print {
   body {
     background: #ffffff !important;
     color: #000000 !important;
   }
-  
+
   .sidebar, .no-print, .btn, button, .modal-overlay, .lock-screen-container {
     display: none !important;
   }
-  
+
   .main-content {
     background: #ffffff !important;
     padding: 0 !important;
@@ -2228,28 +2234,28 @@ input:checked + .toggle-slider:before {
     height: auto !important;
     width: 100% !important;
   }
-  
+
   .print-section {
     width: 100% !important;
     display: block !important;
   }
-  
+
   .print-only-header {
     display: block !important;
     color-scheme: light !important;
   }
-  
+
   .print-only-header * {
     color: #111827 !important;
   }
 
-  .kpi-grid {
+  .codir-kpi-grid {
     grid-template-columns: repeat(5, 1fr) !important;
     gap: 10px !important;
     margin-bottom: 20px !important;
   }
 
-  .kpi {
+  .codir-kpi {
     background: #f9fafb !important;
     border: 1px solid #e5e7eb !important;
     color: #111827 !important;
@@ -2257,28 +2263,28 @@ input:checked + .toggle-slider:before {
     transform: none !important;
   }
 
-  .kpi-val, .kpi-label, .kpi-sub {
+  .codir-kpi * {
     color: #111827 !important;
   }
 
-  .two-col {
+  .codir-two-col {
     display: flex !important;
     flex-direction: row !important;
     gap: 15px !important;
   }
 
-  .card {
+  .codir-card {
     background: #ffffff !important;
     border: 1px solid #d1d5db !important;
     color: #111827 !important;
     box-shadow: none !important;
   }
 
-  .form-title, .bar-label, .bar-val, .top-deal-item * {
+  .codir-section-title, .codir-bar-label, .codir-bar-val, .codir-top-deal * {
     color: #111827 !important;
   }
 
-  .bar-track {
+  .codir-bar-track {
     background: #e5e7eb !important;
   }
 
