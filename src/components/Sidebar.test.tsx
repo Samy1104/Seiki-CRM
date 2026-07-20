@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { Sidebar } from './Sidebar';
+import { useAuth } from '../context/AuthContext';
 
 vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({ user: { email: 'test@seiki.fr' }, logout: vi.fn() }),
+  useAuth: vi.fn(() => ({ user: { email: 'test@seiki.fr' }, logout: vi.fn() })),
 }));
 
 describe('Sidebar', () => {
@@ -28,12 +29,25 @@ describe('Sidebar', () => {
     expect(setView).toHaveBeenCalledWith('tasks');
   });
 
-  it('toggles collapse mode when collapse button is clicked', () => {
-    render(<Sidebar section="crm" currentView="pipeline" setView={vi.fn()} setActiveApp={vi.fn()} />);
+  it('executes actions from collapsed avatar submenu when clicked', () => {
+    const setActiveApp = vi.fn();
+    const setView = vi.fn();
+    const logout = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({ user: { email: 'test@seiki.fr' }, logout, isAuthenticated: true, loading: false } as any);
 
-    const toggleBtn = screen.getByRole('button', { name: 'Collapse sidebar' });
-    fireEvent.click(toggleBtn);
-    expect(screen.getByRole('button', { name: 'Expand sidebar' })).toBeInTheDocument();
+    render(<Sidebar section="crm" currentView="pipeline" setView={setView} setActiveApp={setActiveApp} />);
+
+    // Collapse sidebar
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+
+    // Click avatar button
+    fireEvent.click(screen.getByTitle('test'));
+
+    // Click "Retour au portail" in floating portal
+    const portalBtn = screen.getByText('Retour au portail');
+    fireEvent.click(portalBtn);
+    expect(setActiveApp).toHaveBeenCalledWith('portal');
   });
 });
+
 

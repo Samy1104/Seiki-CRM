@@ -61,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const [profileOpen, setProfileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const avatarRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
 
   const navItems = section === "crm" ? crmNav : contenuNav;
@@ -86,7 +87,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     if (!profileOpen || !collapsed) return;
     function onDown(e: MouseEvent) {
-      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+      if (
+        avatarRef.current &&
+        !avatarRef.current.contains(e.target as Node) &&
+        menuRef.current &&
+        !menuRef.current.contains(e.target as Node)
+      ) {
         setProfileOpen(false);
       }
     }
@@ -408,6 +414,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Floating submenu portal (collapsed state) */}
       {profileOpen && collapsed && createPortal(
         <div
+          ref={menuRef}
           style={{
             position: "fixed",
             overflow: "hidden",
