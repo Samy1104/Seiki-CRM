@@ -158,10 +158,10 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         return (
           <div
             style={{
-              backgroundColor: '#141414',
+              backgroundColor: '#0d0d0d',
               borderRadius: '8px',
-              border: '1px solid #c8b89a',
-              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.6)',
+              border: '1.5px solid #c8b89a',
+              boxShadow: '0 12px 28px rgba(0, 0, 0, 0.8)',
               transform: 'rotate(4deg)',
               padding: '8px',
               pointerEvents: 'none',
@@ -178,18 +178,18 @@ export function SeikiKanbanBoard<TCard, TColumn>({
             backgroundColor: '#c8b89a',
             borderRadius: 2,
             margin: '4px 0',
-            boxShadow: '0 0 8px rgba(200, 184, 154, 0.6)',
+            boxShadow: '0 0 8px rgba(200, 184, 154, 0.8)',
           }}
         />
       )}
       renderColumnDragPreview={(column) => (
         <div
           style={{
-            backgroundColor: '#141414',
+            backgroundColor: '#0d0d0d',
             borderRadius: '10px',
             padding: '12px 16px',
-            border: '1px solid #c8b89a',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.7)',
+            border: '1.5px solid #c8b89a',
+            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.8)',
             transform: 'rotate(3deg)',
           }}
         >
@@ -232,9 +232,9 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         return colObj ? renderColumnFooter?.(colObj) : null;
       }}
       columnWrapperStyle={() => ({
-        backgroundColor: 'rgba(13, 13, 13, 0.4)',
+        backgroundColor: '#0d0d0d',
         borderRadius: '8px',
-        border: '1px solid var(--color-line, #2a2a2a)',
+        border: '1px solid rgba(200, 184, 154, 0.25)',
         padding: '12px',
         minWidth: '260px',
       })}
