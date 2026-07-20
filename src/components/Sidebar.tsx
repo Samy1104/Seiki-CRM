@@ -66,7 +66,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = section === "crm" ? crmNav : contenuNav;
   const activeId = section === "crm" ? currentView : contenuView;
-  const accentColor = section === "crm" ? "#c8b89a" : "#5b5bd6";
+  const accentColor = section === "crm" ? "#c8b89a" : "#c8b89a";
 
   function handleNavClick(id: string) {
     if (section === "crm" && setView) {

@@ -42,6 +42,8 @@ CREATE TABLE public.users (
   id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   auth_id      UUID UNIQUE NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   full_name    TEXT NOT NULL,
+  first_name   TEXT,
+  last_name    TEXT,
   email        TEXT UNIQUE NOT NULL,
   avatar_url   TEXT,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
