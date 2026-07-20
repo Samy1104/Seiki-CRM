@@ -32,4 +32,24 @@ describe('SeikiKanbanBoard', () => {
     expect(screen.getByText('Done')).toBeInTheDocument();
     expect(screen.getByText('First Task')).toBeInTheDocument();
   });
+
+  it('renders the inner column area transparent, not the library default white', () => {
+    const { container } = render(
+      <SeikiKanbanBoard
+        columns={columns}
+        cards={cards}
+        getColumnId={(col) => col.id}
+        getColumnTitle={(col) => col.title}
+        getColumnColor={(col) => col.color}
+        getCardId={(card) => card.id}
+        getCardColumnId={(card) => card.columnId}
+        renderCard={(card) => <div>{card.title}</div>}
+        onCardMove={vi.fn()}
+      />
+    );
+
+    const innerColumn = container.querySelector('.rkk-column');
+    expect(innerColumn).not.toBeNull();
+    expect(innerColumn).toHaveStyle('background-color: rgba(0, 0, 0, 0)');
+  });
 });

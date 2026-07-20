@@ -212,6 +212,9 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         padding: '12px',
         minWidth: '260px',
       })}
+      columnStyle={() => ({
+        backgroundColor: 'transparent',
+      })}
     />
   );
 }
