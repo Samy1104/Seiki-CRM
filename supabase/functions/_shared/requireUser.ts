@@ -1,10 +1,20 @@
 // ============================================================
 // _shared/requireUser.ts
 // Vérifie que l'appelant d'une Edge Function est soit un utilisateur
-// authentifié Supabase, soit le rôle service_role (cron Supabase via
-// pg_net) — pas juste quelqu'un présentant la clé anon publique extraite
-// du bundle frontend, qui jusqu'ici suffisait pour déclencher ces
-// fonctions (et les appels payants Gemini/Resend/LinkedIn derrière).
+// authentifié Supabase, soit le job pg_cron interne — pas juste
+// quelqu'un présentant la clé anon publique extraite du bundle
+// frontend, qui jusqu'ici suffisait pour déclencher ces fonctions
+// (et les appels payants Gemini/Resend/LinkedIn derrière).
+//
+// Le cron est reconnu via un secret dédié (CRON_SECRET), pas via
+// SUPABASE_SERVICE_ROLE_KEY : cette variable auto-injectée par Supabase
+// s'est révélée ne pas correspondre de façon fiable à la clé service_role
+// affichée dans le Dashboard sur ce projet (401 systématique même avec
+// la bonne clé, cause exacte non élucidée — probablement liée à la
+// migration Supabase vers le nouveau système de clés API). Un secret
+// qu'on choisit et qu'on pose des deux côtés soi-même (Vault + Edge
+// Function secret) élimine cette dépendance à un comportement Supabase
+// qu'on ne contrôle pas.
 // ============================================================
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -15,11 +25,11 @@ function extractBearerToken(req: Request): string | null {
   return match ? match[1] : null;
 }
 
-/** True if the caller presented the service_role key itself (i.e. this is the trusted pg_cron job, not a browser). */
+/** True if the caller presented the shared CRON_SECRET (i.e. this is the trusted pg_cron job, not a browser). */
 export function isServiceRoleCall(req: Request): boolean {
   const token = extractBearerToken(req);
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  return !!token && !!serviceRoleKey && token === serviceRoleKey;
+  const cronSecret = Deno.env.get("CRON_SECRET");
+  return !!token && !!cronSecret && token === cronSecret;
 }
 
 /** Resolves the calling user from their session JWT, or null if there isn't a valid one. */

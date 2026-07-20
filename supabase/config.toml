@@ -434,6 +434,20 @@ verify_jwt = false
 # (RESEND_WEBHOOK_SECRET), pas par verify_jwt.
 [functions.resend-webhook]
 verify_jwt = false
+
+# publish-linkedin-post n'est appelée que par le cron pg_net (jamais le
+# frontend) et s'authentifie via un secret dédié (CRON_SECRET, vérifié dans
+# le code de la fonction) plutôt qu'un JWT Supabase.
+[functions.publish-linkedin-post]
+verify_jwt = false
+
+# flush-send-queue est appelée à la fois par le bouton manuel du frontend
+# (JWT utilisateur, vérifié dans le code via requireUserOrServiceRole) et
+# par le cron pg_net (CRON_SECRET) — verify_jwt désactivé ici aussi pour
+# laisser passer l'appel cron ; le JWT utilisateur reste validé côté code
+# quand il est présent.
+[functions.flush-send-queue]
+verify_jwt = false
 # Directory under `supabase/` where declarative files are written.
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.

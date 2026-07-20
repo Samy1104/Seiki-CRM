@@ -63,6 +63,24 @@
   font-display: swap;
 }
 
+/* Portal screen only (views/Portal.tsx) — variable fonts, one file covers the
+   whole weight axis; each @font-face just points the browser at a different
+   instance of it, same technique Google Fonts itself uses. */
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/inter/Inter-Variable.woff2') format('woff2');
+  font-weight: 300 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('./assets/fonts/playfair-display/PlayfairDisplay-Variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   /* surfaces */
   --color-base: #0A0B0D;

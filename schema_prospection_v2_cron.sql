@@ -2,15 +2,27 @@
 -- SEIKI CRM — Cron pour le mode Prospection 100% automatique
 -- À exécuter UNE FOIS dans Supabase > SQL Editor.
 --
--- Étape 1 : stocker la clé service_role dans Vault (une seule fois, ou
--- si elle change) — évite qu'elle finisse en clair dans cron.job / les
--- logs pg_net, contrairement à une substitution littérale dans l'URL/headers.
---   select vault.create_secret('<SERVICE_ROLE_KEY>', 'seiki_service_role_key');
--- (Si le secret existe déjà : select vault.update_secret(id, '<NOUVELLE_CLE>')
---  en récupérant l'id via select id from vault.secrets where name = 'seiki_service_role_key';)
+-- Étape 1 : générer un secret dédié pour authentifier ce cron auprès des
+-- Edge Functions (PAS la clé service_role — Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
+-- côté Edge Function s'est révélé ne pas correspondre de façon fiable à la
+-- clé affichée dans le Dashboard sur ce projet, cause exacte non élucidée ;
+-- un secret choisi et posé soi-même des deux côtés élimine le problème).
+-- Générer une valeur aléatoire longue, par exemple avec :
+--   openssl rand -hex 32
+-- (ou n'importe quel générateur de chaîne aléatoire >= 32 caractères).
 --
--- Étape 2 : remplacer <PROJECT_REF> ci-dessous par la vraie valeur de ton
--- projet (Dashboard > Settings > API), puis exécuter ce fichier.
+--   select vault.create_secret('<VALEUR_ALEATOIRE_GENEREE>', 'seiki_cron_secret');
+-- (Si le secret existe déjà : select vault.update_secret(id, new_secret := '<NOUVELLE_VALEUR>')
+--  en récupérant l'id via select id from vault.secrets where name = 'seiki_cron_secret';)
+--
+-- Étape 2 : poser CE MÊME secret côté Edge Functions :
+--   npx supabase secrets set CRON_SECRET=<LA_MEME_VALEUR_ALEATOIRE>
+-- puis redéployer : npx supabase functions deploy
+--
+-- Étape 3 : remplacer <PROJECT_REF> et <ANON_KEY> ci-dessous par les vraies
+-- valeurs de ton projet (Dashboard > Settings > API — <ANON_KEY> est la clé
+-- publique anon, sans risque à coller ici en clair, uniquement utilisée
+-- pour le header apikey attendu par la passerelle Supabase).
 --
 -- Vérification après exécution :
 --   SELECT * FROM cron.job WHERE jobname = 'flush-send-queue-hourly';
@@ -28,11 +40,9 @@ SELECT cron.schedule(
     url := 'https://<PROJECT_REF>.supabase.co/functions/v1/flush-send-queue',
     headers := jsonb_build_object(
       'Authorization', 'Bearer ' || (
-        SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'seiki_service_role_key'
+        SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'seiki_cron_secret'
       ),
-      'apikey', (
-        SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'seiki_service_role_key'
-      ),
+      'apikey', '<ANON_KEY>',
       'Content-Type', 'application/json'
     ),
     body := '{}'::jsonb
