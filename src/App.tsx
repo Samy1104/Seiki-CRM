@@ -21,6 +21,12 @@ const AppContent: React.FC = () => {
   const [currentView, setView] = useState<string>('pipeline');
   const [activeApp, setActiveApp] = useState<'portal' | 'crm' | 'contenu'>('portal');
 
+  React.useEffect(() => {
+    if (isAuthenticated) {
+      setActiveApp('portal');
+    }
+  }, [isAuthenticated]);
+
   if (loading) {
     return (
       <div className="loading-container">

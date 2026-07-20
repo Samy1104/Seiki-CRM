@@ -44,7 +44,7 @@ export const Login: React.FC = () => {
         <h1 className="font-display text-4xl font-bold leading-tight text-ink">
           Sharper decisions <br />with mobility data
         </h1>
-        <p className="mt-3 text-sm text-ink-soft">CRM interne à Seiki</p>
+        <p className="mt-3 text-sm text-ink-soft">Portail interne Seiki</p>
       </div>
 
       <div className="w-full max-w-96 rounded-overlay border border-line-strong bg-surface p-10 shadow-modal">
@@ -72,7 +72,7 @@ export const Login: React.FC = () => {
           {error && <div className="text-center text-xs font-medium text-danger">{error}</div>}
 
           <Button type="submit" variant="primary" disabled={isSubmitting} className="mt-2 w-full py-3">
-            {isSubmitting ? 'Connexion en cours...' : 'Accéder au CRM'}
+            {isSubmitting ? 'Connexion en cours...' : 'Accéder au portail'}
           </Button>
         </form>
       </div>
