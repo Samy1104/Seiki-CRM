@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Kanban, dropHandler, dropColumnHandler } from 'react-kanban-kit';
-import type { BoardData, ConfigMap, CardMove, ColumnMove } from 'react-kanban-kit';
+import type { BoardData, BoardItem, BoardProps } from 'react-kanban-kit';
+
+type ConfigMap = BoardProps['configMap'];
+type DropCardParams = Parameters<NonNullable<BoardProps['onCardMove']>>[0];
+type DropColumnParams = Parameters<NonNullable<BoardProps['onColumnMove']>>[0];
 
 export interface SeikiKanbanBoardProps<TCard, TColumn> {
   columns: TColumn[];
@@ -105,7 +109,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
 
   const configMap: ConfigMap = {
     card: {
-      render: ({ data }) => {
+      render: ({ data }: { data: BoardItem }) => {
         const cardObj = cardMap.get(data.id) || (data.content as TCard);
         const colObj = columnMap.get(data.parentId || '') || ({} as TColumn);
         return (
@@ -121,7 +125,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
     },
   };
 
-  const handleCardMove = (move: CardMove) => {
+  const handleCardMove = (move: DropCardParams) => {
     const updated = dropHandler(move, dataSource, () => {});
     setDataSource(updated);
     onCardMove(move.cardId, move.fromColumnId, move.toColumnId, move.position).catch(() => {
@@ -130,7 +134,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
     });
   };
 
-  const handleColumnMove = (move: ColumnMove) => {
+  const handleColumnMove = (move: DropColumnParams) => {
     if (!onColumnMove) return;
     const updated = dropColumnHandler(move, dataSource);
     setDataSource(updated);
