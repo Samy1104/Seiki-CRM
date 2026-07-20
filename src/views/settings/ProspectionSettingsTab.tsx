@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface ProspectionSettingsTabProps {
   dailyQuota: number;
@@ -23,38 +25,32 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
   onArchiveAfterChange,
   onSubmit,
 }) => (
-  <div className="card" style={{ padding: '20px' }}>
-    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '14px' }}>
-      Quota d'envoi et relances
-    </div>
+  <div className="rounded-surface border border-line bg-elevated p-5">
+    <div className="mb-3.5 text-sm font-bold text-ink">Quota d'envoi et relances</div>
 
     <form onSubmit={onSubmit}>
-      <div className="form-grid" style={{ marginBottom: '24px' }}>
-        <div className="form-field">
-          <div className="field-label">Quota d'envoi quotidien</div>
-          <input type="number" value={dailyQuota} onChange={(e) => onDailyQuotaChange(parseInt(e.target.value) || 1)} min={1} />
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+      <div className="mb-6 grid grid-cols-2 gap-4">
+        <Field label="Quota d'envoi quotidien">
+          <input type="number" value={dailyQuota} onChange={(e) => onDailyQuotaChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
+          <span className="text-[10px] text-ink-faint">
             Limite Resend : ne pas dépasser {dailyQuota} emails envoyés par jour.
           </span>
-        </div>
+        </Field>
 
-        <div className="form-field">
-          <div className="field-label">Délai avant 1ère relance (jours)</div>
-          <input type="number" value={followup1Days} onChange={(e) => onFollowup1DaysChange(parseInt(e.target.value) || 1)} min={1} />
-        </div>
+        <Field label="Délai avant 1ère relance (jours)">
+          <input type="number" value={followup1Days} onChange={(e) => onFollowup1DaysChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
+        </Field>
 
-        <div className="form-field">
-          <div className="field-label">Délai avant 2ème relance (jours)</div>
-          <input type="number" value={followup2Days} onChange={(e) => onFollowup2DaysChange(parseInt(e.target.value) || 1)} min={1} />
-        </div>
+        <Field label="Délai avant 2ème relance (jours)">
+          <input type="number" value={followup2Days} onChange={(e) => onFollowup2DaysChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
+        </Field>
 
-        <div className="form-field">
-          <div className="field-label">Relances avant archivage</div>
-          <input type="number" value={archiveAfter} onChange={(e) => onArchiveAfterChange(parseInt(e.target.value) || 1)} min={1} />
-        </div>
+        <Field label="Relances avant archivage">
+          <input type="number" value={archiveAfter} onChange={(e) => onArchiveAfterChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
+        </Field>
       </div>
 
-      <button type="submit" className="btn btn-grad">Enregistrer les paramètres</button>
+      <Button type="submit" variant="primary">Enregistrer les paramètres</Button>
     </form>
   </div>
 );

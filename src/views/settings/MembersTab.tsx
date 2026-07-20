@@ -1,6 +1,8 @@
 import React from 'react';
 import type { TeamMember } from '../../services/settingsService';
 import { Trash2, Edit2 } from 'lucide-react';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface MembersTabProps {
   members: TeamMember[];
@@ -31,62 +33,46 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   onCancelEdit,
   onDelete,
 }) => (
-  <div className="two-col" style={{ gap: '20px' }}>
-    {/* Member List */}
-    <div className="card" style={{ padding: '20px', flex: '1.5' }}>
-      <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-h)', marginBottom: '14px' }}>
-        Membres actifs
-      </div>
+  <div className="grid grid-cols-[1.5fr_1fr] gap-5">
+    <div className="rounded-surface border border-line bg-elevated p-5">
+      <div className="mb-3.5 text-sm font-bold text-ink">Membres actifs</div>
 
-      <div className="leads-table-container">
-        <table className="leads-table">
+      <div className="overflow-hidden rounded-control border border-line">
+        <table className="w-full border-collapse text-left text-[12.5px]">
           <thead>
-            <tr>
-              <th>Avatar</th>
-              <th>Nom</th>
-              <th>Email</th>
-              <th>Actions</th>
+            <tr className="border-b border-line bg-surface text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">
+              <th className="px-3 py-2.5">Avatar</th>
+              <th className="px-3 py-2.5">Nom</th>
+              <th className="px-3 py-2.5">Email</th>
+              <th className="px-3 py-2.5">Actions</th>
             </tr>
           </thead>
           <tbody>
             {members.map(m => (
-              <tr key={m.id}>
-                <td style={{ width: '50px' }}>
+              <tr key={m.id} className="border-b border-line last:border-b-0">
+                <td className="px-3 py-2.5">
                   <div
-                    className="member-avatar"
-                    style={{
-                      background: m.color,
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#fff',
-                      fontWeight: '700',
-                      fontSize: '12px'
-                    }}
+                    className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold text-white"
+                    style={{ background: m.color }}
                   >
                     {m.initials}
                   </div>
                 </td>
-                <td style={{ fontWeight: '500' }}>{m.full_name}</td>
-                <td>{m.email || '—'}</td>
-                <td>
-                  <div style={{ display: 'flex', gap: '6px' }}>
+                <td className="px-3 py-2.5 font-medium text-ink">{m.full_name}</td>
+                <td className="px-3 py-2.5 text-ink-soft">{m.email || '—'}</td>
+                <td className="px-3 py-2.5">
+                  <div className="flex gap-1">
                     <button
-                      className="btn-icon-del"
+                      className="rounded-control p-1.5 text-ink-faint transition-colors hover:bg-hover hover:text-ink cursor-pointer"
                       onClick={() => onStartEdit(m)}
                       title="Modifier le membre"
-                      style={{ padding: '6px', color: 'var(--text-secondary)' }}
                     >
                       <Edit2 size={13} />
                     </button>
                     <button
-                      className="btn-icon-del"
+                      className="rounded-control p-1.5 text-ink-faint transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
                       onClick={() => onDelete(m.id)}
                       title="Retirer le membre"
-                      style={{ padding: '6px' }}
                     >
                       <Trash2 size={14} />
                     </button>
@@ -99,53 +85,50 @@ export const MembersTab: React.FC<MembersTabProps> = ({
       </div>
     </div>
 
-    {/* Add / Edit Member Form */}
-    <div className="card" style={{ padding: '20px', flex: '1' }}>
-      <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-h)', marginBottom: '14px' }}>
+    <div className="rounded-surface border border-line bg-elevated p-5">
+      <div className="mb-3.5 text-sm font-bold text-ink">
         {editingMemberId ? 'Modifier le membre' : 'Ajouter un membre'}
       </div>
 
-      <form onSubmit={onSubmit}>
-        <div className="form-field" style={{ marginBottom: '12px' }}>
-          <div className="field-label">Prénom *</div>
+      <form onSubmit={onSubmit} className="flex flex-col gap-3">
+        <Field label="Prénom *">
           <input
             type="text"
             placeholder="ex : Marie"
             value={firstName}
             onChange={e => onFirstNameChange(e.target.value)}
             required
+            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div className="form-field" style={{ marginBottom: '12px' }}>
-          <div className="field-label">NOM *</div>
+        <Field label="NOM *">
           <input
             type="text"
             placeholder="ex : DURAND"
             value={lastName}
             onChange={e => onLastNameChange(e.target.value)}
             required
+            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div className="form-field" style={{ marginBottom: '16px' }}>
-          <div className="field-label">Email</div>
+        <Field label="Email">
           <input
             type="email"
             placeholder="marie@entreprise.com"
             value={email}
             onChange={e => onEmailChange(e.target.value)}
+            className={inputClass}
           />
-        </div>
+        </Field>
 
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="submit" className="btn btn-grad" style={{ flex: '1' }}>
+        <div className="mt-1 flex gap-2">
+          <Button type="submit" variant="primary" className="flex-1">
             {editingMemberId ? 'Enregistrer' : 'Ajouter'}
-          </button>
+          </Button>
           {editingMemberId && (
-            <button type="button" className="btn" onClick={onCancelEdit}>
-              Annuler
-            </button>
+            <Button type="button" variant="secondary" onClick={onCancelEdit}>Annuler</Button>
           )}
         </div>
       </form>

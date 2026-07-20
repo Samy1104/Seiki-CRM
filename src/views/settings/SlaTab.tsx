@@ -1,4 +1,6 @@
 import React from 'react';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface SlaTabProps {
   slaMedia: number;
@@ -23,81 +25,72 @@ export const SlaTab: React.FC<SlaTabProps> = ({
   onAiScoringChange,
   onSubmit,
 }) => (
-  <div className="card" style={{ padding: '20px' }}>
-    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-h)', marginBottom: '14px' }}>
-      Règles SLA et automatisation
-    </div>
+  <div className="rounded-surface border border-line bg-elevated p-5">
+    <div className="mb-3.5 text-sm font-bold text-ink">Règles SLA et automatisation</div>
 
     <form onSubmit={onSubmit}>
-      <div className="form-grid" style={{ marginBottom: '24px' }}>
-        {/* Media SLA */}
-        <div className="form-field">
-          <div className="field-label">SLA Segment Media (jours maximum)</div>
+      <div className="mb-6 grid grid-cols-2 gap-4">
+        <Field label="SLA Segment Media (jours maximum)">
           <input
             type="number"
             value={slaMedia}
             onChange={e => onSlaMediaChange(parseInt(e.target.value) || 1)}
             min={1}
+            className={inputClass}
           />
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <span className="text-[10px] text-ink-faint">
             Alerte déclenchée si un lead du segment Media stagne plus de {slaMedia} jours dans la même étape.
           </span>
-        </div>
+        </Field>
 
-        {/* Retail SLA */}
-        <div className="form-field">
-          <div className="field-label">SLA Segment Retail (jours maximum)</div>
+        <Field label="SLA Segment Retail (jours maximum)">
           <input
             type="number"
             value={slaRetail}
             onChange={e => onSlaRetailChange(parseInt(e.target.value) || 1)}
             min={1}
+            className={inputClass}
           />
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <span className="text-[10px] text-ink-faint">
             Alerte déclenchée si un lead du segment Retail stagne plus de {slaRetail} jours.
           </span>
-        </div>
+        </Field>
 
-        {/* Instit SLA */}
-        <div className="form-field">
-          <div className="field-label">SLA Segment Instit (jours maximum)</div>
+        <Field label="SLA Segment Instit (jours maximum)">
           <input
             type="number"
             value={slaInstit}
             onChange={e => onSlaInstitChange(parseInt(e.target.value) || 1)}
             min={1}
+            className={inputClass}
           />
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '4px' }}>
+          <span className="text-[10px] text-ink-faint">
             Alerte déclenchée si un lead du segment Instit stagne plus de {slaInstit} jours.
           </span>
-        </div>
+        </Field>
 
-        {/* AI Auto scoring */}
-        <div className="form-field" style={{ gridColumn: 'span 2', marginTop: '10px', borderTop: '0.5px solid var(--border)', paddingTop: '16px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <div style={{ fontWeight: '600', color: 'var(--text-h)', fontSize: '13px' }}>Enrichissement et scoring automatique</div>
-              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                Calculer automatiquement le score ICP et préremplir les critères à la création d'un lead (via données d'enrichissement mail/domaine).
-              </div>
+        <div className="col-span-2 mt-2 flex items-center justify-between border-t border-line pt-4">
+          <div>
+            <div className="text-[13px] font-semibold text-ink">Enrichissement et scoring automatique</div>
+            <div className="mt-0.5 text-[11px] text-ink-faint">
+              Calculer automatiquement le score ICP et préremplir les critères à la création d'un lead (via données d'enrichissement mail/domaine).
             </div>
-
-            {/* Custom Toggle Switch */}
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={aiScoring}
-                onChange={e => onAiScoringChange(e.target.checked)}
-              />
-              <span className="toggle-slider"></span>
-            </label>
           </div>
+
+          <label className="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer items-center">
+            <input
+              type="checkbox"
+              checked={aiScoring}
+              onChange={e => onAiScoringChange(e.target.checked)}
+              className="peer sr-only"
+            />
+            <span className="absolute inset-0 rounded-full bg-hover transition-colors peer-checked:bg-amber"></span>
+            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-ink transition-transform peer-checked:translate-x-5"></span>
+          </label>
         </div>
       </div>
 
-      <button type="submit" className="btn btn-grad">
-        Enregistrer les paramètres
-      </button>
+      <Button type="submit" variant="primary">Enregistrer les paramètres</Button>
     </form>
   </div>
 );

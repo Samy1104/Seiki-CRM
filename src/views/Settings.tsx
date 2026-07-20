@@ -13,6 +13,13 @@ import { ProspectionSettingsTab } from './settings/ProspectionSettingsTab';
 
 const AVATAR_COLORS = ['#6B5FE6', '#F5B731', '#4ADE80', '#EC4899', '#3B82F6', '#8B5CF6', '#10B981', '#F97316'];
 
+const TABS = [
+  { id: 'members', label: "Membres de l'équipe", icon: Users },
+  { id: 'pipeline', label: 'Étapes du Pipeline', icon: Target },
+  { id: 'sla', label: 'Règles & SLA Globaux', icon: Sliders },
+  { id: 'prospection', label: 'Prospection', icon: Sliders },
+] as const;
+
 export const Settings: React.FC = () => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla' | 'prospection'>('members');
@@ -238,51 +245,35 @@ export const Settings: React.FC = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Chargement des paramètres...</div>
+        <div className="mt-3 text-ink-soft">Chargement des paramètres...</div>
       </div>
     );
   }
 
   return (
-    <div className="view-section on">
-      {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <div className="page-title">Paramètres</div>
-          <div className="page-sub">Configuration globale de l'espace de travail</div>
-        </div>
+    <div className="p-6">
+      <div className="mb-5">
+        <div className="font-display text-xl font-bold text-ink">Paramètres</div>
+        <div className="mt-0.5 text-xs text-ink-soft">Configuration globale de l'espace de travail</div>
       </div>
 
-      {/* Tabs navigation */}
-      <div className="tab-row" style={{ marginBottom: '20px' }}>
-        <button
-          className={`mtab ${activeTab === 'members' ? 'on' : ''}`}
-          onClick={() => setActiveTab('members')}
-        >
-          <Users size={14} style={{ marginRight: '6px' }} />
-          Membres de l'équipe
-        </button>
-        <button
-          className={`mtab ${activeTab === 'pipeline' ? 'on' : ''}`}
-          onClick={() => setActiveTab('pipeline')}
-        >
-          <Target size={14} style={{ marginRight: '6px' }} />
-          Étapes du Pipeline
-        </button>
-        <button
-          className={`mtab ${activeTab === 'sla' ? 'on' : ''}`}
-          onClick={() => setActiveTab('sla')}
-        >
-          <Sliders size={14} style={{ marginRight: '6px' }} />
-          Règles & SLA Globaux
-        </button>
-        <button
-          className={`mtab ${activeTab === 'prospection' ? 'on' : ''}`}
-          onClick={() => setActiveTab('prospection')}
-        >
-          <Sliders size={14} style={{ marginRight: '6px' }} />
-          Prospection
-        </button>
+      <div className="mb-5 flex gap-1 border-b border-line">
+        {TABS.map(tab => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors cursor-pointer ${
+                isActive ? 'border-amber text-ink' : 'border-transparent text-ink-soft hover:text-ink'
+              }`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <Icon size={14} />
+              {tab.label}
+            </button>
+          );
+        })}
       </div>
 
       {activeTab === 'members' && (
