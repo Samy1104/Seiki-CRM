@@ -82,7 +82,7 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
         const isDone = task.status === 'done';
         return (
           <div
-            className="relative overflow-hidden rounded-control border border-[#c8b89a]/40 bg-[#141414] p-3 transition-colors hover:border-[#c8b89a]"
+            className="relative overflow-hidden rounded-control border border-[#c8b89a]/50 bg-[#1c1d22] p-3 transition-colors hover:border-[#c8b89a]"
             style={isDone ? { opacity: 0.7 } : undefined}
           >
             <div className="mb-3 text-[13.5px] font-semibold text-ink" style={isDone ? { textDecoration: 'line-through' } : undefined}>

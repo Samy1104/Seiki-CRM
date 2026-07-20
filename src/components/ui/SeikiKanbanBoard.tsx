@@ -38,7 +38,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
   onCardMove,
   onColumnMove,
   onCardClick,
-  allowColumnDrag = true,
+  allowColumnDrag = false,
   cardsGap = 10,
 }: SeikiKanbanBoardProps<TCard, TColumn>) {
   // Map lookup for rapid card/col retrieval
@@ -158,7 +158,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         return (
           <div
             style={{
-              backgroundColor: '#0d0d0d',
+              backgroundColor: '#1e2026',
               borderRadius: '8px',
               border: '1.5px solid #c8b89a',
               boxShadow: '0 12px 28px rgba(0, 0, 0, 0.8)',
@@ -182,32 +182,6 @@ export function SeikiKanbanBoard<TCard, TColumn>({
           }}
         />
       )}
-      renderColumnDragPreview={(column) => (
-        <div
-          style={{
-            backgroundColor: '#0d0d0d',
-            borderRadius: '10px',
-            padding: '12px 16px',
-            border: '1.5px solid #c8b89a',
-            boxShadow: '0 16px 36px rgba(0, 0, 0, 0.8)',
-            transform: 'rotate(3deg)',
-          }}
-        >
-          <div className="font-display font-bold text-sm text-[#f2ede4]">{column.title}</div>
-          <div className="text-xs text-[#c8b89a]">{column.totalChildrenCount} éléments</div>
-        </div>
-      )}
-      renderColumnDragIndicator={(_column, info) => (
-        <div
-          style={{
-            width: 4,
-            height: info?.height || '100%',
-            backgroundColor: '#c8b89a',
-            borderRadius: 4,
-            boxShadow: '0 0 10px rgba(200, 184, 154, 0.8)',
-          }}
-        />
-      )}
       renderColumnHeader={(colItem) => {
         const colObj = columnMap.get(colItem.id);
         const colCardsCount = colItem.children?.length || 0;
@@ -215,14 +189,14 @@ export function SeikiKanbanBoard<TCard, TColumn>({
 
         return (
           <div
-            className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-ink cursor-grab active:cursor-grabbing select-none"
+            className="mb-3 flex items-center justify-between border-b-2 pb-2 font-display text-[13.5px] font-bold text-white select-none"
             style={{ borderBottomColor: borderCol }}
           >
-            <span>{colItem.title}</span>
+            <span style={{ color: '#ffffff' }}>{colItem.title}</span>
             {colObj && renderColumnHeaderExtra ? (
               renderColumnHeaderExtra(colObj, colCardsCount)
             ) : (
-              <span className="text-[11px] font-normal text-ink-soft">{colCardsCount}</span>
+              <span className="text-[11px] font-normal text-white/70">{colCardsCount}</span>
             )}
           </div>
         );
