@@ -245,7 +245,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           <div className="modal-badges-row">
             <span className={`badge badge-${lead.segment.toLowerCase()}`}>{lead.segment}</span>
             <span className="stage-pill">{lead.stage?.name}</span>
-            <span style={{ fontSize: '12px', fontWeight: '500', color: lead.score >= 80 ? 'var(--green)' : lead.score >= 60 ? 'var(--gold)' : 'var(--red)' }}>
+            <span style={{ fontSize: '12px', fontWeight: '500', color: lead.score >= 80 ? 'var(--green)' : lead.score >= 60 ? 'var(--color-amber)' : 'var(--red)' }}>
               Score : {lead.score}/100
             </span>
             <span style={{ fontSize: '11px', color: slaBreached ? 'var(--red)' : 'var(--text-muted)' }}>
@@ -313,7 +313,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               {lead.scores && lead.scores.length > 0 ? (
                 lead.scores.map(s => {
                   const pct = Math.round((s.value / s.max_value) * 100);
-                  const color = s.value >= s.max_value * 0.8 ? 'var(--green)' : s.value >= s.max_value * 0.5 ? 'var(--gold)' : 'var(--red)';
+                  const color = s.value >= s.max_value * 0.8 ? 'var(--green)' : s.value >= s.max_value * 0.5 ? 'var(--color-amber)' : 'var(--red)';
                   return (
                     <div key={s.criterion} className="bar-row">
                       <span className="bar-label" style={{ textTransform: 'capitalize' }}>
@@ -562,7 +562,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   const isOver = task.due_date && task.due_date < new Date().toISOString().slice(0, 10) && task.status !== 'done';
                   const isTod = task.due_date === new Date().toISOString().slice(0, 10) && task.status !== 'done';
                   const cls = task.status === 'done' ? 'done' : isOver ? 'overdue' : isTod ? 'today' : 'future';
-                  const pColor = task.priority === 'high' ? 'var(--red)' : task.priority === 'medium' ? 'var(--gold)' : 'var(--green)';
+                  const pColor = task.priority === 'high' ? 'var(--red)' : task.priority === 'medium' ? 'var(--color-amber)' : 'var(--green)';
 
                   return (
                     <div key={task.id} className="task-item">

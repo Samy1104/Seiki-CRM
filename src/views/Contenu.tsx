@@ -399,7 +399,7 @@ export const Contenu: React.FC<ContenuProps> = ({ setActiveApp }) => {
                 {tagBook.map((t) => (
                   <div key={t.alias} className="flex items-center justify-between gap-2 p-2 rounded-lg" style={{ background: 'rgba(255,255,255,0.03)' }}>
                     <div className="min-w-0 flex items-center gap-2 text-sm">
-                      <span style={{ color: 'var(--gold)' }}>@{t.alias}</span>
+                      <span style={{ color: 'var(--color-amber)' }}>@{t.alias}</span>
                       <span className="text-[var(--text-primary)] truncate">{t.name}</span>
                       <span className="text-xs truncate" style={{ color: 'var(--text-secondary)' }}>{t.urn}</span>
                     </div>

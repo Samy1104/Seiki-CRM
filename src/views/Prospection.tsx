@@ -44,7 +44,7 @@ export const Prospection: React.FC = () => {
       {/* Header */}
       <div className="prospection-header">
         <div className="prospection-title">
-          <FileEdit size={20} style={{ color: 'var(--purple)' }} />
+          <FileEdit size={20} style={{ color: 'var(--color-amber)' }} />
           <h1>Prospection</h1>
           <span className="prospection-badge">Templates + fusion</span>
         </div>
@@ -329,8 +329,8 @@ const FollowUpTab: React.FC<{ showToast: (m: string, t?: 'success' | 'error' | '
   if (loading) return <div className="pros-loading"><Loader size={20} className="spin" /> Analyse des relances...</div>;
 
   const actionLabels = {
-    follow_up_1: { label: '1ère relance', color: 'var(--gold)' },
-    follow_up_2: { label: '2ème relance', color: 'var(--purple)' },
+    follow_up_1: { label: '1ère relance', color: 'var(--color-amber)' },
+    follow_up_2: { label: '2ème relance', color: 'var(--color-chart-neutral)' },
     archive: { label: 'À archiver', color: 'var(--text-muted)' },
     wait: { label: 'Attente', color: 'var(--text-secondary)' },
   };
@@ -493,7 +493,7 @@ const EmailPreviewCard: React.FC<{
           {email.lead?.poste && <span className="epc-poste">{email.lead.poste}</span>}
         </div>
         <div className="epc-subject">
-          <Mail size={12} style={{ color: 'var(--purple)', flexShrink: 0 }} />
+          <Mail size={12} style={{ color: 'var(--color-amber)', flexShrink: 0 }} />
           <span>{email.sujet}</span>
         </div>
         {email.statut_envoi === 'failed' && (
@@ -512,7 +512,7 @@ const EmailPreviewCard: React.FC<{
           {/* Icebreaker */}
           {email.icebreaker && (
             <div className="epc-icebreaker">
-              <Zap size={12} style={{ color: 'var(--gold)' }} />
+              <Zap size={12} style={{ color: 'var(--color-amber)' }} />
               <span><strong>Icebreaker :</strong> {email.icebreaker}</span>
             </div>
           )}
