@@ -8,6 +8,7 @@ import { TrendingUp, Compass, Award } from 'lucide-react';
 import { computeSegmentStats } from '../utils/leadMetrics';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
+import { KpiTile } from '../components/ui/KpiTile';
 
 export const Stats: React.FC = () => {
   const { showToast } = useToast();
@@ -32,7 +33,7 @@ export const Stats: React.FC = () => {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Calcul des statistiques...</div>
+        <div className="mt-3 text-ink-soft">Calcul des statistiques...</div>
       </div>
     );
   }
@@ -45,90 +46,62 @@ export const Stats: React.FC = () => {
   const totalVal = leads.reduce((acc, l) => acc + l.deal_value, 0);
   const wonVal = wonLeads.reduce((acc, l) => acc + l.deal_value, 0);
   const averageDealValue = totalLeads ? Math.round(totalVal / totalLeads) : 0;
-  
-  // Conversion Rate
+
   const conversionRate = totalLeads ? Math.round((wonLeads.length / totalLeads) * 100) : 0;
 
-  // Funnel calculations
-  // Counts how many leads reached each stage or beyond
-  // For simplicity, we show the current snapshot of leads in each stage
   const funnelStages = stages.map(st => {
     const count = leads.filter(l => l.stage_id === st.id).length;
     const value = leads.filter(l => l.stage_id === st.id).reduce((acc, l) => acc + l.deal_value, 0);
-    return {
-      name: st.name,
-      count,
-      value,
-      color: st.color
-    };
+    return { name: st.name, count, value, color: st.color };
   });
 
   const maxStageCount = Math.max(...funnelStages.map(f => f.count), 1);
 
-  // Segment Split
   const segmentStats = computeSegmentStats(leads);
-
   const totalSegmentCount = Object.values(segmentStats).reduce((acc, curr) => acc + curr.count, 0);
+  const segmentOpacity: Record<'Media' | 'Retail' | 'Instit', string> = {
+    Media: 'bg-amber',
+    Retail: 'bg-amber/70',
+    Instit: 'bg-amber/40',
+  };
 
-  // Sources split
   const sourceStats: Record<string, number> = {};
   leads.forEach(l => {
     sourceStats[l.source] = (sourceStats[l.source] || 0) + 1;
   });
 
   return (
-    <div className="view-section on">
-      {/* Page Header */}
-      <div className="page-header">
-        <div>
-          <div className="page-title">Statistiques</div>
-          <div className="page-sub">Indicateurs de performance commerciale</div>
-        </div>
+    <div className="p-6">
+      <div className="mb-6">
+        <div className="font-display text-xl font-bold text-ink">Statistiques</div>
+        <div className="mt-0.5 text-xs text-ink-soft">Indicateurs de performance commerciale</div>
       </div>
 
-      {/* Overview KPI Cards */}
-      <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        <div className="kpi" style={{ borderTop: '2px solid var(--purple)' }}>
-          <div className="kpi-label">Panier Moyen</div>
-          <div className="kpi-val">{averageDealValue}k€</div>
-          <div className="kpi-sub">Valeur moyenne de deal</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--green)' }}>
-          <div className="kpi-label">Taux de conversion</div>
-          <div className="kpi-val">{conversionRate}%</div>
-          <div className="kpi-sub">Deals gagnés / Total</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--gold)' }}>
-          <div className="kpi-label">Deals actifs</div>
-          <div className="kpi-val">{activeLeads.length}</div>
-          <div className="kpi-sub">Opportunités en cours</div>
-        </div>
-
-        <div className="kpi" style={{ borderTop: '2px solid var(--instit)' }}>
-          <div className="kpi-label">Total Gagné</div>
-          <div className="kpi-val">{wonVal}k€</div>
-          <div className="kpi-sub">{wonLeads.length} contrats signés</div>
-        </div>
+      <div className="mb-5 grid grid-cols-4 gap-3">
+        <KpiTile label="Panier Moyen" value={averageDealValue} formatValue={(v) => `${Math.round(v)}k€`} sub="Valeur moyenne de deal" accent="neutral" />
+        <KpiTile label="Taux de conversion" value={conversionRate} formatValue={(v) => `${Math.round(v)}%`} sub="Deals gagnés / Total" accent="success" />
+        <KpiTile label="Deals actifs" value={activeLeads.length} sub="Opportunités en cours" accent="amber" />
+        <KpiTile label="Total Gagné" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub={`${wonLeads.length} contrats signés`} accent="success" />
       </div>
 
-      <div className="two-col" style={{ gap: '20px', marginBottom: '20px' }}>
-        {/* Conversion Funnel Card */}
-        <div className="card" style={{ padding: '20px', flex: '1.2' }}>
-          <div className="form-title">
-            <TrendingUp size={14} style={{ marginRight: '6px' }} />
+      <div className="mb-5 grid grid-cols-[1.2fr_1fr] gap-5">
+        <div className="rounded-surface border border-line bg-elevated p-5">
+          <div className="flex items-center gap-2 text-sm font-bold text-ink">
+            <TrendingUp size={14} className="text-amber" />
             Entonnoir de conversion (Funnel)
           </div>
-          <div className="funnel-container" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+          <div className="mt-4 flex flex-col gap-3">
             {funnelStages.map(f => {
               const pct = Math.round((f.count / maxStageCount) * 100);
               return (
-                <div key={f.name} className="funnel-row" style={{ display: 'flex', alignItems: 'center' }}>
-                  <span style={{ width: '110px', fontSize: '12px', fontWeight: '600', color: 'var(--text-h)' }}>{f.name}</span>
-                  <div style={{ flex: '1', height: '24px', background: 'rgba(255,255,255,0.02)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
-                    <div style={{ width: `${pct}%`, height: '100%', background: f.color || 'var(--purple)', opacity: 0.65, transition: 'width 0.8s ease' }}></div>
-                    <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: '700', color: '#fff' }}>
+                <div key={f.name} className="flex items-center gap-3">
+                  <span className="w-28 flex-shrink-0 text-xs font-semibold text-ink-soft">{f.name}</span>
+                  <div className="relative h-6 flex-1 overflow-hidden rounded-control bg-hover">
+                    <div
+                      className="h-full opacity-70 transition-all duration-700"
+                      style={{ width: `${pct}%`, background: f.color || 'var(--color-amber)' }}
+                    ></div>
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] font-bold text-ink">
                       {f.count} deal{f.count !== 1 ? 's' : ''} ({f.value}k€)
                     </span>
                   </div>
@@ -138,22 +111,21 @@ export const Stats: React.FC = () => {
           </div>
         </div>
 
-        {/* Source acquisition split */}
-        <div className="card" style={{ padding: '20px', flex: '1' }}>
-          <div className="form-title">
-            <Compass size={14} style={{ marginRight: '6px' }} />
+        <div className="rounded-surface border border-line bg-elevated p-5">
+          <div className="flex items-center gap-2 text-sm font-bold text-ink">
+            <Compass size={14} className="text-amber" />
             Sources d'acquisition
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '16px' }}>
+          <div className="mt-4 flex flex-col gap-2.5">
             {Object.entries(sourceStats).map(([src, count]) => {
               const pct = totalLeads ? Math.round((count / totalLeads) * 100) : 0;
               return (
-                <div key={src} className="bar-row">
-                  <span className="bar-label" style={{ width: '110px' }}>{src}</span>
-                  <div className="bar-track" style={{ flex: '1' }}>
-                    <div className="bar-fill" style={{ width: `${pct}%`, background: 'var(--purple)' }}></div>
+                <div key={src} className="flex items-center gap-3">
+                  <span className="w-28 flex-shrink-0 truncate text-xs text-ink-soft">{src}</span>
+                  <div className="h-2 flex-1 overflow-hidden rounded-full bg-hover">
+                    <div className="h-full rounded-full bg-amber transition-all duration-700" style={{ width: `${pct}%` }}></div>
                   </div>
-                  <span className="bar-val" style={{ width: '40px', textAlign: 'right' }}>{count} ({pct}%)</span>
+                  <span className="w-14 flex-shrink-0 text-right text-xs tabular-nums text-ink-faint">{count} ({pct}%)</span>
                 </div>
               );
             })}
@@ -161,25 +133,24 @@ export const Stats: React.FC = () => {
         </div>
       </div>
 
-      {/* Segment split count card */}
-      <div className="card" style={{ padding: '20px' }}>
-        <div className="form-title">
-          <Award size={14} style={{ marginRight: '6px' }} />
+      <div className="rounded-surface border border-line bg-elevated p-5">
+        <div className="flex items-center gap-2 text-sm font-bold text-ink">
+          <Award size={14} className="text-amber" />
           Répartition des leads par segment d'activité
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-around', gap: '20px', marginTop: '16px' }}>
+        <div className="mt-4 grid grid-cols-3 gap-4">
           {(['Media', 'Retail', 'Instit'] as const).map(seg => {
             const data = segmentStats[seg];
             const pct = totalSegmentCount ? Math.round((data.count / totalSegmentCount) * 100) : 0;
-            let color = 'var(--purple)';
-            if (seg === 'Retail') color = 'var(--gold)';
-            else if (seg === 'Instit') color = 'var(--instit-tc)';
 
             return (
-              <div key={seg} style={{ textAlign: 'center', flex: '1', padding: '16px', background: 'rgba(255,255,255,0.01)', border: '0.5px solid var(--border)', borderRadius: '8px' }}>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: color, marginBottom: '6px' }}>{seg}</div>
-                <div style={{ fontSize: '24px', fontWeight: '700', color: 'var(--text-h)' }}>{data.count}</div>
-                <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px' }}>
+              <div key={seg} className="rounded-control border border-line bg-surface p-4 text-center">
+                <div className="mb-2 flex items-center justify-center gap-1.5 text-xs font-semibold text-ink-soft">
+                  <span className={`h-2 w-2 rounded-full ${segmentOpacity[seg]}`}></span>
+                  {seg}
+                </div>
+                <div className="font-display text-2xl font-bold tabular-nums text-ink">{data.count}</div>
+                <div className="mt-1 text-[11px] text-ink-faint">
                   {pct}% des leads · Valeur {data.val}k€
                 </div>
               </div>
