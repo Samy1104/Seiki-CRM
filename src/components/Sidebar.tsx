@@ -94,9 +94,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return () => document.removeEventListener("mousedown", onDown);
   }, [profileOpen, collapsed]);
 
-  const displayName = user?.email ? user.email.split("@")[0] : "Jean Dupont";
+  const displayName = user?.full_name || (user?.email ? user.email.split("@")[0] : "Jean Dupont");
   const initials = displayName
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .toUpperCase()
@@ -361,9 +362,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
               fontWeight: 500,
               background: "rgba(242, 237, 228, 0.1)",
               color: "#f2ede4",
+              overflow: "hidden",
             }}
           >
-            {initials}
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={displayName}
+                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }}
+              />
+            ) : (
+              initials
+            )}
           </div>
           {!collapsed && (
             <>
