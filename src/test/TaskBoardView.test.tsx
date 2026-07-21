@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { TaskBoardView } from '../views/tasks/TaskBoardView';
 import type { Task } from '../services/tasksService';
@@ -40,7 +40,7 @@ describe('TaskBoardView', () => {
   const doneTask = makeTask({ id: 'task-done', description: 'Done task', status: 'done' });
 
   it('renders no status-switch buttons for any task status', () => {
-    render(
+    const { container } = render(
       <TaskBoardView
         todoTasks={[todoTask]}
         inProgressTasks={[inProgressTask]}
@@ -52,16 +52,17 @@ describe('TaskBoardView', () => {
       />
     );
 
-    expect(screen.queryByText(/En cours/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/À faire/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Fini/)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Ouvrir/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Supprimer')).not.toBeInTheDocument();
+    const buttonTexts = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
+    expect(buttonTexts.some((t) => t?.includes('En cours'))).toBe(false);
+    expect(buttonTexts.some((t) => t?.includes('À faire'))).toBe(false);
+    expect(buttonTexts.some((t) => t?.includes('Fini'))).toBe(false);
+    expect(buttonTexts.some((t) => t?.includes('Ouvrir'))).toBe(false);
+    expect(buttonTexts.some((t) => t === 'Supprimer')).toBe(false);
   });
 
   it('renders exactly one delete button per card, each calling onDeleteTask with its own task id', () => {
     const onDeleteTask = vi.fn();
-    render(
+    const { container } = render(
       <TaskBoardView
         todoTasks={[todoTask]}
         inProgressTasks={[inProgressTask]}
@@ -73,7 +74,9 @@ describe('TaskBoardView', () => {
       />
     );
 
-    const deleteButtons = screen.getAllByRole('button', { name: 'Supprimer la tâche' });
+    const deleteButtons = Array.from(
+      container.querySelectorAll('button[aria-label="Supprimer la tâche"]')
+    ) as HTMLButtonElement[];
     expect(deleteButtons).toHaveLength(3);
 
     fireEvent.click(deleteButtons[0]);
