@@ -52,4 +52,45 @@ describe('SeikiKanbanBoard', () => {
     expect(innerColumn).not.toBeNull();
     expect(innerColumn).toHaveStyle('background-color: rgba(0, 0, 0, 0)');
   });
+
+  it('fillWidth: columns flex to fill available width with no max-width cap', () => {
+    const { container } = render(
+      <SeikiKanbanBoard
+        columns={columns}
+        cards={cards}
+        getColumnId={(col) => col.id}
+        getColumnTitle={(col) => col.title}
+        getColumnColor={(col) => col.color}
+        getCardId={(card) => card.id}
+        getCardColumnId={(card) => card.columnId}
+        renderCard={(card) => <div>{card.title}</div>}
+        onCardMove={vi.fn()}
+        fillWidth
+      />
+    );
+
+    const columnOuter = container.querySelector('.rkk-column-outer');
+    expect(columnOuter).not.toBeNull();
+    expect(columnOuter).toHaveStyle({ minWidth: '220px', maxWidth: 'none' });
+  });
+
+  it('without fillWidth, columns keep the existing fixed-width behavior (Pipeline unchanged)', () => {
+    const { container } = render(
+      <SeikiKanbanBoard
+        columns={columns}
+        cards={cards}
+        getColumnId={(col) => col.id}
+        getColumnTitle={(col) => col.title}
+        getColumnColor={(col) => col.color}
+        getCardId={(card) => card.id}
+        getCardColumnId={(card) => card.columnId}
+        renderCard={(card) => <div>{card.title}</div>}
+        onCardMove={vi.fn()}
+      />
+    );
+
+    const columnOuter = container.querySelector('.rkk-column-outer');
+    expect(columnOuter).not.toBeNull();
+    expect(columnOuter).toHaveStyle({ minWidth: '260px', maxWidth: '264px' });
+  });
 });

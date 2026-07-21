@@ -22,6 +22,7 @@ export interface SeikiKanbanBoardProps<TCard, TColumn> {
   onCardClick?: (card: TCard) => void;
   allowColumnDrag?: boolean;
   cardsGap?: number;
+  fillWidth?: boolean;
 }
 
 export function SeikiKanbanBoard<TCard, TColumn>({
@@ -40,6 +41,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
   onCardClick,
   allowColumnDrag = false,
   cardsGap = 10,
+  fillWidth = false,
 }: SeikiKanbanBoardProps<TCard, TColumn>) {
   // Map lookup for rapid card/col retrieval
   const columnMap = useMemo(() => {
@@ -152,6 +154,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
       onCardMove={handleCardMove}
       onColumnMove={handleColumnMove}
       rootClassName="rkk-seiki-board"
+      rootStyle={fillWidth ? { width: '100%' } : undefined}
       renderCardDragPreview={(card) => {
         const cardObj = cardMap.get(card.id) || (card.content as TCard);
         const colObj = columnMap.get(card.parentId || '') || ({} as TColumn);
@@ -205,13 +208,25 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         const colObj = columnMap.get(colItem.id);
         return colObj ? renderColumnFooter?.(colObj) : null;
       }}
-      columnWrapperStyle={() => ({
-        backgroundColor: '#0d0d0d',
-        borderRadius: '8px',
-        border: '1px solid rgba(200, 184, 154, 0.25)',
-        padding: '12px',
-        minWidth: '260px',
-      })}
+      columnWrapperStyle={() =>
+        fillWidth
+          ? {
+              backgroundColor: '#0d0d0d',
+              borderRadius: '8px',
+              border: '1px solid rgba(200, 184, 154, 0.25)',
+              padding: '12px',
+              flex: '1 1 0',
+              minWidth: '220px',
+              maxWidth: 'none',
+            }
+          : {
+              backgroundColor: '#0d0d0d',
+              borderRadius: '8px',
+              border: '1px solid rgba(200, 184, 154, 0.25)',
+              padding: '12px',
+              minWidth: '260px',
+            }
+      }
       columnStyle={() => ({
         backgroundColor: 'transparent',
       })}
