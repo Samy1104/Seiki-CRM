@@ -93,4 +93,57 @@ describe('SeikiKanbanBoard', () => {
     expect(columnOuter).not.toBeNull();
     expect(columnOuter).toHaveStyle({ minWidth: '260px', maxWidth: '264px' });
   });
+
+  // The actual flex item that must grow to fill the board's width is an
+  // unstyled <div> react-kanban-kit renders between `.rkk-board` and
+  // `.rkk-column-outer` — not `.rkk-column-outer` itself, which the two
+  // tests above check inline styles on. That growth comes from a global
+  // CSS rule (`.rkk-fill-width > div:not(.rkk-column-adder)` in
+  // src/index.css), scoped by this `rkk-fill-width` class on the board
+  // root. jsdom has no layout engine and doesn't load src/index.css in
+  // this test file, so it can't verify the resulting pixel widths —
+  // that was verified live in a real browser instead. This test only
+  // locks in the CSS hook (the class toggle) so a regression there
+  // still fails a test, even though the cascade effect itself can't be
+  // asserted here.
+  it('fillWidth: the board root carries the rkk-fill-width class (the CSS hook that grows the real flex item)', () => {
+    const { container } = render(
+      <SeikiKanbanBoard
+        columns={columns}
+        cards={cards}
+        getColumnId={(col) => col.id}
+        getColumnTitle={(col) => col.title}
+        getColumnColor={(col) => col.color}
+        getCardId={(card) => card.id}
+        getCardColumnId={(card) => card.columnId}
+        renderCard={(card) => <div>{card.title}</div>}
+        onCardMove={vi.fn()}
+        fillWidth
+      />
+    );
+
+    const board = container.querySelector('.rkk-board');
+    expect(board).not.toBeNull();
+    expect(board?.className.split(' ')).toContain('rkk-fill-width');
+  });
+
+  it('without fillWidth, the board root does not carry the rkk-fill-width class', () => {
+    const { container } = render(
+      <SeikiKanbanBoard
+        columns={columns}
+        cards={cards}
+        getColumnId={(col) => col.id}
+        getColumnTitle={(col) => col.title}
+        getColumnColor={(col) => col.color}
+        getCardId={(card) => card.id}
+        getCardColumnId={(card) => card.columnId}
+        renderCard={(card) => <div>{card.title}</div>}
+        onCardMove={vi.fn()}
+      />
+    );
+
+    const board = container.querySelector('.rkk-board');
+    expect(board).not.toBeNull();
+    expect(board?.className.split(' ')).not.toContain('rkk-fill-width');
+  });
 });
