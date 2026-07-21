@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import type { Task } from '../../services/tasksService';
 import { SeikiKanbanBoard } from '../../components/ui/SeikiKanbanBoard';
 import type { TaskWidgetHandlers } from './TaskWidgets';
@@ -43,31 +44,6 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
 }) => {
   const allTasks = [...todoTasks, ...inProgressTasks, ...doneTasks];
 
-  const renderCardActions = (task: Task) => {
-    if (task.status === 'todo') {
-      return (
-        <>
-          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'in_progress')}>En cours →</button>
-          <button className="transition-colors hover:text-danger cursor-pointer" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
-        </>
-      );
-    }
-    if (task.status === 'in_progress') {
-      return (
-        <>
-          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'todo')}>← À faire</button>
-          <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'done')}>Fini ✓</button>
-        </>
-      );
-    }
-    return (
-      <>
-        <button className="transition-colors hover:text-ink cursor-pointer" onClick={() => onUpdateStatus(task.id, 'in_progress')}>← Ouvrir</button>
-        <button className="transition-colors hover:text-danger cursor-pointer" onClick={() => onDeleteTask(task.id)}>Supprimer</button>
-      </>
-    );
-  };
-
   return (
     <SeikiKanbanBoard<Task, TaskColumn>
       columns={taskColumns}
@@ -77,6 +53,7 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
       getColumnColor={(col) => col.color}
       getCardId={(t) => t.id}
       getCardColumnId={(t) => t.status}
+      fillWidth
       renderCard={(task) => {
         const pColor = getPriorityInfo(task.priority).color;
         const isDone = task.status === 'done';
@@ -93,8 +70,14 @@ export const TaskBoardView: React.FC<TaskBoardViewProps> = ({
               <TaskCardWidgets task={task} widgets={widgets} />
             </div>
 
-            <div className="mt-2.5 flex gap-3 border-t border-line pt-2 text-[11px] font-medium text-ink-soft">
-              {renderCardActions(task)}
+            <div className="mt-2.5 flex justify-end border-t border-line pt-2">
+              <button
+                aria-label="Supprimer la tâche"
+                className="rounded-control p-1.5 text-ink-faint transition-colors hover:bg-danger/10 hover:text-danger cursor-pointer"
+                onClick={() => onDeleteTask(task.id)}
+              >
+                <Trash2 size={15} />
+              </button>
             </div>
             <div className="absolute left-0 top-0 h-full w-[3px]" style={{ background: pColor }}></div>
           </div>
