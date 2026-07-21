@@ -1,0 +1,45 @@
+services:
+  seiki-crm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    image: seiki-crm:latest
+    restart: unless-stopped
+
+    ports:
+      # Change HOST_PORT (or the left-hand side directly) to whatever
+      # port the host wants to expose this on. The container itself
+      # always listens on 8080 internally.
+      - "${HOST_PORT:-8080}:8080"
+
+    # ---- Hardening ----
+    # The image runs as a non-root user already (see Dockerfile), this
+    # goes further: the container filesystem itself is read-only, all
+    # Linux capabilities are dropped, and privilege escalation is
+    # disabled. Only the two directories Nginx actually needs to write
+    # to (its pid/temp files and its cache) get a small in-memory tmpfs.
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/cache/nginx
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # Resource ceiling so a runaway process/traffic spike can't take
+    # down the rest of the host. Generous for a static file server —
+    # tune to the host's actual capacity.
+    mem_limit: 128m
+    cpus: 1.0
+    pids_limit: 100
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s

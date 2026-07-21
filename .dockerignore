@@ -1,0 +1,20 @@
+# Never send secrets or local env files into the build context
+.env
+.env.local
+.env.*.local
+
+# Don't ship dependency/build artifacts into the build context —
+# they get reinstalled/rebuilt inside the image instead
+node_modules
+dist
+dist-ssr
+
+# Not needed inside the image
+.git
+.github
+.vscode
+.idea
+.worktrees
+.superpowers
+*.log
+supabase/.temp

@@ -153,7 +153,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
       cardsGap={cardsGap}
       onCardMove={handleCardMove}
       onColumnMove={handleColumnMove}
-      rootClassName="rkk-seiki-board"
+      rootClassName={fillWidth ? 'rkk-seiki-board rkk-fill-width' : 'rkk-seiki-board'}
       rootStyle={fillWidth ? { width: '100%' } : undefined}
       renderCardDragPreview={(card) => {
         const cardObj = cardMap.get(card.id) || (card.content as TCard);

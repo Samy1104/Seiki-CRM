@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import { Sidebar } from './components/Sidebar';
-import { ErrorBoundary } from './components/ErrorBoundary';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { CrmLayout } from './layouts/CrmLayout';
+import { ContenuLayout } from './layouts/ContenuLayout';
 import { Login } from './views/Login';
+import { Portal } from './views/Portal';
 import { Pipeline } from './views/Pipeline';
 import { Leads } from './views/Leads';
 import { AddLead } from './views/AddLead';
@@ -12,71 +15,62 @@ import { Agenda } from './views/Agenda';
 import { Stats } from './views/Stats';
 import { Codir } from './views/Codir';
 import { Settings } from './views/Settings';
-import './App.css';
-import { Portal } from './views/Portal';
 import { Contenu } from './views/Contenu';
+import { Prospection } from './views/Prospection';
+import './App.css';
 
-const AppContent: React.FC = () => {
-  const { isAuthenticated, loading } = useAuth();
-  const [currentView, setView] = useState<string>('pipeline');
-  const [activeApp, setActiveApp] = useState<'portal' | 'crm' | 'contenu'>('portal');
-
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      setActiveApp('portal');
-    }
-  }, [isAuthenticated]);
-
-  if (loading) {
-    return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>Démarrage de Seiki CRM...</div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Login />;
-  }
-
-  if (activeApp === 'portal') {
-    return <Portal setActiveApp={setActiveApp} />;
-  }
-
-  if (activeApp === 'contenu') {
-    return <Contenu setActiveApp={setActiveApp} />;
-  }
+const AppRoutes: React.FC = () => {
+  const { isAuthenticated } = useAuth();
 
   return (
-    <div className="app-container">
-      {/* Sidebar navigation */}
-      <Sidebar section="crm" currentView={currentView} setView={setView} setActiveApp={setActiveApp} />
+    <Routes>
+      {/* Public Route */}
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to="/portal" replace /> : <Login />}
+      />
 
-      {/* Main workspace area */}
-      <main className="main-content">
-        <ErrorBoundary key={currentView}>
-          {currentView === 'pipeline' && <Pipeline setView={setView} />}
-          {currentView === 'leads' && <Leads setView={setView} />}
-          {currentView === 'add' && <AddLead setView={setView} />}
-          {currentView === 'tasks' && <Tasks />}
-          {currentView === 'agenda' && <Agenda />}
-          {currentView === 'stats' && <Stats />}
-          {currentView === 'codir' && <Codir />}
-          {currentView === 'settings' && <Settings />}
-        </ErrorBoundary>
-      </main>
-    </div>
+      {/* Protected Routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/" element={<Navigate to="/portal" replace />} />
+        <Route path="/portal" element={<Portal />} />
+
+        {/* CRM Section with CrmLayout */}
+        <Route path="/crm" element={<CrmLayout />}>
+          <Route index element={<Navigate to="/crm/pipeline" replace />} />
+          <Route path="pipeline" element={<Pipeline setView={() => {}} />} />
+          <Route path="leads" element={<Leads setView={() => {}} />} />
+          <Route path="add" element={<AddLead setView={() => {}} />} />
+          <Route path="tasks" element={<Tasks />} />
+          <Route path="agenda" element={<Agenda />} />
+          <Route path="stats" element={<Stats />} />
+          <Route path="codir" element={<Codir />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
+
+        {/* Contenu Section with ContenuLayout */}
+        <Route path="/contenu" element={<ContenuLayout />}>
+          <Route index element={<Navigate to="/contenu/linkedin" replace />} />
+          <Route path="linkedin" element={<Contenu />} />
+          <Route path="prospection" element={<Prospection />} />
+        </Route>
+      </Route>
+
+      {/* Fallback Catch-all Route */}
+      <Route path="*" element={<Navigate to="/portal" replace />} />
+    </Routes>
   );
 };
 
 const App: React.FC = () => {
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <ToastProvider>
+          <AppRoutes />
+        </ToastProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 };
 

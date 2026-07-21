@@ -108,6 +108,17 @@
   --color-danger: #F87171;
   --color-chart-neutral: #64748B;
 
+  /* charcoal/beige sub-theme — shared by Sidebar and the kanban boards
+     (Pipeline/Tasks). Distinct from the ink/surface/amber tokens above:
+     this pairing is deliberately darker/warmer, not a duplicate. Extracted
+     here so it's a single source of truth instead of hand-typed hex
+     scattered across each consumer. */
+  --color-charcoal: #0d0d0d;
+  --color-charcoal-fg: #f2ede4;
+  --color-charcoal-fg-soft: #b0afa8;
+  --color-beige: #c8b89a;
+  --color-charcoal-danger: #e05252;
+
   /* type — named to avoid colliding with the legacy --font-heading/--font-body
      custom properties already declared (unlayered) in src/index.css, which
      always win the cascade over anything in this @theme block regardless of

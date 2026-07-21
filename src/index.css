@@ -36,30 +36,30 @@
 }
 
 :root {
-  /* Color Palette — exact seiki.co brand tokens */
-  --bg-deep: #000010;
-  --bg-main: #08080f;
-  --bg-panel: rgba(31, 31, 45, 0.55);
+  /* Unified Design Tokens Bridge */
+  --bg-deep: var(--color-base, #0A0B0D);
+  --bg-main: var(--color-base, #0A0B0D);
+  --bg-panel: var(--color-surface, #111214);
 
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
+  --text-primary: var(--color-ink, #F5F5F4);
+  --text-secondary: var(--color-ink-soft, #9A9A93);
+  --text-muted: var(--color-ink-faint, #6B6B64);
 
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(245, 158, 11, 0.4);
+  --border-subtle: var(--color-line, rgba(255, 255, 255, 0.06));
+  --border-active: var(--color-line-focus, rgba(245, 158, 11, 0.35));
 
-  --purple: #8f37ff;
-  --purple-deep: #431a80;
-  --purple-light: #a7aefc;
-  --purple-glow: rgba(245, 158, 11, 0.25);
+  --purple: var(--color-amber, #F59E0B);
+  --purple-deep: var(--color-surface, #111214);
+  --purple-light: var(--color-charcoal-fg, #f2ede4);
+  --purple-glow: var(--color-amber-glow, rgba(245, 158, 11, 0.18));
 
-  --gold: #f7b700;
-  --gold-glow: rgba(245, 158, 11, 0.25);
+  --gold: var(--color-amber, #F59E0B);
+  --gold-glow: var(--color-amber-glow, rgba(245, 158, 11, 0.18));
 
-  --green: #4ADE80;
+  --green: var(--color-success, #4ADE80);
   --green-glow: rgba(74, 222, 128, 0.25);
 
-  --red: #F87171;
+  --red: var(--color-danger, #F87171);
   --red-glow: rgba(248, 113, 113, 0.25);
 
   --instit: #8B5CF6;
@@ -67,8 +67,8 @@
   --instit-tc: #A78BFA;
 
   /* Fonts */
-  --font-heading: 'Codan', 'Sora', system-ui, sans-serif;
-  --font-body: 'Museo Sans', 'Manrope', system-ui, sans-serif;
+  --font-heading: var(--font-display, 'Sora', system-ui, sans-serif);
+  --font-body: var(--font-ui, 'General Sans', system-ui, sans-serif);
 
   /* Radii */
   --radius-btn: 10px;
@@ -455,6 +455,16 @@ body {
 .rkk-card-shadow {
   background-color: rgba(13, 13, 13, 0.7) !important;
   border: 1px solid rgba(200, 184, 154, 0.3) !important;
+}
+
+/* .rkk-column-outer's own `flex` style (set via columnWrapperStyle in
+   SeikiKanbanBoard.tsx) is inert: react-kanban-kit wraps each column in an
+   unstyled <div> that is the ACTUAL flex item under .rkk-board, not
+   .rkk-column-outer itself. Grow that real flex item instead — only under
+   .rkk-fill-width (Tasks board), never the default Pipeline board. */
+.rkk-fill-width > div:not(.rkk-column-adder) {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 /* ============================================================

@@ -90,8 +90,7 @@ export const leadsService = {
   },
 
   async getLeadById(id: string): Promise<Lead> {
-    // Single round-trip: lead + scores + history embedded via FK joins
-    // (was 3 sequential queries; each modal open now costs 1 request instead of 3)
+    // Single round-trip lookup: lead details, scores, and activity history embedded via FK joins
     const { data, error } = await supabase
       .from('leads')
       .select(`

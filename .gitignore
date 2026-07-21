@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Docker Compose reads this automatically for build args (VITE_SUPABASE_URL, etc.)
+.env
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

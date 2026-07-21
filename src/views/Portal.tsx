@@ -1,14 +1,26 @@
 import React, { useState } from 'react';
 import { ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 interface PortalProps {
-  setActiveApp: (app: 'portal' | 'crm' | 'contenu') => void;
+  setActiveApp?: (app: 'portal' | 'crm' | 'contenu') => void;
 }
 
 export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
   const { logout } = useAuth();
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState<'crm' | 'contenu' | null>(null);
+
+  const handleCrmClick = () => {
+    if (setActiveApp) setActiveApp('crm');
+    navigate('/crm/pipeline');
+  };
+
+  const handleContenuClick = () => {
+    if (setActiveApp) setActiveApp('contenu');
+    navigate('/contenu/linkedin');
+  };
 
   return (
     <div className="h-screen w-full flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
@@ -49,7 +61,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
           }}
           onMouseEnter={() => setHovered('crm')}
           onMouseLeave={() => setHovered(null)}
-          onClick={() => setActiveApp('crm')}
+          onClick={handleCrmClick}
           aria-label="Accéder au CRM"
         >
           {/* Noise texture overlay */}
@@ -142,7 +154,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
           }}
           onMouseEnter={() => setHovered('contenu')}
           onMouseLeave={() => setHovered(null)}
-          onClick={() => setActiveApp('contenu')}
+          onClick={handleContenuClick}
           aria-label="Accéder au Contenu"
         >
           {/* Accent line */}
@@ -157,7 +169,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
           <div className="relative z-10 flex flex-col items-center gap-6 px-12 text-center">
             <span
               className="block text-xs tracking-[0.3em] uppercase mb-2"
-              style={{ fontFamily: "'Inter', sans-serif", color: '#888880', opacity: hovered === 'contenu' ? 1 : 0.5, transition: 'opacity 0.4s' }}
+              style={{ fontFamily: "'Inter', sans-serif", color: '#0d0d0d', opacity: hovered === 'contenu' ? 1 : 0.5, transition: 'opacity 0.4s' }}
             >
               02
             </span>
@@ -185,7 +197,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
                 transition: 'opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s',
               }}
             >
-              Outil de gestion de contenu
+              Studio de création &amp; distribution
             </p>
           </div>
 
@@ -205,15 +217,6 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
           </div>
         </button>
       </div>
-
-      {/* Mobile stacked layout override */}
-      <style>{`
-        @media (max-width: 768px) {
-          .portal-panel { flex: 1 !important; }
-        }
-        * { scrollbar-width: none; }
-        *::-webkit-scrollbar { display: none; }
-      `}</style>
     </div>
   );
 };
