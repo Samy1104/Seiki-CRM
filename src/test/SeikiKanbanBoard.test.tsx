@@ -53,7 +53,7 @@ describe('SeikiKanbanBoard', () => {
     expect(innerColumn).toHaveStyle('background-color: rgba(0, 0, 0, 0)');
   });
 
-  it('fillWidth: columns flex to fill available width with no max-width cap', () => {
+  it('fillWidth: sets the flexible-width inline style contract on the column (no max-width cap)', () => {
     const { container } = render(
       <SeikiKanbanBoard
         columns={columns}

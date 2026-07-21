@@ -208,25 +208,15 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         const colObj = columnMap.get(colItem.id);
         return colObj ? renderColumnFooter?.(colObj) : null;
       }}
-      columnWrapperStyle={() =>
-        fillWidth
-          ? {
-              backgroundColor: '#0d0d0d',
-              borderRadius: '8px',
-              border: '1px solid rgba(200, 184, 154, 0.25)',
-              padding: '12px',
-              flex: '1 1 0',
-              minWidth: '220px',
-              maxWidth: 'none',
-            }
-          : {
-              backgroundColor: '#0d0d0d',
-              borderRadius: '8px',
-              border: '1px solid rgba(200, 184, 154, 0.25)',
-              padding: '12px',
-              minWidth: '260px',
-            }
-      }
+      columnWrapperStyle={() => ({
+        backgroundColor: '#0d0d0d',
+        borderRadius: '8px',
+        border: '1px solid rgba(200, 184, 154, 0.25)',
+        padding: '12px',
+        ...(fillWidth
+          ? { flex: '1 1 0', minWidth: '220px', maxWidth: 'none' }
+          : { minWidth: '260px' }),
+      })}
       columnStyle={() => ({
         backgroundColor: 'transparent',
       })}
