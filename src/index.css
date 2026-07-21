@@ -446,7 +446,7 @@ body {
    REACT-KANBAN-KIT THEME OVERRIDES
    Shared by SeikiKanbanBoard.tsx (Pipeline.tsx + TaskBoardView.tsx).
    The library ships default white drag-shadow placeholders
-   (.rkk-column-shadow, .rkk-card-shadow: #ffffffb7 / #fff) with no
+   (.rkk-column-shadow, .rkk-card-shadow: both #ffffffb7) with no
    React style prop to override them, and its CSS is injected via a
    runtime <style> tag whose load order relative to this file isn't
    guaranteed — !important makes the override reliable either way.
