@@ -1,13 +1,12 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAgendaEvents } from '../hooks/useAgendaEvents';
 import { downloadIcalFile } from '../utils/icalHelpers';
 import { confirmAction } from '../utils/confirmAction';
 import { AgendaHeader } from './agenda/AgendaHeader';
-import { AgendaFilterBar } from './agenda/AgendaFilterBar';
-import { AgendaCalendarGrid } from './agenda/AgendaCalendarGrid';
-import { EventFormModal } from './agenda/EventFormModal';
+import { AgendaForm } from './agenda/AgendaForm';
+import { AgendaTabs } from './agenda/AgendaTabs';
+import { EventCard } from './agenda/EventCard';
 import { IcalFeedModal } from './agenda/IcalFeedModal';
-import CalendarModal from '../components/CalendarModal';
 import type { EventItem } from '../services/eventsService';
 
 export const Agenda: React.FC = () => {
@@ -19,41 +18,20 @@ export const Agenda: React.FC = () => {
     handleDeleteEvent,
   } = useAgendaEvents();
 
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSegment, setSelectedSegment] = useState('Tous les segments');
-
+  const [formOpen, setFormOpen] = useState(true);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
-  const [eventModalOpen, setEventModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [feedModalOpen, setFeedModalOpen] = useState(false);
-  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  const monthPickerRef = useRef<HTMLButtonElement>(null);
-
-  // Filter events by search term and segment
-  const filteredEvents = useMemo(() => {
-    return events.filter((e) => {
-      const matchSearch =
-        !searchTerm ||
-        e.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (e.location && e.location.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchSegment =
-        !selectedSegment ||
-        selectedSegment === 'Tous les segments' ||
-        e.segment === selectedSegment;
-      return matchSearch && matchSegment;
-    });
-  }, [events, searchTerm, selectedSegment]);
-
-  // Split into Upcoming and Past events
+  // Split events into Upcoming and Past
   const todayStr = new Date().toISOString().slice(0, 10);
   const upcomingEvents = useMemo(
-    () => filteredEvents.filter((e) => e.event_date >= todayStr),
-    [filteredEvents, todayStr]
+    () => events.filter((e) => e.event_date >= todayStr),
+    [events, todayStr]
   );
   const pastEvents = useMemo(
-    () => filteredEvents.filter((e) => e.event_date < todayStr),
-    [filteredEvents, todayStr]
+    () => events.filter((e) => e.event_date < todayStr),
+    [events, todayStr]
   );
 
   const formatDateFr = (dateStr: string) => {
@@ -71,7 +49,7 @@ export const Agenda: React.FC = () => {
   const getDaysAgo = (dateStr: string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const evDate = new Date(dateStr);
+    const evDate = new Date(dateStr + 'T12:00:00');
     evDate.setHours(0, 0, 0, 0);
     const diffTime = today.getTime() - evDate.getTime();
     return Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
@@ -79,7 +57,11 @@ export const Agenda: React.FC = () => {
 
   const handleStartEdit = (event: EventItem) => {
     setEditingEvent(event);
-    setEventModalOpen(true);
+    setFormOpen(true);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEvent(null);
   };
 
   const confirmDelete = (id: string) => {
@@ -88,95 +70,119 @@ export const Agenda: React.FC = () => {
     }
   };
 
-  const handleSaveEvent = async (eventData: Omit<EventItem, 'id' | 'created_at' | 'updated_at' | 'ical_uid'>) => {
+  const handleSaveEvent = async (eventData: {
+    name: string;
+    event_date: string;
+    end_date: string | null;
+    location: string | null;
+    segment: string | null;
+    objective: string | null;
+  }) => {
     if (editingEvent) {
       await handleUpdateEvent(editingEvent.id, eventData);
+      setEditingEvent(null);
     } else {
-      await handleCreateEvent(eventData);
+      await handleCreateEvent({ ...eventData, created_by: null });
     }
-    setEditingEvent(null);
   };
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
-          Chargement de l'agenda...
-        </div>
+      <div
+        className="size-full flex flex-col items-center justify-center py-20"
+        style={{ background: 'var(--color-charcoal, #0d0d0d)', color: 'var(--color-charcoal-fg-soft, #b0afa8)' }}
+      >
+        <div className="loading-spinner mb-3" />
+        <span className="text-xs tracking-widest uppercase">Chargement de l'agenda...</span>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6" style={{ overflowY: 'auto' }}>
-      {/* Header */}
-      <AgendaHeader
-        currentDate={currentDate}
-        onPrevMonth={() =>
-          setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))
-        }
-        onNextMonth={() =>
-          setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))
-        }
-        onToday={() => setCurrentDate(new Date())}
-        onOpenDatePicker={() => setDatePickerOpen(true)}
-        onExportIcal={() => downloadIcalFile(events)}
-        onOpenFeedModal={() => setFeedModalOpen(true)}
-        onNewEventClick={() => {
-          setEditingEvent(null);
-          setEventModalOpen(true);
-        }}
-      />
+    <div
+      className="size-full overflow-y-auto"
+      style={{
+        background: 'var(--color-charcoal, #0d0d0d)',
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      <div className="max-w-5xl mx-auto px-8 py-10">
+        {/* Header */}
+        <AgendaHeader
+          onExportIcal={() => downloadIcalFile(events)}
+          onOpenFeedModal={() => setFeedModalOpen(true)}
+        />
 
-      {/* Filter Bar */}
-      <AgendaFilterBar
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        selectedSegment={selectedSegment}
-        setSelectedSegment={setSelectedSegment}
-      />
+        {/* Collapsible Form (Add / Edit) */}
+        <AgendaForm
+          formOpen={formOpen}
+          setFormOpen={setFormOpen}
+          editingEvent={editingEvent}
+          onSaveEvent={handleSaveEvent}
+          onCancelEdit={handleCancelEdit}
+        />
 
-      {/* Main Grid Views (Upcoming & Past) */}
-      <AgendaCalendarGrid
-        upcomingEvents={upcomingEvents}
-        pastEvents={pastEvents}
-        formatDateFr={formatDateFr}
-        getDaysAgo={getDaysAgo}
-        onEdit={handleStartEdit}
-        onDelete={confirmDelete}
-      />
+        {/* Tabs Switcher */}
+        <AgendaTabs
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          upcomingCount={upcomingEvents.length}
+          pastCount={pastEvents.length}
+        />
 
-      {/* Create / Edit Event Modal */}
-      <EventFormModal
-        isOpen={eventModalOpen}
-        onClose={() => {
-          setEventModalOpen(false);
-          setEditingEvent(null);
-        }}
-        editingEvent={editingEvent}
-        onSubmit={handleSaveEvent}
-        formatDateFr={formatDateFr}
-      />
+        {/* Tab Content / Events List */}
+        <div className="mt-6">
+          {activeTab === 'upcoming' &&
+            (upcomingEvents.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-[13px]" style={{ color: '#444' }}>
+                  Aucun événement à venir
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {upcomingEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    formatDateFr={formatDateFr}
+                    onEdit={() => handleStartEdit(event)}
+                    onDelete={() => confirmDelete(event.id)}
+                  />
+                ))}
+              </div>
+            ))}
 
-      {/* iCal Feed Modal */}
+          {activeTab === 'past' &&
+            (pastEvents.length === 0 ? (
+              <div className="py-16 text-center">
+                <p className="text-[13px]" style={{ color: '#444' }}>
+                  Aucun événement dans l'historique
+                </p>
+              </div>
+            ) : (
+              <div className="flex flex-col">
+                {pastEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    past
+                    daysAgo={getDaysAgo(event.event_date)}
+                    formatDateFr={formatDateFr}
+                    onEdit={() => handleStartEdit(event)}
+                    onDelete={() => confirmDelete(event.id)}
+                  />
+                ))}
+              </div>
+            ))}
+        </div>
+      </div>
+
+      {/* iCal Subscription Feed Modal */}
       <IcalFeedModal
         isOpen={feedModalOpen}
         onClose={() => setFeedModalOpen(false)}
       />
-
-      {/* DatePicker Popup */}
-      {datePickerOpen && (
-        <CalendarModal
-          value={currentDate.toISOString().slice(0, 10)}
-          onChange={(v) => {
-            setCurrentDate(new Date(v + 'T12:00:00'));
-            setDatePickerOpen(false);
-          }}
-          onClose={() => setDatePickerOpen(false)}
-          anchorRef={monthPickerRef}
-        />
-      )}
     </div>
   );
 };

@@ -83,15 +83,15 @@
 
 @theme {
   /* surfaces */
-  --color-base: #0A0B0D;
-  --color-surface: #111214;
-  --color-elevated: #18191C;
-  --color-hover: #202126;
+  --color-base: #0d0d0d;
+  --color-surface: #0d0d0d;
+  --color-elevated: #141414;
+  --color-hover: #1a1a1a;
 
   /* borders */
   --color-line: rgba(255, 255, 255, 0.06);
   --color-line-strong: rgba(255, 255, 255, 0.10);
-  --color-line-focus: rgba(245, 158, 11, 0.35);
+  --color-line-focus: rgba(212, 196, 168, 0.35);
 
   /* text */
   --color-ink: #F5F5F4;
@@ -116,7 +116,7 @@
   --color-charcoal: #0d0d0d;
   --color-charcoal-fg: #f2ede4;
   --color-charcoal-fg-soft: #b0afa8;
-  --color-beige: #c8b89a;
+  --color-beige: #D4C4A8;
   --color-charcoal-danger: #e05252;
 
   /* type — named to avoid colliding with the legacy --font-heading/--font-body

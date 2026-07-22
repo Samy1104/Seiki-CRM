@@ -186,7 +186,7 @@ export const EventFormModal: React.FC<EventFormModalProps> = ({
           <Button type="button" variant="secondary" onClick={onClose}>
             Annuler
           </Button>
-          <Button type="submit" className="bg-[var(--gold)] text-black font-semibold">
+          <Button type="submit" className="bg-[#D4C4A8] text-black font-semibold">
             {editingEvent ? 'Enregistrer' : 'Créer'}
           </Button>
         </div>

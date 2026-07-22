@@ -31,22 +31,26 @@
   font-family: 'Museo Sans';
   src: url('./assets/fonts/museo-sans/MuseoSans-700.otf') format('opentype');
   font-weight: 700;
-  font-style: normal;
   font-display: swap;
+}
+
+html, body {
+  background-color: var(--color-charcoal, #0d0d0d) !important;
+  color: var(--color-charcoal-fg, #f2ede4);
 }
 
 :root {
   /* Unified Design Tokens Bridge */
-  --bg-deep: var(--color-base, #0A0B0D);
-  --bg-main: var(--color-base, #0A0B0D);
-  --bg-panel: var(--color-surface, #111214);
+  --bg-deep: var(--color-charcoal, #0d0d0d);
+  --bg-main: var(--color-charcoal, #0d0d0d);
+  --bg-panel: var(--color-charcoal, #0d0d0d);
 
   --text-primary: var(--color-ink, #F5F5F4);
   --text-secondary: var(--color-ink-soft, #9A9A93);
   --text-muted: var(--color-ink-faint, #6B6B64);
 
   --border-subtle: var(--color-line, rgba(255, 255, 255, 0.06));
-  --border-active: var(--color-line-focus, rgba(245, 158, 11, 0.35));
+  --border-active: var(--color-line-focus, rgba(212, 196, 168, 0.35));
 
   --purple: var(--color-amber, #F59E0B);
   --purple-deep: var(--color-surface, #111214);
@@ -97,22 +101,40 @@ body {
 }
 
 /* ============================================================
-   GLOBAL SCROLLBAR (Dark Mode)
+   GLOBAL UNIFIED SCROLLBAR (Dark & Beige)
    ============================================================ */
 
+* {
+  scrollbar-color: var(--color-beige, #D4C4A8) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar,
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
+*::-webkit-scrollbar-track,
 ::-webkit-scrollbar-track {
   background: rgba(10, 10, 20, 0.3);
 }
+
+*::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb {
-  background: rgba(245, 158, 11, 0.3);
+  background: var(--color-beige, #D4C4A8);
   border-radius: 4px;
 }
+
+*::-webkit-scrollbar-thumb:hover,
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(245, 158, 11, 0.6);
+  background: var(--color-beige, #D4C4A8);
+  filter: brightness(1.15);
+}
+
+*::-webkit-scrollbar-corner,
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* ============================================================
@@ -670,9 +692,9 @@ input, select, textarea {
 }
 
 input:focus, select:focus, textarea:focus {
-  outline: none;
-  border-color: var(--color-amber);
-  box-shadow: 0 0 6px var(--color-amber-glow);
+  outline: none !important;
+  border-color: var(--color-beige, #D4C4A8);
+  box-shadow: none !important;
 }
 
 /* Custom Date Input Styling (Dark Calendar & White Icon) */

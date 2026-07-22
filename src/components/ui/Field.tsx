@@ -14,4 +14,4 @@ export const Field: React.FC<FieldProps> = ({ label, className = '', children })
 );
 
 export const inputClass =
-  'w-full rounded-control border border-line-strong bg-base px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-line-focus placeholder:text-ink-faint';
+  'w-full rounded-control border border-line-strong bg-base px-3 py-2 text-sm text-ink outline-none transition-colors focus:border-[#D4C4A8] placeholder:text-ink-faint';

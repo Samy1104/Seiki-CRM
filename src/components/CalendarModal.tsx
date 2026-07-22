@@ -98,7 +98,7 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
         left: pos.left,
         width: Math.max(pos.width, 264),
         background: "#111",
-        borderTop: "1px solid #c8b89a",
+        borderTop: "1px solid var(--color-beige, #D4C4A8)",
         borderLeft: "1px solid rgba(242,237,228,0.08)",
         borderRight: "1px solid rgba(242,237,228,0.08)",
         borderBottom: "1px solid rgba(242,237,228,0.08)",
@@ -172,8 +172,8 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
               onClick={() => !disabled && selectDay(day)}
               className="flex items-center justify-center h-8 text-[13px] transition-all duration-100"
               style={{
-                color: disabled ? "#2a2a2a" : selected ? "#0d0d0d" : todayMark ? "#c8b89a" : "#b0afa8",
-                background: selected ? "#c8b89a" : "transparent",
+                color: disabled ? "#2a2a2a" : selected ? "#0d0d0d" : todayMark ? "var(--color-beige, #D4C4A8)" : "#b0afa8",
+                background: selected ? "var(--color-beige, #D4C4A8)" : "transparent",
                 cursor: disabled ? "not-allowed" : "pointer",
                 fontWeight: selected ? 600 : todayMark ? 500 : 400,
               }}
@@ -183,7 +183,7 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
               }}
               onMouseLeave={(e) => {
                 if (!disabled && !selected)
-                  (e.currentTarget as HTMLElement).style.color = todayMark ? "#c8b89a" : "#b0afa8";
+                  (e.currentTarget as HTMLElement).style.color = todayMark ? "var(--color-beige, #D4C4A8)" : "#b0afa8";
               }}
             >
               {day}
