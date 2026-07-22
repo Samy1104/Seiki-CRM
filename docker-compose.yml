@@ -10,10 +10,12 @@ services:
     restart: unless-stopped
 
     ports:
-      # Change HOST_PORT (or the left-hand side directly) to whatever
-      # port the host wants to expose this on. The container itself
-      # always listens on 8080 internally.
-      - "${HOST_PORT:-8080}:8080"
+      # Bound to 127.0.0.1 only: this container is never meant to be
+      # reachable directly from outside the machine it runs on. A
+      # reverse proxy (system Nginx, Traefik, Caddy, ...) sits in front,
+      # terminates the real domain/TLS, and forwards to this loopback
+      # port. Change HOST_PORT if that port is already taken.
+      - "127.0.0.1:${HOST_PORT:-8080}:8080"
 
     # ---- Hardening ----
     # The image runs as a non-root user already (see Dockerfile), this
