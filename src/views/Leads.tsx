@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
-import type { Lead, MergeProposal } from '../services/leadsService';
+import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
-import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
@@ -12,8 +11,7 @@ import { AccentButton } from '../components/ui/AccentButton';
 import { SegmentedToggle } from '../components/ui/SegmentedToggle';
 import { Badge } from '../components/ui/Badge';
 import { confirmAction } from '../utils/confirmAction';
-import { useLoadOnMount } from '../hooks/useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from '../hooks/useCachedResource';
 
 interface LeadsProps {
   setView: (view: string) => void;
@@ -23,10 +21,6 @@ const scoreClass = (score: number) => (score >= 80 ? 'text-success' : score >= 6
 
 export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   const { showToast } = useToast();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [mergeProposals, setMergeProposals] = useState<MergeProposal[]>([]);
-  const [loading, setLoading] = useState(true);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -39,23 +33,25 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const loadLeadsData = () => withLoadingState(async () => {
-    const fetchedLeads = await leadsService.getLeads(archiveFilter);
-    const fetchedMembers = await settingsService.getTeamMembers();
-    const proposals = await leadsService.getMergeProposals();
+  const onError = (err: unknown) => {
+    console.error('Error loading leads data:', err);
+    showToast('Erreur lors du chargement', 'error');
+  };
 
-    setLeads(fetchedLeads);
-    setTeamMembers(fetchedMembers);
-    setMergeProposals(proposals);
-  }, {
-    setLoading,
-    onError: (err) => {
-      console.error('Error loading leads data:', err);
-      showToast('Erreur lors du chargement', 'error');
-    }
-  });
+  const leadsRes = useCachedResource(`leads:${archiveFilter}`, () => leadsService.getLeads(archiveFilter), [], { onError });
+  const teamMembersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
+  const mergeProposalsRes = useCachedResource('mergeProposals', () => leadsService.getMergeProposals(), [], { onError });
 
-  useLoadOnMount(loadLeadsData, [archiveFilter]);
+  const leads = leadsRes.data;
+  const teamMembers = teamMembersRes.data;
+  const mergeProposals = mergeProposalsRes.data;
+  const loading = leadsRes.loading || teamMembersRes.loading || mergeProposalsRes.loading;
+
+  const loadLeadsData = () => Promise.all([
+    leadsRes.reload(),
+    teamMembersRes.reload(),
+    mergeProposalsRes.reload(),
+  ]).then(() => {});
 
   const handleOpenLead = async (leadId: string) => {
     try {

@@ -1,47 +1,36 @@
-import { useState } from 'react';
 import { tasksService } from '../services/tasksService';
 import type { Task } from '../services/tasksService';
 import { leadsService } from '../services/leadsService';
-import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
-import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
-import { useLoadOnMount } from './useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from './useCachedResource';
 
 export function useTasksData() {
   const { showToast } = useToast();
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [loading, setLoading] = useState(true);
+  const onError = (err: unknown) => {
+    console.error('Error loading tasks data:', err);
+    showToast('Erreur lors du chargement des tâches', 'error');
+  };
 
-  const loadTasksData = () =>
-    withLoadingState(
-      async () => {
-        const fetchedTasks = await tasksService.getTasks();
-        const fetchedLeads = await leadsService.getLeads();
-        const fetchedMembers = await settingsService.getTeamMembers();
+  const tasksRes = useCachedResource('tasks', () => tasksService.getTasks(), [], { onError });
+  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(), [], { onError });
+  const teamMembersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
 
-        setTasks(fetchedTasks);
-        setLeads(fetchedLeads);
-        setTeamMembers(fetchedMembers);
-      },
-      {
-        setLoading,
-        onError: (err) => {
-          console.error('Error loading tasks data:', err);
-          showToast('Erreur lors du chargement des tâches', 'error');
-        },
-      }
-    );
+  const tasks = tasksRes.data;
+  const leads = leadsRes.data;
+  const teamMembers = teamMembersRes.data;
+  const loading = tasksRes.loading || leadsRes.loading || teamMembersRes.loading;
 
-  useLoadOnMount(loadTasksData, []);
+  const loadTasksData = () => Promise.all([
+    tasksRes.reload(),
+    leadsRes.reload(),
+    teamMembersRes.reload(),
+  ]).then(() => {});
 
   const handleStatusChange = async (taskId: string, newStatus: 'todo' | 'in_progress' | 'done') => {
     try {
       await tasksService.updateTask(taskId, { status: newStatus });
-      setTasks((prev) =>
+      tasksRes.setData((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
       );
       showToast('Statut mis à jour');
@@ -54,7 +43,7 @@ export function useTasksData() {
   const handleDeleteTask = async (taskId: string) => {
     try {
       await tasksService.deleteTask(taskId);
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      tasksRes.setData((prev) => prev.filter((t) => t.id !== taskId));
       showToast('Tâche supprimée');
     } catch (err) {
       console.error('Error deleting task:', err);
@@ -65,7 +54,7 @@ export function useTasksData() {
   const handlePriorityChange = async (taskId: string, priority: 'high' | 'medium' | 'low') => {
     try {
       await tasksService.updateTask(taskId, { priority });
-      setTasks((prev) =>
+      tasksRes.setData((prev) =>
         prev.map((t) => (t.id === taskId ? { ...t, priority } : t))
       );
       showToast('Priorité mise à jour');
@@ -118,7 +107,7 @@ export function useTasksData() {
     if (!trimmed) return;
 
     // Immediate optimistic state update
-    setTasks((prev) =>
+    tasksRes.setData((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, description: trimmed } : t))
     );
 
@@ -134,7 +123,6 @@ export function useTasksData() {
 
   return {
     tasks,
-    setTasks,
     leads,
     teamMembers,
     loading,

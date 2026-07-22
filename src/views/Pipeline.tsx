@@ -2,13 +2,11 @@ import React, { useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
-import type { PipelineStage, TeamMember, SlaLimits } from '../services/settingsService';
+import type { PipelineStage } from '../services/settingsService';
 import { tasksService } from '../services/tasksService';
-import type { Task } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
 import { isSlaBreached } from '../utils/leadMetrics';
-import { useLoadOnMount } from '../hooks/useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from '../hooks/useCachedResource';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
 import { AccentButton } from '../components/ui/AccentButton';
@@ -22,38 +20,35 @@ interface PipelineProps {
 
 export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   const { showToast } = useToast();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [slaLimits, setSlaLimits] = useState<SlaLimits>({ Media: 5, Retail: 7, Instit: 14 });
-  const [loading, setLoading] = useState(true);
+  const onError = (err: unknown) => {
+    console.error('Error loading pipeline data:', err);
+    showToast('Erreur de chargement des données', 'error');
+  };
+
+  const stagesRes = useCachedResource('pipelineStages', () => settingsService.getPipelineStages(), [], { onError });
+  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(), [], { onError });
+  const teamMembersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
+  const tasksRes = useCachedResource('tasks', () => tasksService.getTasks(), [], { onError });
+  const slaLimitsRes = useCachedResource('slaLimits', () => settingsService.getSlaLimits(), { Media: 5, Retail: 7, Instit: 14 }, { onError });
+
+  const stages = stagesRes.data;
+  const leads = leadsRes.data;
+  const teamMembers = teamMembersRes.data;
+  const tasks = tasksRes.data;
+  const slaLimits = slaLimitsRes.data;
+  const loading = stagesRes.loading || leadsRes.loading || teamMembersRes.loading || tasksRes.loading || slaLimitsRes.loading;
+
+  const reloadPipelineData = () => Promise.all([
+    stagesRes.reload(),
+    leadsRes.reload(),
+    teamMembersRes.reload(),
+    tasksRes.reload(),
+    slaLimitsRes.reload(),
+  ]).then(() => {});
 
   // Modal state
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
-
-  const loadPipelineData = () => withLoadingState(async () => {
-    const fetchedStages = await settingsService.getPipelineStages();
-    const fetchedLeads = await leadsService.getLeads();
-    const fetchedMembers = await settingsService.getTeamMembers();
-    const fetchedTasks = await tasksService.getTasks();
-    const limits = await settingsService.getSlaLimits();
-
-    setStages(fetchedStages);
-    setLeads(fetchedLeads);
-    setTeamMembers(fetchedMembers);
-    setTasks(fetchedTasks);
-    setSlaLimits(limits);
-  }, {
-    setLoading,
-    onError: (err) => {
-      console.error('Error loading pipeline data:', err);
-      showToast('Erreur de chargement des données', 'error');
-    }
-  });
-
-  useLoadOnMount(loadPipelineData);
 
   const handleOpenLead = async (leadId: string) => {
     try {
@@ -171,7 +166,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
         )}
         onCardMove={async (leadId, _fromCol, toCol) => {
           await leadsService.updateLead(leadId, { stage_id: toCol });
-          setLeads((prev) =>
+          leadsRes.setData((prev) =>
             prev.map((l) => (l.id === leadId ? { ...l, stage_id: toCol } : l))
           );
         }}
@@ -189,7 +184,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           slaLimits={slaLimits}
           showToast={showToast}
           onClose={() => setModalOpen(false)}
-          onChanged={loadPipelineData}
+          onChanged={reloadPipelineData}
         />
       )}
     </div>

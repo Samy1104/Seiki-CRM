@@ -1,48 +1,33 @@
 import { useState } from 'react';
 import { leadsService, type Lead } from '../services/leadsService';
-import { tasksService, type Task } from '../services/tasksService';
-import { eventsService, type EventItem } from '../services/eventsService';
-import { settingsService, type PipelineStage, type SlaLimits } from '../services/settingsService';
+import { tasksService } from '../services/tasksService';
+import { eventsService } from '../services/eventsService';
+import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
-import { useLoadOnMount } from './useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from './useCachedResource';
 import { isSlaBreached, computeSegmentStats } from '../utils/leadMetrics';
 
 export function useCodirData() {
   const { showToast } = useToast();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [slaLimits, setSlaLimits] = useState<SlaLimits>({ Media: 5, Retail: 7, Instit: 14 });
-  const [loading, setLoading] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const loadCodirData = () =>
-    withLoadingState(
-      async () => {
-        const fetchedLeads = await leadsService.getLeads();
-        const fetchedTasks = await tasksService.getTasks();
-        const fetchedEvents = await eventsService.getEvents();
-        const fetchedStages = await settingsService.getPipelineStages();
-        const limits = await settingsService.getSlaLimits();
+  const onError = (err: unknown) => {
+    console.error('Error loading CODIR data:', err);
+    showToast('Erreur de chargement des rapports', 'error');
+  };
 
-        setLeads(fetchedLeads);
-        setTasks(fetchedTasks);
-        setEvents(fetchedEvents);
-        setStages(fetchedStages);
-        setSlaLimits(limits);
-      },
-      {
-        setLoading,
-        onError: (err) => {
-          console.error('Error loading CODIR data:', err);
-          showToast('Erreur de chargement des rapports', 'error');
-        },
-      }
-    );
+  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(), [], { onError });
+  const tasksRes = useCachedResource('tasks', () => tasksService.getTasks(), [], { onError });
+  const eventsRes = useCachedResource('agendaEvents', () => eventsService.getEvents(), [], { onError });
+  const stagesRes = useCachedResource('pipelineStages', () => settingsService.getPipelineStages(), [], { onError });
+  const slaLimitsRes = useCachedResource('slaLimits', () => settingsService.getSlaLimits(), { Media: 5, Retail: 7, Instit: 14 }, { onError });
 
-  useLoadOnMount(loadCodirData);
+  const leads = leadsRes.data;
+  const tasks = tasksRes.data;
+  const events = eventsRes.data;
+  const stages = stagesRes.data;
+  const slaLimits = slaLimitsRes.data;
+  const loading = leadsRes.loading || tasksRes.loading || eventsRes.loading || stagesRes.loading || slaLimitsRes.loading;
 
   const toggleFullscreen = () => {
     const element = document.documentElement;

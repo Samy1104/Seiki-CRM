@@ -1,33 +1,25 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { leadsService } from '../services/leadsService';
-import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
-import type { PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { TrendingUp, Compass, Award } from 'lucide-react';
 import { computeSegmentStats } from '../utils/leadMetrics';
-import { useLoadOnMount } from '../hooks/useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from '../hooks/useCachedResource';
 import { KpiTile } from '../components/ui/KpiTile';
 
 export const Stats: React.FC = () => {
   const { showToast } = useToast();
-  const [leads, setLeads] = useState<Lead[]>([]);
-  const [stages, setStages] = useState<PipelineStage[]>([]);
-  const [loading, setLoading] = useState(true);
+  const onError = (err: unknown) => {
+    console.error('Error loading stats data:', err);
+    showToast('Erreur de chargement des statistiques', 'error');
+  };
 
-  useLoadOnMount(() => withLoadingState(async () => {
-    const fetchedLeads = await leadsService.getLeads();
-    const fetchedStages = await settingsService.getPipelineStages();
-    setLeads(fetchedLeads);
-    setStages(fetchedStages);
-  }, {
-    setLoading,
-    onError: (err) => {
-      console.error('Error loading stats data:', err);
-      showToast('Erreur de chargement des statistiques', 'error');
-    }
-  }));
+  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(), [], { onError });
+  const stagesRes = useCachedResource('pipelineStages', () => settingsService.getPipelineStages(), [], { onError });
+
+  const leads = leadsRes.data;
+  const stages = stagesRes.data;
+  const loading = leadsRes.loading || stagesRes.loading;
 
   if (loading) {
     return (

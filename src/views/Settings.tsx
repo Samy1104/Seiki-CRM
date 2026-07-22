@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { settingsService } from '../services/settingsService';
-import type { TeamMember, PipelineStage } from '../services/settingsService';
+import type { AppSetting, TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Users, Target, Sliders } from 'lucide-react';
-import { useLoadOnMount } from '../hooks/useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from '../hooks/useCachedResource';
 import { confirmAction } from '../utils/confirmAction';
 import { MembersTab } from './settings/MembersTab';
 import { PipelineStagesTab } from './settings/PipelineStagesTab';
@@ -23,11 +22,6 @@ const TABS = [
 export const Settings: React.FC = () => {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla' | 'prospection'>('members');
-  const [loading, setLoading] = useState(true);
-
-  // Data lists
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [stages, setStages] = useState<PipelineStage[]>([]);
 
   // Form states - Member
   const [newMemberFirstName, setNewMemberFirstName] = useState('');
@@ -52,16 +46,28 @@ export const Settings: React.FC = () => {
   const [followup2Days, setFollowup2Days] = useState(10);
   const [archiveAfter, setArchiveAfter] = useState(2);
 
-  const loadSettingsData = () => withLoadingState(async () => {
-    const fetchedMembers = await settingsService.getTeamMembers();
-    const fetchedStages = await settingsService.getPipelineStages();
-    const fetchedSettings = await settingsService.getSettings();
+  const onError = (err: unknown) => {
+    console.error('Error loading settings data:', err);
+    showToast('Erreur lors du chargement des paramètres', 'error');
+  };
 
-    setMembers(fetchedMembers);
-    setStages(fetchedStages);
+  const membersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
+  const stagesRes = useCachedResource('pipelineStages', () => settingsService.getPipelineStages(), [], { onError });
+  const settingsRes = useCachedResource<AppSetting[]>('appSettings', () => settingsService.getSettings(), [], { onError });
 
-    // Populate SLA & AI settings
-    fetchedSettings.forEach(s => {
+  const members = membersRes.data;
+  const stages = stagesRes.data;
+  const loading = membersRes.loading || stagesRes.loading || settingsRes.loading;
+
+  const loadSettingsData = () => Promise.all([
+    membersRes.reload(),
+    stagesRes.reload(),
+    settingsRes.reload(),
+  ]).then(() => {});
+
+  // Populate SLA & AI settings whenever the fetched settings change
+  useEffect(() => {
+    settingsRes.data.forEach(s => {
       if (s.key === 'sla_media' && s.value.days !== undefined) setSlaMedia(s.value.days);
       if (s.key === 'sla_retail' && s.value.days !== undefined) setSlaRetail(s.value.days);
       if (s.key === 'sla_instit' && s.value.days !== undefined) setSlaInstit(s.value.days);
@@ -71,15 +77,8 @@ export const Settings: React.FC = () => {
       if (s.key === 'followup_2_days' && s.value.days !== undefined) setFollowup2Days(s.value.days);
       if (s.key === 'archive_after_followups' && s.value.count !== undefined) setArchiveAfter(s.value.count);
     });
-  }, {
-    setLoading,
-    onError: (err) => {
-      console.error('Error loading settings data:', err);
-      showToast('Erreur lors du chargement des paramètres', 'error');
-    }
-  });
-
-  useLoadOnMount(loadSettingsData);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settingsRes.data]);
 
   // Team Member Actions
   const handleAddMember = async (e: React.FormEvent) => {

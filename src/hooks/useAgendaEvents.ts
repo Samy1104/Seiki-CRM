@@ -1,30 +1,18 @@
-import { useState } from 'react';
 import { eventsService, type EventItem } from '../services/eventsService';
 import { useToast } from '../context/ToastContext';
-import { useLoadOnMount } from './useLoadOnMount';
-import { withLoadingState } from '../utils/withLoadingState';
+import { useCachedResource } from './useCachedResource';
 
 export function useAgendaEvents() {
   const { showToast } = useToast();
-  const [events, setEvents] = useState<EventItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const onError = (err: unknown) => {
+    console.error('Error loading agenda events:', err);
+    showToast('Erreur lors du chargement de l\'agenda', 'error');
+  };
 
-  const loadEvents = () =>
-    withLoadingState(
-      async () => {
-        const fetchedEvents = await eventsService.getEvents();
-        setEvents(fetchedEvents);
-      },
-      {
-        setLoading,
-        onError: (err) => {
-          console.error('Error loading agenda events:', err);
-          showToast('Erreur lors du chargement de l\'agenda', 'error');
-        },
-      }
-    );
-
-  useLoadOnMount(loadEvents, []);
+  const eventsRes = useCachedResource<EventItem[]>('agendaEvents', () => eventsService.getEvents(), [], { onError });
+  const events = eventsRes.data;
+  const loading = eventsRes.loading;
+  const loadEvents = () => eventsRes.reload();
 
   const handleCreateEvent = async (eventData: Omit<EventItem, 'id' | 'created_at' | 'updated_at' | 'ical_uid'>) => {
     try {
@@ -61,7 +49,6 @@ export function useAgendaEvents() {
 
   return {
     events,
-    setEvents,
     loading,
     reloadEvents: loadEvents,
     handleCreateEvent,

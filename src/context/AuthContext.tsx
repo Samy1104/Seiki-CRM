@@ -21,6 +21,46 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_CACHE_KEY = 'seiki:authState';
+
+interface CachedAuth {
+  isAuthenticated: boolean;
+  user: UserProfile | null;
+}
+
+/**
+ * Supabase's own getSession() is async even when the token is already sitting
+ * in localStorage, so every full page refresh forces at least one render of
+ * the "Démarrage de Seiki CRM..." gate before it resolves. Caching the last
+ * known auth result lets the protected UI render immediately on refresh,
+ * while getSession() still runs in the background to catch a revoked/expired
+ * session and correct the state.
+ */
+function loadCachedAuth(): CachedAuth | null {
+  try {
+    const raw = sessionStorage.getItem(AUTH_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as CachedAuth) : null;
+  } catch {
+    return null;
+  }
+}
+
+function persistAuth(next: CachedAuth): void {
+  try {
+    sessionStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(next));
+  } catch {
+    // storage unavailable/full — auth still works, just without the cached fast-path
+  }
+}
+
+function clearCachedAuth(): void {
+  try {
+    sessionStorage.removeItem(AUTH_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 function toUserProfile(session: Session): UserProfile {
   const email = session.user.email ?? '';
   const meta = session.user.user_metadata ?? {};
@@ -39,9 +79,10 @@ function toUserProfile(session: Session): UserProfile {
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const cachedAuth = loadCachedAuth();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(cachedAuth?.isAuthenticated ?? false);
+  const [user, setUser] = useState<UserProfile | null>(cachedAuth?.user ?? null);
+  const [loading, setLoading] = useState<boolean>(!cachedAuth);
 
   const fetchUserProfile = async (session: Session): Promise<UserProfile> => {
     const fallbackProfile = toUserProfile(session);
@@ -75,12 +116,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(false);
       setUser(null);
       setLoading(false);
+      clearCachedAuth();
       return;
     }
     setIsAuthenticated(true);
     const profile = await fetchUserProfile(session);
     setUser(profile);
     setLoading(false);
+    persistAuth({ isAuthenticated: true, user: profile });
   };
 
   useEffect(() => {
