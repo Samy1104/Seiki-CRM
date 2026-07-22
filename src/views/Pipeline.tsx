@@ -9,9 +9,9 @@ import { useToast } from '../context/ToastContext';
 import { isSlaBreached } from '../utils/leadMetrics';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
 import { withLoadingState } from '../utils/withLoadingState';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
-import { Button } from '../components/ui/Button';
+import { HeaderActionButton } from '../components/ui/HeaderActionButton';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DealCard } from './pipeline/DealCard';
 import { SeikiKanbanBoard } from '../components/ui/SeikiKanbanBoard';
@@ -107,10 +107,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
         <div>
           <div className="font-display text-3xl font-bold text-ink">Pipeline</div>
         </div>
-        <Button variant="primary" onClick={() => setView('add')}>
-          <Plus size={16} />
-          Nouveau lead
-        </Button>
+        <HeaderActionButton onClick={() => setView('add')}>Nouveau lead</HeaderActionButton>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">

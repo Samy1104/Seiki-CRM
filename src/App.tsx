@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
@@ -21,6 +21,8 @@ import './App.css';
 
 const AppRoutes: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const goToCrmView = (view: string) => navigate(`/crm/${view}`);
 
   return (
     <Routes>
@@ -38,9 +40,9 @@ const AppRoutes: React.FC = () => {
         {/* CRM Section with CrmLayout */}
         <Route path="/crm" element={<CrmLayout />}>
           <Route index element={<Navigate to="/crm/pipeline" replace />} />
-          <Route path="pipeline" element={<Pipeline setView={() => {}} />} />
-          <Route path="leads" element={<Leads setView={() => {}} />} />
-          <Route path="add" element={<AddLead setView={() => {}} />} />
+          <Route path="pipeline" element={<Pipeline setView={goToCrmView} />} />
+          <Route path="leads" element={<Leads setView={goToCrmView} />} />
+          <Route path="add" element={<AddLead setView={goToCrmView} />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="agenda" element={<Agenda />} />
           <Route path="stats" element={<Stats />} />

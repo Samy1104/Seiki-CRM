@@ -8,6 +8,8 @@ import { Search, Filter, Layers } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
+import { HeaderActionButton } from '../components/ui/HeaderActionButton';
+import { SegmentedToggle } from '../components/ui/SegmentedToggle';
 import { Badge } from '../components/ui/Badge';
 import { confirmAction } from '../utils/confirmAction';
 import { useLoadOnMount } from '../hooks/useLoadOnMount';
@@ -19,7 +21,7 @@ interface LeadsProps {
 
 const scoreClass = (score: number) => (score >= 80 ? 'text-success' : score >= 60 ? 'text-amber' : 'text-danger');
 
-export const Leads: React.FC<LeadsProps> = () => {
+export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   const { showToast } = useToast();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
@@ -131,13 +133,16 @@ export const Leads: React.FC<LeadsProps> = () => {
           <div className="font-display text-3xl font-bold text-ink">Tous les leads</div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant={!archiveFilter ? 'primary' : 'ghost'} size="sm" onClick={() => setArchiveFilter(false)}>
-            Actifs
-          </Button>
-          <Button variant={archiveFilter ? 'primary' : 'ghost'} size="sm" onClick={() => setArchiveFilter(true)}>
-            Archivés
-          </Button>
+        <div className="flex items-center gap-4">
+          <SegmentedToggle
+            value={archiveFilter ? 'archived' : 'active'}
+            onChange={(v) => setArchiveFilter(v === 'archived')}
+            options={[
+              { value: 'active', label: 'Actifs' },
+              { value: 'archived', label: 'Archivés' },
+            ]}
+          />
+          <HeaderActionButton onClick={() => setView('add')}>Nouveau lead</HeaderActionButton>
         </div>
       </div>
 
