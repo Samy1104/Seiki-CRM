@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Plus, ChevronUp, Calendar } from "lucide-react";
+import { Plus, ChevronUp, ChevronDown, Calendar } from "lucide-react";
 import CalendarModal from "../../components/CalendarModal";
+import { SegmentSelectModal } from "./SegmentSelectModal";
 import type { EventItem } from "../../services/eventsService";
 
 export const SEGMENTS = [
@@ -48,7 +49,9 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
 
   const startDateRef = useRef<HTMLButtonElement>(null);
   const endDateRef = useRef<HTMLButtonElement>(null);
+  const segmentRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLDivElement>(null);
+  const [segmentModalOpen, setSegmentModalOpen] = useState(false);
 
   // Sync form when editingEvent changes
   useEffect(() => {
@@ -81,12 +84,17 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
 
   function inputStyle(field: string) {
     return {
+      borderTop: "none",
+      borderLeft: "none",
+      borderRight: "none",
+      borderRadius: "0",
       borderBottom: `1px solid ${
         focusedField === field ? "var(--color-beige, #D4C4A8)" : "rgba(242,237,228,0.12)"
       }`,
       transition: "border-color 0.2s ease",
       outline: "none",
       boxShadow: "none",
+      background: "transparent",
     };
   }
 
@@ -164,7 +172,7 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
         style={{ borderBottom: "1px solid rgba(242,237,228,0.08)" }}
       >
         <div className="overflow-hidden">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-7">
               {/* Nom */}
               <div className="flex flex-col gap-2">
@@ -174,12 +182,13 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
                 <input
                   type="text"
                   required
+                  autoComplete="off"
                   placeholder="ex : MIPIM Cannes"
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
                   onFocus={() => setFocusedField("name")}
                   onBlur={() => setFocusedField(null)}
-                  className="bg-transparent outline-none focus:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
+                  className="bg-transparent rounded-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
                   style={{
                     color: "var(--color-charcoal-fg, #f2ede4)",
                     caretColor: "var(--color-beige, #D4C4A8)",
@@ -195,12 +204,13 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
                 </label>
                 <input
                   type="text"
+                  autoComplete="off"
                   placeholder="ex : Cannes, France"
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                   onFocus={() => setFocusedField("location")}
                   onBlur={() => setFocusedField(null)}
-                  className="bg-transparent outline-none focus:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
+                  className="bg-transparent rounded-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
                   style={{
                     color: "var(--color-charcoal-fg, #f2ede4)",
                     caretColor: "var(--color-beige, #D4C4A8)",
@@ -223,7 +233,7 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
                     borderBottom: `1px solid ${
                       openCal === "startDate" ? "var(--color-beige, #D4C4A8)" : "rgba(242,237,228,0.12)"
                     }`,
-                    color: form.startDate ? "var(--color-charcoal-fg, #f2ede4)" : "#444",
+                    color: form.startDate ? "var(--color-charcoal-fg, #f2ede4)" : "#555",
                   }}
                 >
                   <span className="text-[13px]">
@@ -261,7 +271,7 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
                     borderBottom: `1px solid ${
                       openCal === "endDate" ? "var(--color-beige, #D4C4A8)" : "rgba(242,237,228,0.12)"
                     }`,
-                    color: form.endDate ? "var(--color-charcoal-fg, #f2ede4)" : "#444",
+                    color: form.endDate ? "var(--color-charcoal-fg, #f2ede4)" : "#555",
                   }}
                 >
                   <span className="text-[13px]">
@@ -287,28 +297,35 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
               </div>
 
               {/* Segment */}
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 relative">
                 <label className="text-[10px] tracking-[0.2em] uppercase" style={{ color: "#555" }}>
                   Segment ciblé
                 </label>
-                <select
-                  value={form.segment}
-                  onChange={(e) => setForm({ ...form, segment: e.target.value })}
-                  onFocus={() => setFocusedField("segment")}
-                  onBlur={() => setFocusedField(null)}
-                  className="bg-transparent outline-none focus:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full appearance-none cursor-pointer"
+                <button
+                  ref={segmentRef}
+                  type="button"
+                  onClick={() => setSegmentModalOpen((v) => !v)}
+                  className="flex items-center justify-between py-2 px-0 w-full text-left transition-colors duration-200 cursor-pointer outline-none focus:outline-none focus-visible:outline-none focus:ring-0"
                   style={{
+                    borderBottom: `1px solid ${
+                      segmentModalOpen ? "var(--color-beige, #D4C4A8)" : "rgba(242,237,228,0.12)"
+                    }`,
                     color: "var(--color-charcoal-fg, #f2ede4)",
-                    colorScheme: "dark",
-                    ...inputStyle("segment"),
+                    outline: "none",
                   }}
                 >
-                  {SEGMENTS.map((s) => (
-                    <option key={s} value={s} style={{ background: "#1a1a1a", color: "#f2ede4" }}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  <span className="text-[13px]">{form.segment}</span>
+                  <ChevronDown size={13} strokeWidth={1.5} style={{ color: "#555" }} />
+                </button>
+                {segmentModalOpen && (
+                  <SegmentSelectModal
+                    options={SEGMENTS}
+                    value={form.segment}
+                    onChange={(v) => setForm({ ...form, segment: v })}
+                    onClose={() => setSegmentModalOpen(false)}
+                    anchorRef={segmentRef}
+                  />
+                )}
               </div>
 
               {/* Objectif — full width */}
@@ -318,12 +335,13 @@ export const AgendaForm: React.FC<AgendaFormProps> = ({
                 </label>
                 <input
                   type="text"
+                  autoComplete="off"
                   placeholder="ex : Rencontre 5 prospects et qualification"
                   value={form.objective}
                   onChange={(e) => setForm({ ...form, objective: e.target.value })}
                   onFocus={() => setFocusedField("objective")}
                   onBlur={() => setFocusedField(null)}
-                  className="bg-transparent outline-none focus:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
+                  className="bg-transparent rounded-none outline-none focus:outline-none focus-visible:outline-none focus:ring-0 text-[13px] py-2 px-0 w-full"
                   style={{
                     color: "var(--color-charcoal-fg, #f2ede4)",
                     caretColor: "var(--color-beige, #D4C4A8)",

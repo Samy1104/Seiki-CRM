@@ -39,6 +39,40 @@ html, body {
   color: var(--color-charcoal-fg, #f2ede4);
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #555 !important;
+  opacity: 1 !important;
+}
+
+/* Eliminate all native outlines, focus rings, and browser autofill blue boxes */
+*,
+*:focus,
+*:focus-visible,
+*:focus-within,
+input,
+input:focus,
+input:focus-visible,
+textarea,
+textarea:focus,
+textarea:focus-visible,
+button,
+button:focus,
+button:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0d0d0d inset !important;
+  -webkit-text-fill-color: #f2ede4 !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
 :root {
   /* Unified Design Tokens Bridge */
   --bg-deep: var(--color-charcoal, #0d0d0d);
