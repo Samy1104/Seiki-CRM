@@ -113,6 +113,25 @@ export function useTasksData() {
     }
   };
 
+  const handleDescriptionChange = async (taskId: string, description: string) => {
+    const trimmed = description.trim();
+    if (!trimmed) return;
+
+    // Immediate optimistic state update
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, description: trimmed } : t))
+    );
+
+    try {
+      await tasksService.updateTask(taskId, { description: trimmed });
+      showToast('Nom de la tâche mis à jour');
+    } catch (err) {
+      console.error('Error updating task description:', err);
+      showToast('Erreur lors de la mise à jour', 'error');
+      loadTasksData();
+    }
+  };
+
   return {
     tasks,
     setTasks,
@@ -126,5 +145,6 @@ export function useTasksData() {
     handleAssigneeToggle,
     handleLeadChange,
     handleDueDateChange,
+    handleDescriptionChange,
   };
 }

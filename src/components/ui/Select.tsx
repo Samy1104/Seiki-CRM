@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useId
 } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { createPortal } from 'react-dom';
 import { ChevronDown, Check } from 'lucide-react';
 
 // Helper to join classes
@@ -26,6 +26,7 @@ interface SelectContextProps {
   setFocusedValue: (value: string | null) => void;
   staticRegistry: Record<string, { label: React.ReactNode; textValue?: string }>;
   itemsRef: React.RefObject<Record<string, { label: React.ReactNode; textValue?: string }>>;
+  optionValuesRef: React.RefObject<string[]>;
   registerItem: (value: string, label: React.ReactNode, textValue?: string) => void;
   unregisterItem: (value: string) => void;
   triggerId: string;
@@ -99,6 +100,7 @@ export const Select: React.FC<SelectProps> = ({
 
   const [focusedValue, setFocusedValue] = useState<string | null>(null);
   const itemsRef = useRef<Record<string, { label: React.ReactNode; textValue?: string }>>({});
+  const optionValuesRef = useRef<string[]>([]);
 
   const staticRegistry = React.useMemo(() => findSelectItems(children), [children]);
 
@@ -127,10 +129,13 @@ export const Select: React.FC<SelectProps> = ({
 
   const registerItem = useCallback((val: string, label: React.ReactNode, textValue?: string) => {
     itemsRef.current[val] = { label, textValue };
+    if (!optionValuesRef.current.includes(val)) {
+      optionValuesRef.current.push(val);
+    }
   }, []);
 
-  const unregisterItem = useCallback((val: string) => {
-    delete itemsRef.current[val];
+  const unregisterItem = useCallback((_val: string) => {
+    // Retain registry and optionValuesRef so keyboard navigation and SelectValue remain functional when content closes
   }, []);
 
   // Click outside handling
@@ -148,9 +153,13 @@ export const Select: React.FC<SelectProps> = ({
       handleOpenChange(false);
     };
 
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('touchstart', handleOutsideClick);
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleOutsideClick);
+      document.addEventListener('touchstart', handleOutsideClick);
+    }, 0);
+
     return () => {
+      clearTimeout(timer);
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
     };
@@ -167,6 +176,7 @@ export const Select: React.FC<SelectProps> = ({
     setFocusedValue,
     staticRegistry,
     itemsRef,
+    optionValuesRef,
     registerItem,
     unregisterItem,
     triggerId,
@@ -193,71 +203,56 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
       triggerRef,
       focusedValue,
       setFocusedValue,
-      contentRef,
       triggerId,
       contentId,
       disabled,
-      onValueChange
+      onValueChange,
+      optionValuesRef
     } = useSelectContext();
 
     // Expose ref to both context and internal forwardRef
     React.useImperativeHandle(ref, () => triggerRef.current as HTMLButtonElement);
 
-    const getOptions = () => {
-      if (!contentRef.current) return [];
-      return Array.from(
-        contentRef.current.querySelectorAll('[data-select-item]:not([data-disabled="true"])')
-      ) as HTMLElement[];
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    const handleKeyDown = useCallback((e: KeyboardEvent | React.KeyboardEvent) => {
       if (disabled) return;
+
+      const keys = optionValuesRef.current;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
+        e.preventDefault();
+      }
 
       if (!open) {
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
           setOpen(true);
         }
         return;
       }
 
-      const options = getOptions();
-      if (options.length === 0) return;
+      if (keys.length === 0) return;
 
-      const currentIndex = options.findIndex(el => el.getAttribute('data-value') === focusedValue);
+      const curr = keys.indexOf(focusedValue ?? '');
 
       switch (e.key) {
         case 'ArrowDown': {
-          e.preventDefault();
-          const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % options.length;
-          const nextVal = options[nextIndex].getAttribute('data-value');
-          if (nextVal) {
-            setFocusedValue(nextVal);
-            options[nextIndex].scrollIntoView?.({ block: 'nearest' });
-          }
+          const nextIndex = curr === -1 ? 0 : (curr + 1) % keys.length;
+          setFocusedValue(keys[nextIndex]);
           break;
         }
         case 'ArrowUp': {
-          e.preventDefault();
-          const prevIndex = currentIndex === -1 ? options.length - 1 : (currentIndex - 1 + options.length) % options.length;
-          const prevVal = options[prevIndex].getAttribute('data-value');
-          if (prevVal) {
-            setFocusedValue(prevVal);
-            options[prevIndex].scrollIntoView?.({ block: 'nearest' });
-          }
+          const prevIndex = curr === -1 ? keys.length - 1 : (curr - 1 + keys.length) % keys.length;
+          setFocusedValue(keys[prevIndex]);
           break;
         }
         case 'Enter':
         case ' ': {
-          e.preventDefault();
-          if (focusedValue) {
+          if (focusedValue !== null && focusedValue !== undefined) {
             onValueChange?.(focusedValue);
             setOpen(false);
           }
           break;
         }
         case 'Escape': {
-          e.preventDefault();
           setOpen(false);
           break;
         }
@@ -266,7 +261,17 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
           break;
         }
       }
-    };
+    }, [disabled, open, focusedValue, setOpen, onValueChange, setFocusedValue, optionValuesRef]);
+
+    // Single global keyboard listener when open
+    useEffect(() => {
+      if (!open) return;
+      const onGlobalKeyDown = (e: KeyboardEvent) => {
+        handleKeyDown(e);
+      };
+      window.addEventListener('keydown', onGlobalKeyDown);
+      return () => window.removeEventListener('keydown', onGlobalKeyDown);
+    }, [open, handleKeyDown]);
 
     const handleTriggerClick = (e: React.MouseEvent<HTMLButtonElement>) => {
       setOpen(!open);
@@ -274,7 +279,9 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
     };
 
     const handleTriggerKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
-      handleKeyDown(e);
+      if (!open) {
+        handleKeyDown(e);
+      }
       onKeyDown?.(e);
     };
 
@@ -286,24 +293,28 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? contentId : undefined}
-        aria-activedescendant={focusedValue ? `${contentId}-option-${focusedValue}` : undefined}
+        aria-activedescendant={focusedValue !== null ? `${contentId}-option-${focusedValue}` : undefined}
         disabled={disabled}
         {...props}
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-control border border-line bg-surface px-3 py-2 text-sm text-ink hover:bg-hover focus:outline-none focus:border-line-focus disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 cursor-pointer",
+          "flex h-10 w-full items-center justify-between rounded-xl border border-[rgba(242,237,228,0.12)] bg-[#0d0d0d] px-3.5 py-2 text-[12px] text-[#f2ede4] hover:bg-[#161616] focus:outline-none transition-all duration-200 cursor-pointer",
+          open && "border-[var(--color-beige,#D4C4A8)]",
           className
         )}
+        style={{
+          ...props.style,
+        }}
       >
         <span className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
           {children}
         </span>
         <ChevronDown
-          size={16}
+          size={14}
           className={cn(
-            "text-ink-faint transition-transform duration-200 flex-shrink-0 ml-2",
-            open && "transform rotate-180 text-ink"
+            "text-[#666] transition-transform duration-200 flex-shrink-0 ml-2",
+            open && "transform rotate-180 text-[var(--color-beige,#D4C4A8)]"
           )}
         />
       </button>
@@ -335,63 +346,72 @@ export interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement>
 }
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ children, className, ...props }, ref) => {
-    const { open, contentRef, contentId, triggerId, value, setFocusedValue } = useSelectContext();
+  ({ children, className, style, ...props }, ref) => {
+    const { open, contentRef, contentId, triggerId, value, setFocusedValue, triggerRef } = useSelectContext();
+    const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
 
     React.useImperativeHandle(ref, () => contentRef.current as HTMLDivElement);
 
-    // Visual highlighted initial index selection on open
+    React.useLayoutEffect(() => {
+      if (open && triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        setPos({
+          top: rect.bottom + 6,
+          left: rect.left,
+          width: Math.max(rect.width, 180),
+        });
+      }
+    }, [open, triggerRef]);
+
     useEffect(() => {
       if (open) {
-        if (value) {
+        if (value !== undefined) {
           setFocusedValue(value);
-          // Scroll the active item into view on open
-          requestAnimationFrame(() => {
-            if (contentRef.current) {
-              const activeEl = contentRef.current.querySelector(`[data-value="${value}"]`);
-              activeEl?.scrollIntoView?.({ block: 'nearest' });
-            }
-          });
-        } else {
-          // Highlight first option
-          if (contentRef.current) {
-            const options = contentRef.current.querySelectorAll('[data-select-item]:not([data-disabled="true"])');
-            if (options.length > 0) {
-              const firstVal = options[0].getAttribute('data-value');
-              setFocusedValue(firstVal);
-            }
-          }
         }
       } else {
         setFocusedValue(null);
       }
-    }, [open, value, setFocusedValue, contentRef]);
+    }, [open, value, setFocusedValue]);
 
-    return (
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            ref={contentRef}
-            id={contentId}
-            role="listbox"
-            aria-labelledby={triggerId}
-            initial={{ opacity: 0, y: -4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.98 }}
-            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className={cn(
-              "absolute z-50 mt-1.5 max-h-60 min-w-full w-max overflow-y-auto overflow-x-hidden rounded-control border border-line bg-surface p-1 shadow-modal focus:outline-none scrollbar-thin top-full left-0",
-              className
-            )}
-            style={{
-              transformOrigin: 'top center',
-            }}
-            {...(props as any)}
-          >
-            {children}
-          </motion.div>
+    if (!open) return null;
+
+    const rect = triggerRef.current ? triggerRef.current.getBoundingClientRect() : null;
+    const top = rect ? rect.bottom + 6 : pos.top;
+    const left = rect ? rect.left : pos.left;
+    const width = rect ? Math.max(rect.width, 180) : Math.max(pos.width, 180);
+
+    return createPortal(
+      <div
+        ref={contentRef}
+        id={contentId}
+        role="listbox"
+        aria-labelledby={triggerId}
+        {...props}
+        className={cn(
+          "fixed py-2 overflow-hidden max-h-[300px] overflow-y-auto outline-none focus:outline-none scrollbar-thin",
+          className
         )}
-      </AnimatePresence>
+        style={{
+          background: "#111",
+          borderTop: "1px solid var(--color-beige, #D4C4A8)",
+          borderLeft: "1px solid rgba(242,237,228,0.08)",
+          borderRight: "1px solid rgba(242,237,228,0.08)",
+          borderBottom: "1px solid rgba(242,237,228,0.08)",
+          boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
+          fontFamily: "'Inter', sans-serif",
+          userSelect: "none",
+          borderRadius: 0,
+          ...style,
+          position: "fixed",
+          top,
+          left,
+          width,
+          zIndex: 9999,
+        }}
+      >
+        {children}
+      </div>,
+      document.body
     );
   }
 );
@@ -445,6 +465,13 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
       [ref]
     );
 
+    // Auto scroll into view when highlighted
+    useEffect(() => {
+      if (isHighlighted && localRef.current) {
+        localRef.current.scrollIntoView({ block: 'nearest' });
+      }
+    }, [isHighlighted]);
+
     // Register this item in the context registry so SelectValue can display it when selected
     useEffect(() => {
       registerItem(value, children, textValue);
@@ -485,19 +512,25 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
         onKeyDown={onKeyDown}
         onMouseEnter={onMouseEnter}
         className={cn(
-          "relative flex w-full cursor-pointer select-none items-center rounded-control py-1.5 pl-8 pr-2 text-sm text-ink outline-none transition-colors duration-150",
+          "w-full flex items-center justify-between px-4 py-2.5 text-[13px] transition-colors duration-150 cursor-pointer text-left outline-none focus:outline-none focus-visible:outline-none focus:ring-0",
           disabled && "pointer-events-none opacity-50 cursor-not-allowed",
-          isHighlighted && "bg-hover text-ink",
-          isSelected && "bg-amber-soft text-ink font-medium",
           className
         )}
+        style={{
+          color: isSelected || isHighlighted ? "var(--color-beige, #D4C4A8)" : "#b0afa8",
+          background: isHighlighted
+            ? "rgba(212,196,168,0.12)"
+            : isSelected
+            ? "rgba(212,196,168,0.06)"
+            : "transparent",
+          fontWeight: isSelected ? 600 : 400,
+          outline: "none",
+        }}
       >
+        <span>{children}</span>
         {isSelected && (
-          <span className="absolute left-2 flex h-3.5 w-3.5 items-center justify-center text-amber">
-            <Check size={14} strokeWidth={3} />
-          </span>
+          <Check size={13} strokeWidth={2} style={{ color: "var(--color-beige, #D4C4A8)" }} />
         )}
-        <span className="truncate">{children}</span>
       </div>
     );
   }

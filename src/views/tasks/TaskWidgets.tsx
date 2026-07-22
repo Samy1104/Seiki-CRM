@@ -6,6 +6,8 @@ import type { TeamMember } from '../../services/settingsService';
 import type { Lead } from '../../services/leadsService';
 import { getPriorityInfo } from '../../utils/taskPriority';
 
+import CalendarModal from '../../components/CalendarModal';
+
 export interface ActiveDropdown {
   taskId: string;
   type: 'assignee' | 'priority' | 'lead';
@@ -30,13 +32,16 @@ export interface TaskWidgetHandlers {
   onUpdateDueDate: (taskId: string, value: string | null) => void;
   onUpdatePriority: (taskId: string, priority: 'high' | 'medium' | 'low') => void;
   onUpdateLead: (taskId: string, leadId: string | null) => void;
+  onUpdateDescription: (taskId: string, description: string) => void;
 }
 
-const dropdownMenuClass = 'rounded-surface border border-line-strong bg-surface p-1.5 shadow-modal min-w-[180px]';
-const dropdownTitleClass = 'px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-ink-faint';
+const dropdownMenuClass = 'rounded-xl border border-[rgba(242,237,228,0.15)] bg-[#141414] p-2 shadow-[0_12px_36px_rgba(0,0,0,0.6)] min-w-[180px]';
+const dropdownTitleClass = 'px-2.5 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#666] border-b border-[rgba(242,237,228,0.06)] mb-1';
 const dropdownItemClass = (selected: boolean) =>
-  `flex items-center rounded-control px-2 py-1.5 text-xs cursor-pointer transition-colors ${
-    selected ? 'bg-amber-soft text-ink' : 'text-ink-soft hover:bg-hover hover:text-ink'
+  `flex items-center rounded-md px-2.5 py-1.5 text-[12px] cursor-pointer transition-colors ${
+    selected
+      ? 'bg-[rgba(212,196,168,0.14)] text-[var(--color-beige,#D4C4A8)] font-medium'
+      : 'text-[#b0afa8] hover:bg-[#1a1a1a] hover:text-[#f2ede4]'
   }`;
 
 interface AssigneeWidgetProps extends DropdownProps {
@@ -132,30 +137,48 @@ interface DatePickerWidgetProps {
 }
 
 export const DatePickerWidget: React.FC<DatePickerWidgetProps> = ({ task, onUpdateDueDate }) => {
+  const [openCal, setOpenCal] = React.useState(false);
+  const btnRef = React.useRef<HTMLButtonElement>(null);
+
   const isOverdue = task.due_date && task.due_date < new Date().toISOString().slice(0, 10) && task.status !== 'done';
   const isToday = task.due_date === new Date().toISOString().slice(0, 10) && task.status !== 'done';
 
-  const toneClass = isOverdue ? 'text-danger bg-danger/10' : isToday ? 'text-amber bg-amber-soft' : task.due_date ? 'text-ink-soft bg-hover' : 'text-ink-faint';
+  const toneStyle = isOverdue
+    ? { color: 'var(--color-charcoal-danger, #e05252)', background: 'rgba(224, 82, 82, 0.12)' }
+    : isToday
+    ? { color: 'var(--color-amber, #F59E0B)', background: 'rgba(245, 158, 11, 0.14)' }
+    : task.due_date
+    ? { color: '#b0afa8', background: '#1a1a1a' }
+    : { color: '#555', background: 'transparent' };
 
   return (
     <div className="relative inline-block">
       <button
-        className={`inline-flex items-center gap-1 rounded-control px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-hover cursor-pointer ${toneClass}`}
+        ref={btnRef}
+        type="button"
+        onClick={() => setOpenCal(!openCal)}
+        className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium transition-all cursor-pointer"
+        style={{
+          ...toneStyle,
+          border: '1px solid rgba(242,237,228,0.08)',
+        }}
         title={task.due_date ? `Échéance : ${task.due_date}` : "Définir l'échéance"}
       >
-        <Calendar size={13} />
+        <Calendar size={12} />
         {task.due_date ? (
-          <span>{new Date(task.due_date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+          <span>{new Date(task.due_date + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
         ) : (
           <span>—</span>
         )}
       </button>
-      <input
-        type="date"
-        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-        value={task.due_date || ''}
-        onChange={(e) => onUpdateDueDate(task.id, e.target.value || null)}
-      />
+      {openCal && (
+        <CalendarModal
+          value={task.due_date || ''}
+          onChange={(val) => onUpdateDueDate(task.id, val || null)}
+          onClose={() => setOpenCal(false)}
+          anchorRef={btnRef}
+        />
+      )}
     </div>
   );
 };
@@ -309,6 +332,113 @@ export const LeadWidget: React.FC<LeadWidgetProps> = ({
         </div>,
         document.body
       )}
+    </div>
+  );
+};
+
+interface TaskDescriptionWidgetProps {
+  task: Task;
+  onUpdateDescription: (taskId: string, description: string) => void;
+  className?: string;
+}
+
+export const TaskDescriptionWidget: React.FC<TaskDescriptionWidgetProps> = ({
+  task,
+  onUpdateDescription,
+  className = '',
+}) => {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [text, setText] = React.useState(task.description);
+  const [localDesc, setLocalDesc] = React.useState(task.description);
+
+  React.useEffect(() => {
+    setLocalDesc(task.description);
+    if (!isEditing) {
+      setText(task.description);
+    }
+  }, [task.description, isEditing]);
+
+  const handleCommit = (newText: string) => {
+    const trimmed = newText.trim();
+    setIsEditing(false);
+    if (trimmed && trimmed !== task.description) {
+      setLocalDesc(trimmed);
+      onUpdateDescription(task.id, trimmed);
+    } else {
+      setText(localDesc);
+    }
+  };
+
+  if (isEditing) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          handleCommit(text);
+        }}
+        className="w-full min-w-0 flex items-center"
+        onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <input
+          type="text"
+          autoFocus
+          value={text}
+          draggable={false}
+          onChange={(e) => setText(e.target.value)}
+          onBlur={() => handleCommit(text)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') {
+              e.preventDefault();
+              e.stopPropagation();
+              setText(localDesc);
+              setIsEditing(false);
+            }
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          onDragStart={(e) => e.preventDefault()}
+          className="w-full bg-transparent rounded-none text-[13px] font-medium py-1 px-0 outline-none focus:outline-none focus:ring-0 transition-colors duration-200"
+          style={{
+            color: "var(--color-charcoal-fg, #f2ede4)",
+            caretColor: "var(--color-beige, #D4C4A8)",
+            borderTop: "none",
+            borderLeft: "none",
+            borderRight: "none",
+            borderRadius: 0,
+            borderBottom: "1px solid var(--color-beige, #D4C4A8)",
+          }}
+        />
+      </form>
+    );
+  }
+
+  const isDone = task.status === 'done';
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        setText(localDesc);
+        setIsEditing(true);
+      }}
+      onMouseDown={(e) => e.stopPropagation()}
+      title="Cliquer pour modifier le nom"
+      className={`cursor-pointer group flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-[#1a1a1a] transition-colors overflow-hidden text-ellipsis whitespace-nowrap min-w-0 w-full ${className}`}
+    >
+      <span
+        className="text-[13px] font-medium truncate"
+        style={{
+          color: isDone ? '#555' : 'var(--color-charcoal-fg, #f2ede4)',
+          textDecoration: isDone ? 'line-through' : 'none',
+        }}
+      >
+        {localDesc}
+      </span>
+      <span className="opacity-0 group-hover:opacity-100 text-[10px] text-[#888] transition-opacity ml-1 flex-shrink-0">
+        ✎
+      </span>
     </div>
   );
 };

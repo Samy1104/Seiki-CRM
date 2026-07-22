@@ -26,6 +26,7 @@ export const Tasks: React.FC = () => {
     handleAssigneeToggle,
     handleLeadChange,
     handleDueDateChange,
+    handleDescriptionChange,
   } = useTasksData();
 
   const {
@@ -60,7 +61,7 @@ export const Tasks: React.FC = () => {
   const [dragOverStatus, setDragOverStatus] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
 
-  // Interactive inline editing dropdowns
+  // Dropdown state for inline table/card editing
   const [activeDropdown, setActiveDropdown] = useState<ActiveDropdown | null>(null);
   const dropdownWrapperRef = useRef<HTMLDivElement | null>(null);
 
@@ -108,17 +109,17 @@ export const Tasks: React.FC = () => {
     setDragOverTaskId(null);
   };
 
-  const handleDrop = async (e: React.DragEvent, status: 'todo' | 'in_progress' | 'done') => {
+  const handleDrop = async (e: React.DragEvent, targetStatus: 'todo' | 'in_progress' | 'done') => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('text/plain');
     setDragOverStatus(null);
     setDragOverTaskId(null);
+    const taskId = e.dataTransfer.getData('text/plain') || draggedTaskId;
+    if (!taskId) return;
     setDraggedTaskId(null);
 
-    if (!taskId) return;
     const task = tasks.find(t => t.id === taskId);
-    if (task && task.status !== status) {
-      await handleStatusChange(taskId, status);
+    if (task && task.status !== targetStatus) {
+      await handleStatusChange(taskId, targetStatus);
     }
   };
 
@@ -191,6 +192,7 @@ export const Tasks: React.FC = () => {
     onUpdateDueDate: handleDueDateChange,
     onUpdatePriority: handlePriorityChange,
     onUpdateLead: handleLeadChange,
+    onUpdateDescription: handleDescriptionChange,
   };
 
   const confirmDeleteTask = (taskId: string) => {
@@ -201,17 +203,25 @@ export const Tasks: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <div style={{ marginTop: '12px', color: 'var(--text-secondary)' }}>
-          Chargement des tâches...
-        </div>
+      <div
+        className="size-full flex flex-col items-center justify-center py-20"
+        style={{ background: 'var(--color-charcoal, #0d0d0d)', color: 'var(--color-charcoal-fg-soft, #b0afa8)' }}
+      >
+        <div className="loading-spinner mb-3" />
+        <span className="text-xs tracking-widest uppercase">Chargement des tâches...</span>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6" style={{ overflowY: 'auto' }}>
+    <div
+      className="size-full overflow-y-auto"
+      style={{
+        background: 'var(--color-charcoal, #0d0d0d)',
+        fontFamily: "'General Sans', sans-serif",
+      }}
+    >
+      <div className="w-full max-w-[1550px] mx-auto px-6 py-8 space-y-6">
       {/* Page Header */}
       <TasksHeader
         viewMode={viewMode}
@@ -304,11 +314,9 @@ export const Tasks: React.FC = () => {
           onStatusChange={setNewStatus}
           onSubmit={handleCreateTask}
           onClose={() => setTaskModalOpen(false)}
-          activeDropdown={activeDropdown}
-          setActiveDropdown={setActiveDropdown}
-          dropdownWrapperRef={dropdownWrapperRef}
         />
       )}
+      </div>
     </div>
   );
 };

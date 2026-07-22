@@ -35,24 +35,30 @@ export const TasksFilterBar: React.FC<TasksFilterBarProps> = ({
 }) => {
   return (
     <div
-      className="p-4 rounded-2xl border border-[var(--border-subtle)] flex flex-wrap items-center justify-between gap-4"
-      style={{ background: 'var(--bg-panel)' }}
+      className="p-3.5 rounded-xl flex items-center justify-between gap-4 w-full"
+      style={{
+        background: '#141414',
+        border: '1px solid rgba(242,237,228,0.08)',
+      }}
     >
-      <div className="flex flex-wrap items-center gap-3 flex-1 min-w-0">
-        <div className="flex items-center gap-2 text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mr-1">
-          <SlidersHorizontal size={14} />
-          <span>Filtres</span>
-        </div>
+      <div
+        className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-[0.2em] flex-shrink-0 mr-1"
+        style={{ color: "var(--color-charcoal-fg-soft, #b0afa8)" }}
+      >
+        <SlidersHorizontal size={13} style={{ color: "#666" }} />
+        <span>Filtres</span>
+      </div>
 
+      <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 flex-1 min-w-0">
         {/* Priorité */}
         <Select
           value={filterPriority}
           onValueChange={(val) => setFilterPriority(val as 'high' | 'medium' | 'low' | '')}
         >
-          <SelectTrigger className="w-[140px]">
+          <SelectTrigger className="w-full text-[12px]" style={{ background: '#0d0d0d', borderColor: 'rgba(242,237,228,0.12)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectValue placeholder="Toutes priorités" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent style={{ background: '#141414', borderColor: 'rgba(242,237,228,0.15)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectItem value="">Toutes priorités</SelectItem>
             <SelectItem value="high">Haute</SelectItem>
             <SelectItem value="medium">Moyenne</SelectItem>
@@ -62,10 +68,10 @@ export const TasksFilterBar: React.FC<TasksFilterBarProps> = ({
 
         {/* Lead */}
         <Select value={filterLeadId} onValueChange={setFilterLeadId}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full text-[12px]" style={{ background: '#0d0d0d', borderColor: 'rgba(242,237,228,0.12)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectValue placeholder="Tous les leads" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent style={{ background: '#141414', borderColor: 'rgba(242,237,228,0.15)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectItem value="">Tous les leads</SelectItem>
             {leads.map((l) => (
               <SelectItem key={l.id} value={l.id}>
@@ -77,10 +83,10 @@ export const TasksFilterBar: React.FC<TasksFilterBarProps> = ({
 
         {/* Assigné */}
         <Select value={filterAssigneeId} onValueChange={setFilterAssigneeId}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-full text-[12px]" style={{ background: '#0d0d0d', borderColor: 'rgba(242,237,228,0.12)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectValue placeholder="Tous les membres" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent style={{ background: '#141414', borderColor: 'rgba(242,237,228,0.15)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectItem value="">Tous les membres</SelectItem>
             {teamMembers.map((m) => (
               <SelectItem key={m.id} value={m.id}>
@@ -92,10 +98,10 @@ export const TasksFilterBar: React.FC<TasksFilterBarProps> = ({
 
         {/* Tri */}
         <Select value={sortByDue} onValueChange={(val) => setSortByDue(val as 'asc' | '')}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full text-[12px]" style={{ background: '#0d0d0d', borderColor: 'rgba(242,237,228,0.12)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectValue placeholder="Tri par défaut" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent style={{ background: '#141414', borderColor: 'rgba(242,237,228,0.15)', color: 'var(--color-charcoal-fg, #f2ede4)' }}>
             <SelectItem value="">Tri par défaut</SelectItem>
             <SelectItem value="asc">Date d'échéance (proche)</SelectItem>
           </SelectContent>
@@ -104,11 +110,17 @@ export const TasksFilterBar: React.FC<TasksFilterBarProps> = ({
 
       {hasActiveFilters && (
         <button
+          type="button"
           onClick={clearFilters}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] uppercase tracking-[0.1em] font-medium transition-colors cursor-pointer flex-shrink-0"
+          style={{
+            color: "var(--color-charcoal-danger, #e05252)",
+            background: "rgba(224, 82, 82, 0.1)",
+            border: "1px solid rgba(224, 82, 82, 0.2)",
+          }}
         >
-          <X size={14} />
-          <span>Effacer les filtres</span>
+          <X size={13} />
+          <span>Effacer</span>
         </button>
       )}
     </div>

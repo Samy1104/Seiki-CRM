@@ -209,12 +209,12 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         return colObj ? renderColumnFooter?.(colObj) : null;
       }}
       columnWrapperStyle={() => ({
-        backgroundColor: '#0d0d0d',
-        borderRadius: '8px',
-        border: '1px solid rgba(200, 184, 154, 0.25)',
+        backgroundColor: '#141414',
+        borderRadius: '12px',
+        border: '1px solid rgba(242, 237, 228, 0.08)',
         padding: '12px',
         ...(fillWidth
-          ? { flex: '1 1 0', minWidth: '220px', maxWidth: 'none' }
+          ? { flex: '1 1 0%', minWidth: '0', maxWidth: '100%' }
           : { minWidth: '260px' }),
       })}
       columnStyle={() => ({

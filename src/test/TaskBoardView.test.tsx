@@ -32,6 +32,7 @@ const mockWidgets: TaskWidgetHandlers = {
   onUpdateDueDate: vi.fn(),
   onUpdatePriority: vi.fn(),
   onUpdateLead: vi.fn(),
+  onUpdateDescription: vi.fn(),
 };
 
 describe('TaskBoardView', () => {

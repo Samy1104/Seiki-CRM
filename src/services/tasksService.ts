@@ -143,13 +143,17 @@ export const tasksService = {
         dataToUpdate.completed_at = completedAt;
       }
 
-      const { data: originalTask, error: fetchError } = await supabase
-        .from('tasks')
-        .select('status, lead_id, description')
-        .eq('id', id)
-        .single();
-
-      if (fetchError) throw fetchError;
+      let originalTask: { status: string; lead_id: string | null; description: string } | null = null;
+      try {
+        const { data } = await supabase
+          .from('tasks')
+          .select('status, lead_id, description')
+          .eq('id', id)
+          .maybeSingle();
+        originalTask = data;
+      } catch (err) {
+        console.warn('Could not fetch original task for history', err);
+      }
 
       const { error } = await supabase
         .from('tasks')
@@ -158,7 +162,7 @@ export const tasksService = {
 
       if (error) throw error;
 
-      if (originalTask.lead_id && originalTask.status !== 'done' && otherUpdates.status === 'done') {
+      if (originalTask?.lead_id && originalTask?.status !== 'done' && otherUpdates.status === 'done') {
         await supabase
           .from('history')
           .insert([{

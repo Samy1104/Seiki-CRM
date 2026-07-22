@@ -39,6 +39,16 @@ html, body {
   color: var(--color-charcoal-fg, #f2ede4);
 }
 
+::selection {
+  background-color: rgba(212, 196, 168, 0.25) !important;
+  color: #f2ede4 !important;
+}
+
+::-moz-selection {
+  background-color: rgba(212, 196, 168, 0.25) !important;
+  color: #f2ede4 !important;
+}
+
 input::placeholder,
 textarea::placeholder {
   color: #555 !important;
@@ -71,6 +81,12 @@ input:-webkit-autofill:active {
   -webkit-box-shadow: 0 0 0 1000px #0d0d0d inset !important;
   -webkit-text-fill-color: #f2ede4 !important;
   transition: background-color 5000s ease-in-out 0s;
+}
+
+input[type="text"],
+input[type="text"]:focus,
+input[type="text"]:active {
+  background-color: transparent !important;
 }
 
 :root {
@@ -3416,14 +3432,14 @@ input:checked + .toggle-slider:before {
 }
 
 .modal-box {
-  background: #0E0E1C;
-  border: 1px solid rgba(245, 158, 11, 0.3);
+  background: #141414 !important;
+  border: 1px solid rgba(242, 237, 228, 0.12);
   border-radius: 16px;
   width: 100%;
   max-width: 520px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.7);
   animation: modalScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
