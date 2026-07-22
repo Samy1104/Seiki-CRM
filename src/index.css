@@ -3411,3 +3411,19 @@ input:checked + .toggle-slider:before {
   border-top: 1px solid var(--border-subtle);
   margin-top: 6px;
 }
+
+/* Tab Switch Animation */
+@keyframes tabContentFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-tab-fade {
+  animation: tabContentFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

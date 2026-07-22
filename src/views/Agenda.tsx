@@ -131,7 +131,7 @@ export const Agenda: React.FC = () => {
         />
 
         {/* Tab Content / Events List */}
-        <div className="mt-6">
+        <div key={activeTab} className="mt-6 animate-tab-fade">
           {activeTab === 'upcoming' &&
             (upcomingEvents.length === 0 ? (
               <div className="py-16 text-center">
