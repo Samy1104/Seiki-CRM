@@ -26,7 +26,7 @@ export const LeadScoringSection: React.FC<LeadScoringSectionProps> = ({
   return (
     <div className="rounded-surface border border-line bg-elevated p-5">
       <div className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
-        <Award size={14} className="text-amber" />
+        <Award size={14} className="text-beige" />
         Scoring ICP — 6 critères
       </div>
 

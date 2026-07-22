@@ -4,11 +4,11 @@ import type { Lead, MergeProposal } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
 import type { TeamMember } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
-import { Search, Filter, Layers } from 'lucide-react';
+import { Search, Filter, Layers, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
 import { Button } from '../components/ui/Button';
-import { HeaderActionButton } from '../components/ui/HeaderActionButton';
+import { AccentButton } from '../components/ui/AccentButton';
 import { SegmentedToggle } from '../components/ui/SegmentedToggle';
 import { Badge } from '../components/ui/Badge';
 import { confirmAction } from '../utils/confirmAction';
@@ -142,7 +142,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               { value: 'archived', label: 'Archivés' },
             ]}
           />
-          <HeaderActionButton onClick={() => setView('add')}>Nouveau lead</HeaderActionButton>
+          <AccentButton icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setView('add')}>Nouveau lead</AccentButton>
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import type { PipelineStage } from '../../services/settingsService';
 import type { Lead } from '../../services/leadsService';
 import { EmailGenerator } from '../../components/EmailGenerator';
 import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 
@@ -45,7 +46,7 @@ export const LeadGeneralInfoSection: React.FC<LeadGeneralInfoSectionProps> = ({
   return (
     <div className="rounded-surface border border-line bg-elevated p-5">
       <div className="mb-4 flex items-center gap-2 text-sm font-bold text-ink">
-        <FileText size={14} className="text-amber" />
+        <FileText size={14} className="text-beige" />
         Informations du lead
       </div>
 
@@ -217,12 +218,12 @@ export const LeadGeneralInfoSection: React.FC<LeadGeneralInfoSectionProps> = ({
         </div>
 
         <div className="mt-5 flex gap-2.5">
-          <Button type="submit" variant="primary" className="flex-1">
+          <AccentButton type="submit" variant="primary" className="flex-1">
             Ajouter au pipeline
-          </Button>
-          <Button type="button" variant="secondary" onClick={onReset}>
+          </AccentButton>
+          <AccentButton type="button" variant="secondary" onClick={onReset}>
             Réinitialiser
-          </Button>
+          </AccentButton>
         </div>
       </form>
 

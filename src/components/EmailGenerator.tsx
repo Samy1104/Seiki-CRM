@@ -110,7 +110,7 @@ export const EmailGenerator: React.FC<EmailGeneratorProps> = ({
   return (
     <div className="mt-4 rounded-surface border border-line bg-elevated p-4">
       <div className="mb-3 flex items-center gap-2 text-sm font-bold text-ink">
-        <Mail size={14} className="text-amber" />
+        <Mail size={14} className="text-beige" />
         <span>Générateur d'emails</span>
       </div>
 

@@ -1,6 +1,6 @@
 import React from 'react';
-import { List, Kanban } from 'lucide-react';
-import { HeaderActionButton } from '../../components/ui/HeaderActionButton';
+import { List, Kanban, Plus } from 'lucide-react';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { SegmentedToggle } from '../../components/ui/SegmentedToggle';
 
 interface TasksHeaderProps {
@@ -41,7 +41,7 @@ export const TasksHeader: React.FC<TasksHeaderProps> = ({
           ]}
         />
 
-        <HeaderActionButton onClick={onNewTaskClick}>Nouvelle tâche</HeaderActionButton>
+        <AccentButton icon={<Plus size={15} strokeWidth={2.5} />} onClick={onNewTaskClick}>Nouvelle tâche</AccentButton>
       </div>
     </div>
   );
