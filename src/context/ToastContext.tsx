@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
 interface ToastContextType {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
@@ -10,19 +11,12 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [toast, setToast] = useState<{ id: number; message: string; type: 'success' | 'error' | 'info' } | null>(null);
   const nextId = useRef(0);
 
-  // Stable identity (useCallback + useMemo below) so components that list
-  // showToast in a useEffect/useCallback dependency array don't re-run every
-  // time any toast fires anywhere in the app — without this, showToast and
-  // the context value were both new references on every ToastProvider
-  // render, silently forcing extra re-fetches in any consumer depending on it.
   const showToast = useCallback((message: string, type: 'success' | 'error' | 'info' = 'success') => {
     const id = ++nextId.current;
     setToast({ id, message, type });
     setTimeout(() => {
-      // Only dismiss if this is still the toast we scheduled — an older
-      // timer must not clear a newer toast that replaced it in the meantime.
       setToast((current) => (current?.id === id ? null : current));
-    }, 3000);
+    }, 3200);
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
@@ -32,7 +26,10 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       {children}
       {toast && (
         <div className={`toast-message toast-${toast.type}`}>
-          {toast.message}
+          {toast.type === 'success' && <CheckCircle2 size={15} strokeWidth={2} className="toast-icon shrink-0" />}
+          {toast.type === 'error' && <AlertCircle size={15} strokeWidth={2} className="toast-icon shrink-0" />}
+          {toast.type === 'info' && <Info size={15} strokeWidth={2} className="toast-icon shrink-0" />}
+          <span>{toast.message}</span>
         </div>
       )}
     </ToastContext.Provider>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
@@ -22,10 +22,19 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
 
   const [viewYear, setViewYear] = useState(initial.getFullYear());
   const [viewMonth, setViewMonth] = useState(initial.getMonth());
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const getInitialPos = () => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      return { top: rect.bottom + 8, left: rect.left, width: Math.max(rect.width, 260) };
+    }
+    return { top: 0, left: 0, width: 0 };
+  };
+
+  const [pos, setPos] = useState(getInitialPos);
   const ref = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       setPos({ top: rect.bottom + 8, left: rect.left, width: Math.max(rect.width, 260) });
@@ -88,6 +97,8 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
     const dd = String(day).padStart(2, "0");
     return `${viewYear}-${mm}-${dd}` < minDate;
   }
+
+  if (!pos.width) return null;
 
   return createPortal(
     <div

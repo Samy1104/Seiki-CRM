@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
 
@@ -19,11 +19,20 @@ export const SegmentSelectModal: React.FC<SegmentSelectModalProps> = ({
 }) => {
   const initialIndex = Math.max(0, options.indexOf(value));
   const [highlightedIndex, setHighlightedIndex] = useState<number>(initialIndex);
-  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
+
+  const getInitialPos = () => {
+    if (anchorRef.current) {
+      const rect = anchorRef.current.getBoundingClientRect();
+      return { top: rect.bottom + 8, left: rect.left, width: Math.max(rect.width, 220) };
+    }
+    return { top: 0, left: 0, width: 0 };
+  };
+
+  const [pos, setPos] = useState(getInitialPos);
   const ref = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (anchorRef.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       setPos({ top: rect.bottom + 8, left: rect.left, width: Math.max(rect.width, 220) });
@@ -79,6 +88,8 @@ export const SegmentSelectModal: React.FC<SegmentSelectModalProps> = ({
       item.scrollIntoView({ block: "nearest" });
     }
   }, [highlightedIndex]);
+
+  if (!pos.width) return null;
 
   return createPortal(
     <div

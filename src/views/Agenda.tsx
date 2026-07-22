@@ -1,12 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useAgendaEvents } from '../hooks/useAgendaEvents';
-import { downloadIcalFile } from '../utils/icalHelpers';
-import { confirmAction } from '../utils/confirmAction';
+import { downloadIcalFile, ICAL_FEED_URL } from '../utils/icalHelpers';
+import { useToast } from '../context/ToastContext';
 import { AgendaHeader } from './agenda/AgendaHeader';
 import { AgendaForm } from './agenda/AgendaForm';
 import { AgendaTabs } from './agenda/AgendaTabs';
 import { EventCard } from './agenda/EventCard';
-import { IcalFeedModal } from './agenda/IcalFeedModal';
+import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import type { EventItem } from '../services/eventsService';
 
 export const Agenda: React.FC = () => {
@@ -17,11 +17,21 @@ export const Agenda: React.FC = () => {
     handleUpdateEvent,
     handleDeleteEvent,
   } = useAgendaEvents();
+  const { showToast } = useToast();
 
   const [formOpen, setFormOpen] = useState(true);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-  const [feedModalOpen, setFeedModalOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const handleCopyFeedUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(ICAL_FEED_URL);
+      showToast("URL d'abonnement copiée dans le presse-papier");
+    } catch {
+      showToast("Erreur lors de la copie de l'URL", "error");
+    }
+  };
 
   // Split events into Upcoming and Past
   const todayStr = new Date().toISOString().slice(0, 10);
@@ -65,8 +75,13 @@ export const Agenda: React.FC = () => {
   };
 
   const confirmDelete = (id: string) => {
-    if (confirmAction('Voulez-vous vraiment supprimer cet événement ?')) {
-      handleDeleteEvent(id);
+    setDeleteTargetId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (deleteTargetId) {
+      handleDeleteEvent(deleteTargetId);
+      setDeleteTargetId(null);
     }
   };
 
@@ -110,7 +125,7 @@ export const Agenda: React.FC = () => {
         {/* Header */}
         <AgendaHeader
           onExportIcal={() => downloadIcalFile(events)}
-          onOpenFeedModal={() => setFeedModalOpen(true)}
+          onCopyFeedUrl={handleCopyFeedUrl}
         />
 
         {/* Collapsible Form (Add / Edit) */}
@@ -178,10 +193,11 @@ export const Agenda: React.FC = () => {
         </div>
       </div>
 
-      {/* iCal Subscription Feed Modal */}
-      <IcalFeedModal
-        isOpen={feedModalOpen}
-        onClose={() => setFeedModalOpen(false)}
+      {/* Delete Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!deleteTargetId}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTargetId(null)}
       />
     </div>
   );

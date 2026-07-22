@@ -3,12 +3,12 @@ import { Download, Link } from 'lucide-react';
 
 interface AgendaHeaderProps {
   onExportIcal: () => void;
-  onOpenFeedModal: () => void;
+  onCopyFeedUrl: () => void;
 }
 
 export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
   onExportIcal,
-  onOpenFeedModal,
+  onCopyFeedUrl,
 }) => {
   return (
     <div className="flex items-end justify-between mb-10">
@@ -42,7 +42,7 @@ export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
           style={{ color: "#555" }}
           onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--color-charcoal-fg-soft, #b0afa8)")}
           onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#555")}
-          onClick={onOpenFeedModal}
+          onClick={onCopyFeedUrl}
         >
           <Link size={12} strokeWidth={1.5} />
           URL d'abonnement
