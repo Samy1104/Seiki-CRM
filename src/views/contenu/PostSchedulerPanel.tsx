@@ -1,10 +1,12 @@
 import React from 'react';
-import { Loader2, RotateCcw, X, Calendar, Clock } from 'lucide-react';
+import { Image as ImageIcon, Loader2, RotateCcw, X, Calendar, Clock } from 'lucide-react';
 import type { LinkedinAccount, ScheduledPost } from '../../services/linkedinService';
 import type { LinkedInPost } from '../../services/contentService';
 import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { Badge } from '../../components/ui/Badge';
 import { Field, inputClass } from '../../components/ui/Field';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 
 interface PostSchedulerPanelProps {
   post: LinkedInPost | null;
@@ -47,7 +49,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
       {post && (
         <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-4 shadow-hover">
           <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-            <Calendar size={15} className="text-amber" />
+            <Calendar size={15} strokeWidth={2} className="text-amber" />
             <h3 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
               Planifier la publication
             </h3>
@@ -55,18 +57,18 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
 
           <div className="flex gap-4 flex-wrap items-end pt-1">
             <Field label="Compte cible">
-              <select
-                value={targetAccountId}
-                onChange={(e) => setTargetAccountId(e.target.value)}
-                className={`${inputClass} py-2 px-3 text-xs w-auto cursor-pointer`}
-              >
-                <option value="" className="bg-surface text-ink">— Choisir —</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id} className="bg-surface text-ink">
-                    {a.label}
-                  </option>
-                ))}
-              </select>
+              <Select value={targetAccountId} onValueChange={(val) => setTargetAccountId(val)}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="— Choisir un compte —" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {a.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
 
             <Field label="Date">
@@ -98,21 +100,20 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
               </div>
             </Field>
 
-            <Button
+            <AccentButton
               variant="primary"
               onClick={onSchedule}
               disabled={scheduling}
-              className="uppercase tracking-wider text-xs px-4 py-2"
+              icon={
+                scheduling ? (
+                  <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+                ) : (
+                  <Clock size={14} strokeWidth={2} />
+                )
+              }
             >
-              {scheduling ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" />
-                  <span>Programmation...</span>
-                </>
-              ) : (
-                <span>Programmer</span>
-              )}
-            </Button>
+              {scheduling ? 'Programmation...' : 'Programmer'}
+            </AccentButton>
           </div>
         </div>
       )}
@@ -120,7 +121,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
       {/* Queue Listing */}
       <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-4 shadow-hover">
         <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-          <Clock size={15} className="text-amber" />
+          <Clock size={15} strokeWidth={2} className="text-amber" />
           <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
             Posts programmés en file d'attente
           </h2>
@@ -166,7 +167,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
                   size="sm"
                   onClick={() => onRetry(p.id)}
                 >
-                  <RotateCcw size={13} className="text-amber" /> Relancer
+                  <RotateCcw size={13} strokeWidth={2} className="text-amber" /> Relancer
                 </Button>
               )}
               {p.status === 'scheduled' && (
@@ -175,7 +176,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
                   size="sm"
                   onClick={() => onCancel(p.id)}
                 >
-                  <X size={13} /> Annuler
+                  <X size={13} strokeWidth={2} /> Annuler
                 </Button>
               )}
             </div>

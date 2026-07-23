@@ -1,8 +1,9 @@
 import React from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import type { ContentVoice, ContentLanguage } from '../../services/contentService';
-import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 
 interface PostGeneratorFormProps {
   brief: string;
@@ -28,7 +29,7 @@ export const PostGeneratorForm: React.FC<PostGeneratorFormProps> = ({
   return (
     <div className="space-y-5 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
       <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-        <Sparkles size={15} className="text-amber" />
+        <Sparkles size={15} strokeWidth={2} className="text-amber" />
         <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Nouveau brief de publication
         </h2>
@@ -47,46 +48,44 @@ export const PostGeneratorForm: React.FC<PostGeneratorFormProps> = ({
       <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
         <div className="flex gap-4 flex-wrap items-center">
           <Field label="Voix">
-            <select
-              value={voice}
-              onChange={(e) => setVoice(e.target.value as ContentVoice)}
-              className={`${inputClass} py-2 px-3 text-xs w-auto cursor-pointer`}
-            >
-              <option value="seiki" className="bg-surface text-ink">Seiki (entreprise)</option>
-              <option value="jaafar" className="bg-surface text-ink">Jaafar (personnel)</option>
-            </select>
+            <Select value={voice} onValueChange={(val) => setVoice(val as ContentVoice)}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Choisir la voix" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="seiki">Seiki (entreprise)</SelectItem>
+                <SelectItem value="jaafar">Jaafar (personnel)</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
 
           <Field label="Langue">
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value as ContentLanguage)}
-              className={`${inputClass} py-2 px-3 text-xs w-auto cursor-pointer`}
-            >
-              <option value="fr" className="bg-surface text-ink">Français</option>
-              <option value="en" className="bg-surface text-ink">English</option>
-            </select>
+            <Select value={language} onValueChange={(val) => setLanguage(val as ContentLanguage)}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="Choisir la langue" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="fr">Français</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+              </SelectContent>
+            </Select>
           </Field>
         </div>
 
-        <Button
+        <AccentButton
           variant="primary"
           onClick={onGenerate}
           disabled={loading}
-          className="uppercase tracking-wider text-xs"
+          icon={
+            loading ? (
+              <Loader2 size={15} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <Sparkles size={15} strokeWidth={2} />
+            )
+          }
         >
-          {loading ? (
-            <>
-              <Loader2 size={15} className="animate-spin" />
-              <span>Génération...</span>
-            </>
-          ) : (
-            <>
-              <Sparkles size={15} />
-              <span>Générer</span>
-            </>
-          )}
-        </Button>
+          {loading ? 'Génération...' : 'Générer'}
+        </AccentButton>
       </div>
     </div>
   );

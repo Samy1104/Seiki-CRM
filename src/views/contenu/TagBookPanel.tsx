@@ -1,7 +1,7 @@
 import React from 'react';
-import { AtSign, Trash2, Loader2 } from 'lucide-react';
+import { AtSign, Trash2, Loader2, Plus } from 'lucide-react';
 import type { TagEntry } from '../../services/contentService';
-import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
 
 interface TagBookPanelProps {
@@ -32,7 +32,7 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
   return (
     <div className="space-y-4 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
       <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-        <AtSign size={15} className="text-amber" />
+        <AtSign size={15} strokeWidth={2} className="text-amber" />
         <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Comptes tagués (TagBook)
         </h2>
@@ -52,7 +52,7 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
               className="flex items-center justify-between gap-2 p-3 rounded-control border border-line-strong bg-base hover:border-line-focus transition-all"
             >
               <div className="min-w-0 flex items-center gap-2 text-xs font-ui">
-                <span className="text-amber bg-amber-soft border border-line-focus px-2 py-0.5 rounded-control font-semibold">
+                <span className="font-semibold text-amber bg-amber-soft px-2 py-0.5 rounded-control">
                   @{t.alias}
                 </span>
                 <span className="text-ink truncate font-medium">{t.name}</span>
@@ -63,7 +63,7 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
                 className="shrink-0 text-ink-faint hover:text-danger transition-colors cursor-pointer p-1"
                 title="Supprimer l'alias"
               >
-                <Trash2 size={14} />
+                <Trash2 size={14} strokeWidth={2} />
               </button>
             </div>
           ))}
@@ -95,17 +95,21 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
             className={`${inputClass} py-2 px-3 text-xs`}
           />
         </Field>
-        <Button
+        <AccentButton
           variant="primary"
           onClick={onAddTag}
           disabled={savingTag}
-          className="uppercase tracking-wider text-xs px-4 py-2"
+          icon={
+            savingTag ? (
+              <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <Plus size={14} strokeWidth={2.5} />
+            )
+          }
         >
-          {savingTag ? <Loader2 size={14} className="animate-spin" /> : 'Ajouter'}
-        </Button>
+          {savingTag ? 'Enregistrement...' : 'Ajouter'}
+        </AccentButton>
       </div>
     </div>
   );
 };
-
-

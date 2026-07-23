@@ -30,11 +30,11 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
           className="text-xs flex items-center gap-2 px-3.5 py-2 rounded-control border border-line-strong bg-surface text-ink-soft hover:text-ink hover:border-line-focus transition-all duration-200 cursor-pointer"
         >
           {isJaafarConnected ? (
-            <CheckCircle2 size={14} className="text-success" />
+            <CheckCircle2 size={15} strokeWidth={2} className="text-success" />
           ) : (
-            <Link2 size={14} className="text-amber" />
+            <Link2 size={15} strokeWidth={2} className="text-amber" />
           )}
-          <span>{isJaafarConnected ? 'Jaafar (Connecté)' : 'Connecter Jaafar'}</span>
+          <span className="font-medium">{isJaafarConnected ? 'Jaafar (Connecté)' : 'Connecter Jaafar'}</span>
         </a>
 
         <a
@@ -42,14 +42,13 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
           className="text-xs flex items-center gap-2 px-3.5 py-2 rounded-control border border-line-strong bg-surface text-ink-soft hover:text-ink hover:border-line-focus transition-all duration-200 cursor-pointer"
         >
           {isSeikiConnected ? (
-            <CheckCircle2 size={14} className="text-success" />
+            <CheckCircle2 size={15} strokeWidth={2} className="text-success" />
           ) : (
-            <Link2 size={14} className="text-amber" />
+            <Link2 size={15} strokeWidth={2} className="text-amber" />
           )}
-          <span>{isSeikiConnected ? 'Seiki (Connecté)' : 'Connecter Seiki'}</span>
+          <span className="font-medium">{isSeikiConnected ? 'Seiki (Connecté)' : 'Connecter Seiki'}</span>
         </a>
       </div>
     </div>
   );
 };
-
