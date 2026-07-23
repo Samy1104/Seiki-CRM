@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, Loader2 } from 'lucide-react';
 import type { ContentVoice, ContentLanguage } from '../../services/contentService';
 import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface PostGeneratorFormProps {
   brief: string;
@@ -25,77 +26,54 @@ export const PostGeneratorForm: React.FC<PostGeneratorFormProps> = ({
   onGenerate,
 }) => {
   return (
-    <div
-      className="space-y-5 p-6 rounded-2xl border border-[var(--border-subtle)] shadow-lg"
-      style={{ background: 'var(--bg-panel)' }}
-    >
-      <div className="flex items-center gap-2 pb-3 border-b border-[var(--border-subtle)]">
-        <Sparkles size={15} className="text-[var(--gold)]" />
-        <h2 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--text-primary)]">
+    <div className="space-y-5 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
+      <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
+        <Sparkles size={15} className="text-amber" />
+        <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Nouveau brief de publication
         </h2>
       </div>
 
-      <div>
-        <label
-          className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-2"
-          style={{ fontFamily: 'var(--font-body)' }}
-        >
-          Sujet / Brief
-        </label>
+      <Field label="Sujet / Brief">
         <textarea
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="Ex : Nous venons de signer un partenariat avec la ville de Lyon pour mesurer les flux piétons du centre-ville..."
+          placeholder="Ex : Nous venons de signer un partenariat avec la ville de Lyon..."
           rows={4}
-          className="w-full rounded-xl p-3.5 text-sm bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] placeholder-[var(--text-muted)] focus:outline-none focus:border-[#c8b89a] transition-all duration-200"
-          style={{ resize: 'vertical', fontFamily: 'var(--font-body)' }}
+          className={`${inputClass} resize-y`}
         />
-      </div>
+      </Field>
 
       <div className="flex flex-wrap items-center justify-between gap-4 pt-1">
         <div className="flex gap-4 flex-wrap items-center">
-          <div>
-            <label
-              className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1.5"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              Voix
-            </label>
+          <Field label="Voix">
             <select
               value={voice}
               onChange={(e) => setVoice(e.target.value as ContentVoice)}
-              className="rounded-xl py-2 px-3 text-xs bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] cursor-pointer transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className={`${inputClass} py-2 px-3 text-xs w-auto cursor-pointer`}
             >
-              <option value="seiki" className="bg-[var(--color-surface)]">Seiki (entreprise)</option>
-              <option value="jaafar" className="bg-[var(--color-surface)]">Jaafar (personnel)</option>
+              <option value="seiki" className="bg-surface text-ink">Seiki (entreprise)</option>
+              <option value="jaafar" className="bg-surface text-ink">Jaafar (personnel)</option>
             </select>
-          </div>
+          </Field>
 
-          <div>
-            <label
-              className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1.5"
-              style={{ fontFamily: 'var(--font-body)' }}
-            >
-              Langue
-            </label>
+          <Field label="Langue">
             <select
               value={language}
               onChange={(e) => setLanguage(e.target.value as ContentLanguage)}
-              className="rounded-xl py-2 px-3 text-xs bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] cursor-pointer transition-colors"
-              style={{ fontFamily: 'var(--font-body)' }}
+              className={`${inputClass} py-2 px-3 text-xs w-auto cursor-pointer`}
             >
-              <option value="fr" className="bg-[var(--color-surface)]">Français</option>
-              <option value="en" className="bg-[var(--color-surface)]">English</option>
+              <option value="fr" className="bg-surface text-ink">Français</option>
+              <option value="en" className="bg-surface text-ink">English</option>
             </select>
-          </div>
+          </Field>
         </div>
 
         <Button
+          variant="primary"
           onClick={onGenerate}
           disabled={loading}
-          className="bg-[var(--gold)] text-black font-semibold text-xs tracking-wider uppercase hover:bg-[var(--gold)]/90 transition-all flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50"
+          className="uppercase tracking-wider text-xs"
         >
           {loading ? (
             <>
@@ -113,4 +91,3 @@ export const PostGeneratorForm: React.FC<PostGeneratorFormProps> = ({
     </div>
   );
 };
-
