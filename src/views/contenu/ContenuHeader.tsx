@@ -11,15 +11,12 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
   const isSeikiConnected = accounts.some((a) => a.target_type === 'company');
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-strong pb-6">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-strong pb-6 mb-6">
       <div>
-        <span className="text-[11px] font-ui font-medium tracking-[0.2em] uppercase block mb-1 text-ink-soft">
-          Studio de création &amp; distribution
-        </span>
-        <h1 className="text-3xl sm:text-4xl font-display font-bold tracking-tight text-ink">
-          Générateur de posts LinkedIn
+        <h1 className="text-3xl font-display font-bold text-ink">
+          LinkedIn
         </h1>
-        <p className="text-sm font-ui text-ink-soft mt-1.5">
+        <p className="text-sm font-ui text-ink-soft mt-1">
           Rédigez, adaptez au style de votre marque et planifiez vos publications
         </p>
       </div>
