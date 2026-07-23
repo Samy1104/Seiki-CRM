@@ -29,20 +29,22 @@ export const Prospection: React.FC = () => {
   };
 
   return (
-    <div className="prospection-view">
-      {/* Header & Tabs */}
-      <ProspectionHeader
-        mode={mode}
-        onModeChange={handleModeChange}
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-      />
+    <div className="p-8 space-y-6" style={{ overflowY: 'auto' }}>
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header & Tabs */}
+        <ProspectionHeader
+          mode={mode}
+          onModeChange={handleModeChange}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+        />
 
-      {/* Active Tab Content */}
-      <div className="prospection-body">
-        {activeTab === 'validation' && <ValidationTab showToast={showToast} />}
-        {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
-        {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
+        {/* Active Tab Content */}
+        <div>
+          {activeTab === 'validation' && <ValidationTab showToast={showToast} />}
+          {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
+          {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
+        </div>
       </div>
     </div>
   );
