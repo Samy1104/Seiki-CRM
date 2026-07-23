@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Check, Loader } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { templatesService, type EmailTemplate } from '../../services/templatesService';
 import { leadsService, type Lead } from '../../services/leadsService';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
+import { AccentButton } from '../../components/ui/AccentButton';
+import { Field, inputClass } from '../../components/ui/Field';
 
 const SEGMENTS: EmailTemplate['segment'][] = ['All', 'Media', 'Retail', 'Instit'];
 const STEPS: { key: EmailTemplate['step']; label: string }[] = [
@@ -85,18 +87,18 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
 
   if (loading) {
     return (
-      <div className="pros-loading">
-        <Loader size={20} className="spin" /> Chargement...
+      <div className="py-12 text-center text-sm font-ui text-ink-soft flex items-center justify-center gap-2">
+        <Loader2 size={18} strokeWidth={2} className="animate-spin text-[#D4C4A8]" /> Chargement...
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-3" style={{ width: '100%' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+    <div className="space-y-5 p-6 rounded-surface border border-line-strong bg-surface shadow-hover font-ui">
+      <div className="flex gap-4 flex-wrap">
+        <Field label="Segment" className="flex-1 min-w-[200px]">
           <Select value={segment} onValueChange={(val) => setSegment(val as EmailTemplate['segment'])}>
-            <SelectTrigger className="gen-select">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={segment} />
             </SelectTrigger>
             <SelectContent>
@@ -107,10 +109,11 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        </Field>
+
+        <Field label="Étape" className="flex-1 min-w-[200px]">
           <Select value={step} onValueChange={(val) => setStep(val as EmailTemplate['step'])}>
-            <SelectTrigger className="gen-select">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder={step} />
             </SelectTrigger>
             <SelectContent>
@@ -121,54 +124,66 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </Field>
       </div>
 
-      <div className="gen-field-group">
-        <label className="gen-label">Sujet</label>
-        <input className="gen-input" value={subject} onChange={(e) => setSubject(e.target.value)} />
-      </div>
+      <Field label="Sujet">
+        <input className={inputClass} value={subject} onChange={(e) => setSubject(e.target.value)} />
+      </Field>
 
-      <div className="gen-field-group">
-        <label className="gen-label">Corps</label>
+      <Field label="Corps">
         <div className="flex gap-2 flex-wrap mb-2">
           {VARIABLES.map((v) => (
             <button
               key={v.value}
               type="button"
-              className="text-xs px-2 py-1 rounded-full bg-brand-bg-panel border border-brand-border text-brand-text-secondary hover:text-white"
+              className="text-xs px-2.5 py-1 rounded-control bg-base border border-line-strong text-ink-soft hover:text-ink hover:border-line-focus cursor-pointer transition-colors"
               onClick={() => insertVariable(v.value)}
             >
               {v.label}
             </button>
           ))}
         </div>
-        <textarea ref={bodyRef} className="gen-textarea" rows={10} value={body} onChange={(e) => setBody(e.target.value)} />
+        <textarea ref={bodyRef} className={`${inputClass} resize-y`} rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
+      </Field>
+
+      <div className="pt-1">
+        <AccentButton
+          variant="primary"
+          onClick={handleSave}
+          disabled={saving}
+          icon={
+            saving ? (
+              <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+            ) : (
+              <Check size={14} strokeWidth={2.5} />
+            )
+          }
+        >
+          {saving ? 'Enregistrement...' : 'Sauvegarder'}
+        </AccentButton>
       </div>
 
-      <button className="btn-primary-sm" onClick={handleSave} disabled={saving} style={{ alignSelf: 'flex-start' }}>
-        {saving ? <Loader size={13} className="spin" /> : <Check size={13} />} Sauvegarder
-      </button>
-
-      <div className="gen-field-group">
-        <label className="gen-label">Aperçu sur un lead</label>
-        <Select value={previewLeadId} onValueChange={(val) => setPreviewLeadId(val)}>
-          <SelectTrigger className="gen-select">
-            <SelectValue placeholder="-- Choisir un lead --" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">-- Choisir un lead --</SelectItem>
-            {leads.map((l) => (
-              <SelectItem key={l.id} value={l.id}>
-                {l.contact_name} — {l.company_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="pt-4 border-t border-line-strong">
+        <Field label="Aperçu sur un lead">
+          <Select value={previewLeadId} onValueChange={(val) => setPreviewLeadId(val)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="-- Choisir un lead --" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">-- Choisir un lead --</SelectItem>
+              {leads.map((l) => (
+                <SelectItem key={l.id} value={l.id}>
+                  {l.contact_name} — {l.company_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
         {preview && (
-          <div className="mt-3 p-4 rounded-xl bg-brand-bg-panel border border-brand-border">
-            <div className="font-semibold text-brand-text">{preview.subject}</div>
-            <div className="mt-2 text-brand-text-secondary whitespace-pre-line">{preview.body}</div>
+          <div className="mt-3 p-4 rounded-control bg-base border border-line-strong">
+            <div className="font-semibold text-ink text-sm">{preview.subject}</div>
+            <div className="mt-2 text-xs text-ink-soft whitespace-pre-line leading-relaxed">{preview.body}</div>
           </div>
         )}
       </div>

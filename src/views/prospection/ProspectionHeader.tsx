@@ -18,36 +18,54 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
   setActiveTab,
 }) => {
   return (
-    <>
-      <div className="prospection-header">
-        <div className="prospection-title">
-          <FileEdit size={24} style={{ color: 'var(--color-amber)' }} />
-          <h1 className="text-3xl font-bold">Prospection</h1>
-          <span className="prospection-badge">Templates + fusion</span>
+    <div className="flex flex-col gap-5 border-b border-line-strong pb-6 mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <FileEdit size={26} strokeWidth={2} className="text-[#D4C4A8]" />
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-3xl font-display font-bold text-ink">Prospection</h1>
+              <span className="text-[10.5px] font-ui font-semibold uppercase tracking-wide text-ink-soft bg-base border border-line-strong px-2.5 py-0.5 rounded-control">
+                Templates + fusion
+              </span>
+            </div>
+          </div>
         </div>
         <ProspectionModeToggle mode={mode} onChange={onModeChange} />
       </div>
 
-      <div className="prospection-tabs">
+      <div className="flex items-center gap-2 flex-wrap font-ui">
         <button
-          className={`pros-tab ${activeTab === 'validation' ? 'active' : ''}`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-control transition-all cursor-pointer border ${
+            activeTab === 'validation'
+              ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+              : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
+          }`}
           onClick={() => setActiveTab('validation')}
         >
-          <Mail size={14} /> Validation
+          <Mail size={14} strokeWidth={2} /> Validation
         </button>
         <button
-          className={`pros-tab ${activeTab === 'templates' ? 'active' : ''}`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-control transition-all cursor-pointer border ${
+            activeTab === 'templates'
+              ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+              : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
+          }`}
           onClick={() => setActiveTab('templates')}
         >
-          <FileEdit size={14} /> Templates
+          <FileEdit size={14} strokeWidth={2} /> Templates
         </button>
         <button
-          className={`pros-tab ${activeTab === 'followup' ? 'active' : ''}`}
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-control transition-all cursor-pointer border ${
+            activeTab === 'followup'
+              ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+              : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
+          }`}
           onClick={() => setActiveTab('followup')}
         >
-          <RefreshCw size={14} /> Relances
+          <RefreshCw size={14} strokeWidth={2} /> Relances
         </button>
       </div>
-    </>
+    </div>
   );
 };

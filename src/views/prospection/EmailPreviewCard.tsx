@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, ChevronDown, ChevronUp, AlertTriangle, Zap, Check, Send, Edit3, Trash2, Loader } from 'lucide-react';
+import { Mail, ChevronDown, ChevronUp, AlertTriangle, Zap, Check, Send, Edit3, Trash2, Loader2 } from 'lucide-react';
 import { emailsService, type GeneratedEmail } from '../../services/emailsService';
 import { confirmAction } from '../../utils/confirmAction';
+import { AccentButton } from '../../components/ui/AccentButton';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface EmailPreviewCardProps {
   email: GeneratedEmail;
@@ -79,84 +82,110 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
   };
 
   return (
-    <div className={`email-preview-card ${expanded ? 'expanded' : ''}`}>
-      <div className="epc-header" onClick={() => setExpanded((v) => !v)}>
-        <div className="epc-prospect">
-          <strong>{email.lead?.contact_name || '—'}</strong>
-          <span className="epc-company">{email.lead?.company_name}</span>
-          {email.lead?.poste && <span className="epc-poste">{email.lead.poste}</span>}
+    <div className="rounded-surface border border-line-strong bg-surface overflow-hidden transition-all shadow-hover mb-3">
+      <div
+        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-hover transition-colors font-ui"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <Mail size={16} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <strong className="text-ink font-semibold">{email.lead?.contact_name || '—'}</strong>
+              {email.lead?.company_name && (
+                <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
+                  {email.lead.company_name}
+                </span>
+              )}
+              {email.lead?.poste && (
+                <span className="text-xs text-ink-faint truncate">({email.lead.poste})</span>
+              )}
+            </div>
+            <div className="text-xs text-ink-soft truncate mt-0.5">
+              {email.sujet}
+            </div>
+          </div>
         </div>
-        <div className="epc-subject">
-          <Mail size={12} style={{ color: 'var(--color-amber)', flexShrink: 0 }} />
-          <span>{email.sujet}</span>
-        </div>
-        {email.statut_envoi === 'failed' && (
-          <span className="epc-failed-badge">
-            <AlertTriangle size={12} /> Échec d'envoi
-          </span>
-        )}
-        <div className="epc-chevron">
-          {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+
+        <div className="flex items-center gap-3 shrink-0">
+          {email.statut_envoi === 'failed' && (
+            <span className="text-xs text-danger font-semibold bg-danger/10 px-2.5 py-1 rounded-control border border-danger/20 flex items-center gap-1">
+              <AlertTriangle size={12} strokeWidth={2} /> Échec d'envoi
+            </span>
+          )}
+          <div className="text-ink-faint">
+            {expanded ? <ChevronUp size={16} strokeWidth={2} /> : <ChevronDown size={16} strokeWidth={2} />}
+          </div>
         </div>
       </div>
 
       {expanded && (
-        <div className="epc-body">
+        <div className="p-4 border-t border-line-strong bg-base space-y-4 font-ui">
           {email.icebreaker && (
-            <div className="epc-icebreaker">
-              <Zap size={12} style={{ color: 'var(--color-amber)' }} />
+            <div className="p-3 rounded-control border border-line-focus bg-[#D4C4A8]/10 text-xs text-ink flex items-center gap-2">
+              <Zap size={14} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
               <span><strong>Icebreaker :</strong> {email.icebreaker}</span>
             </div>
           )}
 
           {isEditing ? (
-            <div className="epc-edit-form">
-              <div>
-                <label className="gen-label">Sujet</label>
+            <div className="space-y-4">
+              <Field label="Sujet">
                 <input
-                  className="epc-input"
+                  className={inputClass}
                   value={editedSujet}
                   onChange={(e) => setEditedSujet(e.target.value)}
                 />
-              </div>
-              <div>
-                <label className="gen-label">Corps</label>
+              </Field>
+              <Field label="Corps">
                 <textarea
-                  className="epc-textarea"
-                  rows={10}
+                  className={`${inputClass} resize-y`}
+                  rows={8}
                   value={editedCorps}
                   onChange={(e) => setEditedCorps(e.target.value)}
                 />
-              </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="btn-primary-sm" onClick={handleSaveEdit}>
-                  <Check size={12} /> Sauvegarder
-                </button>
-                <button className="btn-ghost-sm" onClick={() => setIsEditing(false)}>
+              </Field>
+              <div className="flex items-center gap-2 pt-1">
+                <AccentButton
+                  variant="primary"
+                  onClick={handleSaveEdit}
+                  icon={<Check size={14} strokeWidth={2.5} />}
+                >
+                  Sauvegarder
+                </AccentButton>
+                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>
                   Annuler
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
-            <div className="epc-corps">
-              {email.corps_du_mail.split('\n').map((line, i) => (
-                <p key={i}>{line}</p>
-              ))}
+            <div className="text-sm text-ink-soft whitespace-pre-line leading-relaxed bg-surface p-4 rounded-control border border-line-strong">
+              {email.corps_du_mail}
             </div>
           )}
 
           {!isEditing && (
-            <div className="epc-actions">
-              <button className="btn-primary-sm" onClick={handleApproveAndSend} disabled={isSending}>
-                {isSending ? <Loader size={12} className="spin" /> : <Send size={12} />}
+            <div className="flex items-center gap-2 pt-1 flex-wrap">
+              <AccentButton
+                variant="primary"
+                onClick={handleApproveAndSend}
+                disabled={isSending}
+                icon={
+                  isSending ? (
+                    <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+                  ) : (
+                    <Send size={14} strokeWidth={2} />
+                  )
+                }
+              >
                 {isSending ? 'Envoi...' : email.statut_envoi === 'failed' ? 'Réessayer l\'envoi' : 'Approuver & Envoyer'}
-              </button>
-              <button className="btn-ghost-sm" onClick={() => setIsEditing(true)}>
-                <Edit3 size={12} /> Modifier
-              </button>
-              <button className="btn-ghost-sm danger" onClick={handleDelete}>
-                <Trash2 size={12} /> Supprimer
-              </button>
+              </AccentButton>
+              <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+                <Edit3 size={13} strokeWidth={2} className="text-[#D4C4A8]" /> Modifier
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDelete}>
+                <Trash2 size={13} strokeWidth={2} /> Supprimer
+              </Button>
             </div>
           )}
         </div>
