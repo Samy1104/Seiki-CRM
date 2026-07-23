@@ -2,9 +2,10 @@
 // Edge Function : learn-linkedin-style
 // Runtime : Deno (Supabase)
 // Rôle : Compare un post LinkedIn généré et sa version éditée par
-//        l'utilisateur, demande à Gemini de mettre à jour le jeu
-//        de règles de style appris pour la voix concernée, et
-//        persiste le résultat dans app_settings.
+//        l'utilisateur, demande à Gemini d'extraire une éventuelle
+//        nouvelle règle de style généralisable, et l'ajoute au
+//        journal de règles apprises pour la voix concernée dans
+//        app_settings.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -12,6 +13,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callGemini } from "../_shared/geminiApi.ts";
 import { requireUser } from "../_shared/requireUser.ts";
+import { appendLearnedRule, buildExtractionPrompt, type LearnedRuleEntry } from "../_shared/learnedRules.ts";
 
 type Voice = "seiki" | "jaafar";
 
@@ -27,35 +29,13 @@ interface LearnRequest {
   edited: PostShape;
 }
 
+interface ExtractionResult {
+  rule: string | null;
+  reason: string | null;
+}
+
 function settingsKey(voice: Voice): string {
   return `linkedin_style_learned_${voice}`;
-}
-
-function formatPost(post: PostShape): string {
-  return `Hook: ${post.hook}\nCorps: ${post.corps}\nHashtags: ${post.hashtags.map((h) => `#${h}`).join(" ")}`;
-}
-
-function buildPrompt(voice: Voice, currentRules: string | null, original: PostShape, edited: PostShape): string {
-  const voiceLabel = voice === "seiki" ? "Seiki (entreprise)" : "Jaafar (personnel)";
-  return `Tu maintiens un jeu de règles de style pour la voix "${voiceLabel}" d'un générateur de posts LinkedIn.
-
-RÈGLES ACTUELLES :
-${currentRules && currentRules.trim().length > 0 ? currentRules : "(aucune règle apprise pour le moment)"}
-
-Un utilisateur a édité un post généré par l'IA. Compare la version originale et la version éditée pour comprendre ce que l'utilisateur a corrigé (longueur, ton, structure, emojis, formulations à éviter, etc.).
-
-VERSION ORIGINALE (générée par l'IA) :
-${formatPost(original)}
-
-VERSION ÉDITÉE (par l'utilisateur) :
-${formatPost(edited)}
-
-Mets à jour le jeu de règles : intègre les nouvelles observations pertinentes, fusionne ou remplace les règles existantes en cas de doublon ou de contradiction, et supprime celles qui ne sont plus utiles. Le résultat doit rester un jeu de règles concis et cohérent (pas un journal d'événements). Si la modification ne révèle aucune préférence de style généralisable (ex: simple correction de faute de frappe, changement de fait spécifique au brief), renvoie les règles actuelles inchangées.
-
-Réponds UNIQUEMENT avec ce JSON valide (aucun texte avant ou après) :
-{
-  "rules": "Le jeu de règles complet et mis à jour, sous forme de liste à puces texte."
-}`;
 }
 
 serve(async (req: Request) => {
@@ -77,6 +57,7 @@ serve(async (req: Request) => {
       );
     }
     const voice: Voice = body.voice === "jaafar" ? "jaafar" : "seiki";
+    const voiceLabel = voice === "seiki" ? "Seiki (entreprise)" : "Jaafar (personnel)";
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -85,31 +66,44 @@ serve(async (req: Request) => {
     const authError = await requireUser(req, supabase, corsHeaders(req));
     if (authError) return authError;
 
-    const { data: existing } = await supabase
+    const { data: existingRow } = await supabase
       .from("app_settings")
       .select("value")
       .eq("key", settingsKey(voice))
       .maybeSingle();
-    const currentRules = (existing?.value as { rules?: string } | null)?.rules ?? null;
+    const existingEntries = Array.isArray((existingRow?.value as { entries?: LearnedRuleEntry[] } | null)?.entries)
+      ? ((existingRow!.value as { entries: LearnedRuleEntry[] }).entries)
+      : [];
 
-    const prompt = buildPrompt(voice, currentRules, body.original, body.edited);
-
+    const prompt = buildExtractionPrompt(voiceLabel, existingEntries, body.original, body.edited);
     const { rawText } = await callGemini(geminiKey, { userPrompt: prompt, temperature: 0.3 });
 
-    let parsed: { rules: string };
+    let parsed: ExtractionResult;
     try {
-      parsed = JSON.parse(rawText) as { rules: string };
+      parsed = JSON.parse(rawText) as ExtractionResult;
     } catch {
       throw new Error(`JSON invalide retourné par Gemini : ${rawText.substring(0, 300)}`);
     }
-    if (!parsed.rules) {
-      throw new Error("Gemini a retourné un JSON incomplet (champ rules manquant)");
+
+    if (!parsed.rule) {
+      return new Response(
+        JSON.stringify({ success: true, learned: false }),
+        { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
+      );
     }
+
+    const newEntry: LearnedRuleEntry = {
+      rule: parsed.rule,
+      reason: parsed.reason ?? "",
+      learned_at: new Date().toISOString(),
+    };
+    const updatedEntries = appendLearnedRule(existingEntries, newEntry);
+    console.log(`[learn-linkedin-style] Nouvelle règle apprise (${voice}):`, JSON.stringify(newEntry));
 
     const { error: upsertErr } = await supabase.from("app_settings").upsert(
       {
         key: settingsKey(voice),
-        value: { rules: parsed.rules },
+        value: { entries: updatedEntries },
         label: `Règles de style LinkedIn apprises — ${voice === "seiki" ? "Seiki" : "Jaafar"}`,
         category: "contenu",
         updated_at: new Date().toISOString(),
@@ -119,7 +113,7 @@ serve(async (req: Request) => {
     if (upsertErr) throw upsertErr;
 
     return new Response(
-      JSON.stringify({ success: true, rules: parsed.rules }),
+      JSON.stringify({ success: true, learned: true, entry: newEntry }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } }
     );
   } catch (err) {
