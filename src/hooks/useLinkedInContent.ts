@@ -23,8 +23,11 @@ export function useLinkedInContent() {
     setCopied(false);
     try {
       const result = await contentService.generateLinkedInPost(brief, voice, language);
-      setPost(result);
-      setOriginalPost(result);
+      setPost(result.post);
+      setOriginalPost(result.post);
+      if (result.validationWarnings.length > 0) {
+        showToast(`Post généré avec des réserves de style : ${result.validationWarnings.join(' ')}`, 'info');
+      }
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la génération', 'error');
     } finally {

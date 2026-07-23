@@ -21,6 +21,7 @@ const TAG_BOOK_KEY = 'linkedin_tag_book';
 interface GeneratePostResult {
   success: boolean;
   post: LinkedInPost;
+  validation_warnings?: string[];
   meta: {
     model: string;
     voice: ContentVoice;
@@ -29,12 +30,17 @@ interface GeneratePostResult {
   };
 }
 
+export interface GeneratedPost {
+  post: LinkedInPost;
+  validationWarnings: string[];
+}
+
 export const contentService = {
   async generateLinkedInPost(
     brief: string,
     voice: ContentVoice,
     language: ContentLanguage
-  ): Promise<LinkedInPost> {
+  ): Promise<GeneratedPost> {
     try {
       const data = await callEdgeFunction<GeneratePostResult & { error?: string }>(
         'generate-linkedin-post',
@@ -42,7 +48,7 @@ export const contentService = {
       );
 
       if (data && data.success && data.post) {
-        return data.post;
+        return { post: data.post, validationWarnings: data.validation_warnings ?? [] };
       }
       throw new Error(data?.error || 'Erreur génération');
     } catch (err) {
@@ -70,7 +76,7 @@ export const contentService = {
         ? ['Seiki', 'Leadership', 'AI', 'MobilityIntelligence', 'Innovation']
         : ['Seiki', 'MobilityIntelligence', 'Data', 'SmartCity', 'Innovation'];
 
-      return { hook, corps, hashtags };
+      return { post: { hook, corps, hashtags }, validationWarnings: [] };
     }
   },
 
