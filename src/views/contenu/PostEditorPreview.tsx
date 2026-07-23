@@ -2,6 +2,8 @@ import React from 'react';
 import { Copy, Check, GraduationCap, Loader2, AtSign, PenSquare } from 'lucide-react';
 import type { LinkedInPost, TagEntry } from '../../services/contentService';
 import type { MentionField } from '../../hooks/useTagBook';
+import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface PostEditorPreviewProps {
   post: LinkedInPost;
@@ -42,66 +44,60 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
   };
 
   return (
-    <div
-      className="p-6 rounded-2xl border border-[var(--border-subtle)] space-y-5 shadow-lg"
-      style={{ background: 'var(--bg-panel)' }}
-    >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[var(--border-subtle)]">
+    <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-5 shadow-hover">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-line-strong">
         <div className="flex items-center gap-2">
-          <PenSquare size={15} className="text-[var(--gold)]" />
-          <h2 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--text-primary)]">
+          <PenSquare size={15} className="text-amber" />
+          <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
             Aperçu &amp; Éditeur en direct
           </h2>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap" style={{ fontFamily: 'var(--font-body)' }}>
-          <button
+        <div className="flex items-center gap-2 flex-wrap font-ui">
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleLearn}
             disabled={learning}
-            className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-black/30 hover:border-[#c8b89a]/40 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer disabled:opacity-50"
             title="Enregistre vos corrections pour améliorer les prochaines générations"
           >
-            {learning ? <Loader2 size={13} className="animate-spin text-[var(--gold)]" /> : <GraduationCap size={13} className="text-[#c8b89a]" />}
+            {learning ? <Loader2 size={13} className="animate-spin text-amber" /> : <GraduationCap size={13} className="text-amber" />}
             <span>Valider &amp; apprendre</span>
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={handleCopy}
-            className="text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--border-subtle)] bg-black/30 hover:border-[#c8b89a]/40 text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
           >
-            {copied ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} className="text-[#c8b89a]" />}
+            {copied ? <Check size={13} className="text-success" /> : <Copy size={13} className="text-amber" />}
             <span>{copied ? 'Copié !' : 'Copier'}</span>
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Hook Textarea */}
       <div className="relative">
-        <label
-          className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1.5"
-          style={{ fontFamily: 'var(--font-body)' }}
-        >
-          Accroche (Hook)
-        </label>
-        <textarea
-          ref={hookRef}
-          value={post.hook}
-          onChange={(e) => handleFieldChange('hook', e)}
-          onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'hook' ? null : m)), 150)}
-          rows={2}
-          className="w-full rounded-xl p-3.5 text-sm bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all duration-200"
-          style={{ resize: 'vertical', fontFamily: 'var(--font-body)' }}
-        />
+        <Field label="Accroche (Hook)">
+          <textarea
+            ref={hookRef}
+            value={post.hook}
+            onChange={(e) => handleFieldChange('hook', e)}
+            onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'hook' ? null : m)), 150)}
+            rows={2}
+            className={`${inputClass} resize-y`}
+          />
+        </Field>
         {mention?.field === 'hook' && mentionMatches.length > 0 && (
-          <div className="absolute z-20 mt-1 w-full rounded-xl border border-[#c8b89a]/40 bg-[var(--bg-panel)] overflow-hidden shadow-modal">
+          <div className="absolute z-20 mt-1 w-full rounded-overlay border border-line-focus bg-elevated overflow-hidden shadow-modal">
             {mentionMatches.map((t) => (
               <button
                 key={t.alias}
                 onClick={() => insertMention(t)}
-                className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-[var(--bg-hover)] text-[var(--text-primary)] transition-colors border-b border-[var(--border-subtle)] last:border-none"
+                className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-hover text-ink transition-colors border-b border-line-strong last:border-none cursor-pointer"
               >
-                <AtSign size={13} className="text-[var(--gold)]" />
-                <span className="font-semibold text-[#c8b89a]">@{t.alias}</span>
-                <span className="text-xs text-[var(--text-secondary)]">({t.name})</span>
+                <AtSign size={13} className="text-amber" />
+                <span className="font-semibold text-amber">@{t.alias}</span>
+                <span className="text-xs text-ink-soft">({t.name})</span>
               </button>
             ))}
           </div>
@@ -110,32 +106,27 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
 
       {/* Corps Textarea */}
       <div className="relative">
-        <label
-          className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1.5"
-          style={{ fontFamily: 'var(--font-body)' }}
-        >
-          Corps du post
-        </label>
-        <textarea
-          ref={corpsRef}
-          value={post.corps}
-          onChange={(e) => handleFieldChange('corps', e)}
-          onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'corps' ? null : m)), 150)}
-          rows={8}
-          className="w-full rounded-xl p-3.5 text-sm bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all duration-200"
-          style={{ resize: 'vertical', fontFamily: 'var(--font-body)' }}
-        />
+        <Field label="Corps du post">
+          <textarea
+            ref={corpsRef}
+            value={post.corps}
+            onChange={(e) => handleFieldChange('corps', e)}
+            onBlur={() => setTimeout(() => setMention((m) => (m?.field === 'corps' ? null : m)), 150)}
+            rows={8}
+            className={`${inputClass} resize-y`}
+          />
+        </Field>
         {mention?.field === 'corps' && mentionMatches.length > 0 && (
-          <div className="absolute z-20 mt-1 w-full rounded-xl border border-[#c8b89a]/40 bg-[var(--bg-panel)] overflow-hidden shadow-modal">
+          <div className="absolute z-20 mt-1 w-full rounded-overlay border border-line-focus bg-elevated overflow-hidden shadow-modal">
             {mentionMatches.map((t) => (
               <button
                 key={t.alias}
                 onClick={() => insertMention(t)}
-                className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-[var(--bg-hover)] text-[var(--text-primary)] transition-colors border-b border-[var(--border-subtle)] last:border-none"
+                className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-hover text-ink transition-colors border-b border-line-strong last:border-none cursor-pointer"
               >
-                <AtSign size={13} className="text-[var(--gold)]" />
-                <span className="font-semibold text-[#c8b89a]">@{t.alias}</span>
-                <span className="text-xs text-[var(--text-secondary)]">({t.name})</span>
+                <AtSign size={13} className="text-amber" />
+                <span className="font-semibold text-amber">@{t.alias}</span>
+                <span className="text-xs text-ink-soft">({t.name})</span>
               </button>
             ))}
           </div>
@@ -143,13 +134,7 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
       </div>
 
       {/* Hashtags Input */}
-      <div>
-        <label
-          className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1.5"
-          style={{ fontFamily: 'var(--font-body)' }}
-        >
-          Hashtags
-        </label>
+      <Field label="Hashtags">
         <input
           value={post.hashtags.map((h) => `#${h}`).join(' ')}
           onChange={(e) =>
@@ -161,12 +146,10 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
                 .map((h) => h.replace(/^#/, '')),
             })
           }
-          className="w-full rounded-xl p-3 text-sm bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all duration-200"
-          style={{ fontFamily: 'var(--font-body)' }}
+          className={inputClass}
           placeholder="#hashtag1 #hashtag2"
         />
-      </div>
+      </Field>
     </div>
   );
 };
-
