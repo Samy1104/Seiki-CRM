@@ -1,4 +1,4 @@
-import type { VoiceProfile } from './voices/types';
+import type { VoiceProfile } from './voices/types.ts';
 
 export interface PostShape {
   hook: string;
