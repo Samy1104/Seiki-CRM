@@ -18,13 +18,21 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
   setActiveTab,
 }) => {
   return (
-    <div className="flex flex-col gap-5 border-b border-line-strong pb-6 mb-6">
+    <div className="flex flex-col gap-5 mb-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold text-ink">Prospection</h1>
-          <p className="text-sm font-ui text-ink-soft mt-1">
-            Gestion des campagnes d'emails et des relances automatiques
-          </p>
+          <h1
+            style={{
+              fontFamily: "'Playfair Display', serif",
+              fontWeight: 900,
+              fontSize: "2.25rem",
+              color: "var(--color-charcoal-fg, #f2ede4)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
+            }}
+          >
+            Prospection
+          </h1>
         </div>
         <ProspectionModeToggle mode={mode} onChange={onModeChange} />
       </div>

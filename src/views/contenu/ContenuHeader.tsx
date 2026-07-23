@@ -11,14 +11,20 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
   const isSeikiConnected = accounts.some((a) => a.target_type === 'company');
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-line-strong pb-6 mb-6">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       <div>
-        <h1 className="text-3xl font-display font-bold text-ink">
+        <h1
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 900,
+            fontSize: "2.25rem",
+            color: "var(--color-charcoal-fg, #f2ede4)",
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
+          }}
+        >
           LinkedIn
         </h1>
-        <p className="text-sm font-ui text-ink-soft mt-1">
-          Rédigez, adaptez au style de votre marque et planifiez vos publications
-        </p>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap font-ui">
