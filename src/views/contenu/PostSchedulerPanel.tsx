@@ -1,5 +1,5 @@
 import React from 'react';
-import { Image as ImageIcon, Loader2, RotateCcw, X, Calendar, Clock } from 'lucide-react';
+import { Loader2, RotateCcw, X, Calendar, Clock } from 'lucide-react';
 import type { LinkedinAccount, ScheduledPost } from '../../services/linkedinService';
 import type { LinkedInPost } from '../../services/contentService';
 import { Button } from '../../components/ui/Button';
@@ -49,7 +49,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
       {post && (
         <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-4 shadow-hover">
           <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-            <Calendar size={15} strokeWidth={2} className="text-amber" />
+            <Calendar size={15} strokeWidth={2} className="text-[#D4C4A8]" />
             <h3 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
               Planifier la publication
             </h3>
@@ -121,7 +121,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
       {/* Queue Listing */}
       <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-4 shadow-hover">
         <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-          <Clock size={15} strokeWidth={2} className="text-amber" />
+          <Clock size={15} strokeWidth={2} className="text-[#D4C4A8]" />
           <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
             Posts programmés en file d'attente
           </h2>
@@ -142,7 +142,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
                 {p.hook}
               </div>
               <div className="text-xs font-ui text-ink-soft mt-1 flex items-center gap-2 flex-wrap">
-                <span className="text-amber font-medium">{accountLabel(p.target_account_id)}</span>
+                <span className="text-[#D4C4A8] font-medium">{accountLabel(p.target_account_id)}</span>
                 <span>•</span>
                 <span>{new Date(p.scheduled_at).toLocaleString('fr-FR')}</span>
                 <span>•</span>
@@ -167,7 +167,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
                   size="sm"
                   onClick={() => onRetry(p.id)}
                 >
-                  <RotateCcw size={13} strokeWidth={2} className="text-amber" /> Relancer
+                  <RotateCcw size={13} strokeWidth={2} className="text-[#D4C4A8]" /> Relancer
                 </Button>
               )}
               {p.status === 'scheduled' && (

@@ -29,7 +29,7 @@ export const PostGeneratorForm: React.FC<PostGeneratorFormProps> = ({
   return (
     <div className="space-y-5 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
       <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-        <Sparkles size={15} strokeWidth={2} className="text-amber" />
+        <Sparkles size={15} strokeWidth={2} className="text-[#D4C4A8]" />
         <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Nouveau brief de publication
         </h2>

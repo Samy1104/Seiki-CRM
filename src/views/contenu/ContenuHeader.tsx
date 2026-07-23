@@ -32,7 +32,7 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
           {isJaafarConnected ? (
             <CheckCircle2 size={15} strokeWidth={2} className="text-success" />
           ) : (
-            <Link2 size={15} strokeWidth={2} className="text-amber" />
+            <Link2 size={15} strokeWidth={2} className="text-[#D4C4A8]" />
           )}
           <span className="font-medium">{isJaafarConnected ? 'Jaafar (Connecté)' : 'Connecter Jaafar'}</span>
         </a>
@@ -44,7 +44,7 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
           {isSeikiConnected ? (
             <CheckCircle2 size={15} strokeWidth={2} className="text-success" />
           ) : (
-            <Link2 size={15} strokeWidth={2} className="text-amber" />
+            <Link2 size={15} strokeWidth={2} className="text-[#D4C4A8]" />
           )}
           <span className="font-medium">{isSeikiConnected ? 'Seiki (Connecté)' : 'Connecter Seiki'}</span>
         </a>

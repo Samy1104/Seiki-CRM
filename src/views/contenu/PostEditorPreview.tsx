@@ -47,7 +47,7 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
     <div className="p-6 rounded-surface border border-line-strong bg-surface space-y-5 shadow-hover">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-line-strong">
         <div className="flex items-center gap-2">
-          <PenSquare size={15} strokeWidth={2} className="text-amber" />
+          <PenSquare size={15} strokeWidth={2} className="text-[#D4C4A8]" />
           <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
             Aperçu &amp; Éditeur en direct
           </h2>
@@ -62,9 +62,9 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
             title="Enregistre vos corrections pour améliorer les prochaines générations"
           >
             {learning ? (
-              <Loader2 size={13} strokeWidth={2} className="animate-spin text-amber" />
+              <Loader2 size={13} strokeWidth={2} className="animate-spin text-[#D4C4A8]" />
             ) : (
-              <GraduationCap size={13} strokeWidth={2} className="text-amber" />
+              <GraduationCap size={13} strokeWidth={2} className="text-[#D4C4A8]" />
             )}
             <span>Valider &amp; apprendre</span>
           </Button>
@@ -76,7 +76,7 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
             {copied ? (
               <Check size={13} strokeWidth={2.5} className="text-success" />
             ) : (
-              <Copy size={13} strokeWidth={2} className="text-amber" />
+              <Copy size={13} strokeWidth={2} className="text-[#D4C4A8]" />
             )}
             <span>{copied ? 'Copié !' : 'Copier'}</span>
           </Button>
@@ -103,8 +103,8 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
                 onClick={() => insertMention(t)}
                 className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-hover text-ink transition-colors border-b border-line-strong last:border-none cursor-pointer"
               >
-                <AtSign size={13} strokeWidth={2} className="text-amber" />
-                <span className="font-semibold text-amber">@{t.alias}</span>
+                <AtSign size={13} strokeWidth={2} className="text-[#D4C4A8]" />
+                <span className="font-semibold text-[#D4C4A8]">@{t.alias}</span>
                 <span className="text-xs text-ink-soft">({t.name})</span>
               </button>
             ))}
@@ -132,8 +132,8 @@ export const PostEditorPreview: React.FC<PostEditorPreviewProps> = ({
                 onClick={() => insertMention(t)}
                 className="w-full text-left px-3.5 py-2.5 text-sm flex items-center gap-2 hover:bg-hover text-ink transition-colors border-b border-line-strong last:border-none cursor-pointer"
               >
-                <AtSign size={13} strokeWidth={2} className="text-amber" />
-                <span className="font-semibold text-amber">@{t.alias}</span>
+                <AtSign size={13} strokeWidth={2} className="text-[#D4C4A8]" />
+                <span className="font-semibold text-[#D4C4A8]">@{t.alias}</span>
                 <span className="text-xs text-ink-soft">({t.name})</span>
               </button>
             ))}

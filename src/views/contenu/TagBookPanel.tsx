@@ -32,14 +32,14 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
   return (
     <div className="space-y-4 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
       <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
-        <AtSign size={15} strokeWidth={2} className="text-amber" />
+        <AtSign size={15} strokeWidth={2} className="text-[#D4C4A8]" />
         <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Comptes tagués (TagBook)
         </h2>
       </div>
 
       <p className="text-xs font-ui text-ink-soft leading-relaxed">
-        Ajoutez un alias une fois (nom + URN LinkedIn), puis tapez <code className="text-amber font-semibold">@alias</code> dans le post pour l'insérer.
+        Ajoutez un alias une fois (nom + URN LinkedIn), puis tapez <code className="text-[#D4C4A8] font-semibold">@alias</code> dans le post pour l'insérer.
         Pour trouver l'URN : si vous administrez la page, le numéro est dans l'URL d'admin
         (<code>linkedin.com/company/ID/admin/</code>) → <code className="text-ink">urn:li:organization:ID</code>.
       </p>
@@ -52,7 +52,7 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
               className="flex items-center justify-between gap-2 p-3 rounded-control border border-line-strong bg-base hover:border-line-focus transition-all"
             >
               <div className="min-w-0 flex items-center gap-2 text-xs font-ui">
-                <span className="font-semibold text-amber bg-amber-soft px-2 py-0.5 rounded-control">
+                <span className="font-semibold text-[#D4C4A8] bg-[#D4C4A8]/10 border border-line-focus px-2 py-0.5 rounded-control">
                   @{t.alias}
                 </span>
                 <span className="text-ink truncate font-medium">{t.name}</span>
