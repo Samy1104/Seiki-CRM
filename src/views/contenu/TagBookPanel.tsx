@@ -2,6 +2,7 @@ import React from 'react';
 import { AtSign, Trash2, Loader2 } from 'lucide-react';
 import type { TagEntry } from '../../services/contentService';
 import { Button } from '../../components/ui/Button';
+import { Field, inputClass } from '../../components/ui/Field';
 
 interface TagBookPanelProps {
   tagBook: TagEntry[];
@@ -29,21 +30,18 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
   onDeleteTag,
 }) => {
   return (
-    <div
-      className="space-y-4 p-6 rounded-2xl border border-[var(--border-subtle)] shadow-lg"
-      style={{ background: 'var(--bg-panel)' }}
-    >
-      <div className="flex items-center gap-2 pb-3 border-b border-[var(--border-subtle)]">
-        <AtSign size={15} className="text-[var(--gold)]" />
-        <h2 className="text-xs font-semibold tracking-[0.25em] uppercase text-[var(--text-primary)]">
+    <div className="space-y-4 p-6 rounded-surface border border-line-strong bg-surface shadow-hover">
+      <div className="flex items-center gap-2 pb-3 border-b border-line-strong">
+        <AtSign size={15} className="text-amber" />
+        <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Comptes tagués (TagBook)
         </h2>
       </div>
 
-      <p className="text-xs text-[var(--text-secondary)] leading-relaxed" style={{ fontFamily: 'var(--font-body)' }}>
-        Ajoutez un alias une fois (nom + URN LinkedIn), puis tapez <code className="text-[#c8b89a] font-semibold">@alias</code> dans le post pour l'insérer.
+      <p className="text-xs font-ui text-ink-soft leading-relaxed">
+        Ajoutez un alias une fois (nom + URN LinkedIn), puis tapez <code className="text-amber font-semibold">@alias</code> dans le post pour l'insérer.
         Pour trouver l'URN : si vous administrez la page, le numéro est dans l'URL d'admin
-        (<code>linkedin.com/company/ID/admin/</code>) → <code className="text-[var(--text-primary)]">urn:li:organization:ID</code>.
+        (<code>linkedin.com/company/ID/admin/</code>) → <code className="text-ink">urn:li:organization:ID</code>.
       </p>
 
       {tagBook.length > 0 && (
@@ -51,18 +49,18 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
           {tagBook.map((t) => (
             <div
               key={t.alias}
-              className="flex items-center justify-between gap-2 p-3 rounded-xl border border-[var(--border-subtle)] bg-black/40 hover:border-[#c8b89a]/30 transition-all"
+              className="flex items-center justify-between gap-2 p-3 rounded-control border border-line-strong bg-base hover:border-line-focus transition-all"
             >
-              <div className="min-w-0 flex items-center gap-2 text-xs" style={{ fontFamily: 'var(--font-body)' }}>
-                <span className="font-semibold text-[#c8b89a] bg-[#c8b89a]/10 px-2 py-0.5 rounded-md">
+              <div className="min-w-0 flex items-center gap-2 text-xs font-ui">
+                <span className="text-amber bg-amber-soft border border-line-focus px-2 py-0.5 rounded-control font-semibold">
                   @{t.alias}
                 </span>
-                <span className="text-[var(--text-primary)] truncate font-medium">{t.name}</span>
-                <span className="text-xs truncate text-[var(--text-muted)]">({t.urn})</span>
+                <span className="text-ink truncate font-medium">{t.name}</span>
+                <span className="text-xs truncate text-ink-faint">({t.urn})</span>
               </div>
               <button
                 onClick={() => onDeleteTag(t.alias)}
-                className="shrink-0 text-[var(--text-muted)] hover:text-rose-400 transition-colors cursor-pointer p-1"
+                className="shrink-0 text-ink-faint hover:text-danger transition-colors cursor-pointer p-1"
                 title="Supprimer l'alias"
               >
                 <Trash2 size={14} />
@@ -72,56 +70,36 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
         </div>
       )}
 
-      <div className="flex gap-3 flex-wrap items-end pt-2 border-t border-[var(--border-subtle)] mt-2">
-        <div>
-          <label
-            className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            Alias
-          </label>
+      <div className="flex gap-3 flex-wrap items-end pt-2 border-t border-line-strong mt-2">
+        <Field label="Alias">
           <input
             value={newTagAlias}
             onChange={(e) => setNewTagAlias(e.target.value)}
             placeholder="Lyon"
-            className="rounded-xl p-2.5 text-xs bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all w-[110px]"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className={`${inputClass} py-2 px-3 text-xs w-[110px]`}
           />
-        </div>
-        <div>
-          <label
-            className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            Nom affiché
-          </label>
+        </Field>
+        <Field label="Nom affiché">
           <input
             value={newTagName}
             onChange={(e) => setNewTagName(e.target.value)}
             placeholder="Ville de Lyon"
-            className="rounded-xl p-2.5 text-xs bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all w-[180px]"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className={`${inputClass} py-2 px-3 text-xs w-[180px]`}
           />
-        </div>
-        <div className="flex-1 min-w-[200px]">
-          <label
-            className="block text-[11px] font-medium tracking-[0.2em] uppercase text-[var(--text-secondary)] mb-1"
-            style={{ fontFamily: 'var(--font-body)' }}
-          >
-            URN LinkedIn
-          </label>
+        </Field>
+        <Field label="URN LinkedIn" className="flex-1 min-w-[200px]">
           <input
             value={newTagUrn}
             onChange={(e) => setNewTagUrn(e.target.value)}
             placeholder="urn:li:organization:12345"
-            className="w-full rounded-xl p-2.5 text-xs bg-black/40 border border-[var(--border-subtle)] text-[var(--text-primary)] focus:outline-none focus:border-[#c8b89a] transition-all"
-            style={{ fontFamily: 'var(--font-body)' }}
+            className={`${inputClass} py-2 px-3 text-xs`}
           />
-        </div>
+        </Field>
         <Button
+          variant="primary"
           onClick={onAddTag}
           disabled={savingTag}
-          className="bg-[var(--gold)] text-black font-semibold text-xs tracking-wider uppercase hover:bg-[var(--gold)]/90 transition-all px-4 py-2.5 rounded-xl cursor-pointer disabled:opacity-50"
+          className="uppercase tracking-wider text-xs px-4 py-2"
         >
           {savingTag ? <Loader2 size={14} className="animate-spin" /> : 'Ajouter'}
         </Button>
@@ -129,4 +107,5 @@ export const TagBookPanel: React.FC<TagBookPanelProps> = ({
     </div>
   );
 };
+
 
