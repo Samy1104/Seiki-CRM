@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Field, inputClass } from '../../components/ui/Field';
 import { TagAutoCompleteCombobox } from '../../components/ui/TagAutoCompleteCombobox';
 import { QuickAddTagModal } from '../../components/ui/QuickAddTagModal';
-import { formatPostForLinkedIn, formatPostForCleanDisplay } from '../../utils/linkedinMentionFormatter';
+import { formatPostForLinkedIn } from '../../utils/linkedinMentionFormatter';
 import { useToast } from '../../context/ToastContext';
 
 interface PostEditorPreviewProps {

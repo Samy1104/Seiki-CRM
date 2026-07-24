@@ -8,7 +8,6 @@ export function parseLinkedInUrl(input: string): {
   url: string;
 } {
   const cleanInput = input.trim();
-  const isCompany = cleanInput.includes('/company/') || cleanInput.includes('organization');
   const isPerson = cleanInput.includes('/in/') || cleanInput.includes('person');
 
   const type: 'organization' | 'person' = isPerson ? 'person' : 'organization';
