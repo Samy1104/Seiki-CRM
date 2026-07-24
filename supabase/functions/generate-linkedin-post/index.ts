@@ -113,8 +113,17 @@ serve(async (req: Request) => {
     let validation = validatePost(attempt.post, profile);
 
     if (!validation.valid) {
-      attempt = await generateOnce(geminiKey, systemPrompt, buildUserPrompt(body.brief, validation.violations));
-      validation = validatePost(attempt.post, profile);
+      const firstAttempt = attempt;
+      const firstValidation = validation;
+      try {
+        attempt = await generateOnce(geminiKey, systemPrompt, buildUserPrompt(body.brief, validation.violations));
+        validation = validatePost(attempt.post, profile);
+      } catch (retryErr) {
+        const message = retryErr instanceof Error ? retryErr.message : "Erreur inconnue";
+        console.error("[generate-linkedin-post] Retry a échoué, on garde la première tentative :", message);
+        attempt = firstAttempt;
+        validation = firstValidation;
+      }
     }
 
     return new Response(

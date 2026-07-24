@@ -4,8 +4,11 @@
 -- into the new { "entries": [...] } shape expected by the
 -- rebuilt writing-style system. Safe to run even if no row
 -- exists yet for a given key (UPDATE affects 0 rows).
--- Run once in the Supabase SQL Editor before deploying the
--- updated generate-linkedin-post / learn-linkedin-style functions.
+-- Run this in the Supabase SQL Editor as soon as possible — the
+-- generate-linkedin-post / learn-linkedin-style functions are already
+-- deployed and reading/writing the NEW {entries: [...]} shape; until
+-- this runs, any user edit to a post will overwrite (not preserve) an
+-- existing legacy {rules: "..."} row instead of migrating it.
 -- ============================================================
 
 UPDATE app_settings
