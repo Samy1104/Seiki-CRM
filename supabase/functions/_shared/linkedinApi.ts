@@ -134,6 +134,27 @@ export async function publishPost(
 
   if (!res.ok) {
     const errBody = await res.text();
+    if (errBody.includes("INVALID_MENTION") || errBody.includes("commentary field is invalid")) {
+      console.warn("[publishPost] Mention rejected by LinkedIn API. Retrying with clean text...");
+      const sanitizedText = text.replace(/@\[([^\]]+)\]\(urn:li:[^)]+\)/g, "@$1");
+      payload.commentary = sanitizedText;
+      const retryRes = await fetchWithTimeout("https://api.linkedin.com/rest/posts", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+          "LinkedIn-Version": LINKEDIN_API_VERSION,
+          "X-Restli-Protocol-Version": "2.0.0",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!retryRes.ok) {
+        const retryErr = await retryRes.text();
+        throw new Error(`LinkedIn publish failed HTTP ${retryRes.status}: ${retryErr}`);
+      }
+      return retryRes.headers.get("x-restli-id") ?? retryRes.headers.get("x-linkedin-id") ?? "unknown";
+    }
     throw new Error(`LinkedIn publish failed HTTP ${res.status}: ${errBody}`);
   }
 

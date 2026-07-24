@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost } from '../services/contentService';
+import { contentService, type ContentVoice, type ContentLanguage, type LinkedInPost, type TagEntry } from '../services/contentService';
 import { useToast } from '../context/ToastContext';
 
 export function useLinkedInContent() {
@@ -14,7 +14,7 @@ export function useLinkedInContent() {
   const [copied, setCopied] = useState(false);
   const [learning, setLearning] = useState(false);
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (selectedTags?: TagEntry[]) => {
     if (!brief.trim()) {
       showToast('Décris le sujet du post avant de générer.', 'error');
       return;
@@ -22,7 +22,7 @@ export function useLinkedInContent() {
     setLoading(true);
     setCopied(false);
     try {
-      const result = await contentService.generateLinkedInPost(brief, voice, language);
+      const result = await contentService.generateLinkedInPost(brief, voice, language, selectedTags);
       setPost(result.post);
       setOriginalPost(result.post);
       if (result.validationWarnings.length > 0) {

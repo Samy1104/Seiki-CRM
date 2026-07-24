@@ -98,9 +98,25 @@ export const linkedinService = {
   },
 
   async retryScheduledPost(id: string): Promise<void> {
+    // Fetch post details to sanitize any rejected person URNs
+    const { data: row } = await supabase
+      .from('scheduled_linkedin_posts')
+      .select('hook, corps')
+      .eq('id', id)
+      .single();
+
+    const cleanHook = row?.hook ? row.hook.replace(/@\[([^\]]+)\]\(urn:li:person:[^)]+\)/g, '@$1') : row?.hook;
+    const cleanCorps = row?.corps ? row.corps.replace(/@\[([^\]]+)\]\(urn:li:person:[^)]+\)/g, '@$1') : row?.corps;
+
     const { error } = await supabase
       .from('scheduled_linkedin_posts')
-      .update({ status: 'scheduled', error_message: null, scheduled_at: new Date().toISOString() })
+      .update({
+        hook: cleanHook,
+        corps: cleanCorps,
+        status: 'scheduled',
+        error_message: null,
+        scheduled_at: new Date().toISOString(),
+      })
       .eq('id', id);
     if (error) throw error;
   },

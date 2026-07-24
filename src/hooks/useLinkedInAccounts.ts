@@ -3,6 +3,9 @@ import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../se
 import type { LinkedInPost } from '../services/contentService';
 import { useToast } from '../context/ToastContext';
 
+import { formatPostForLinkedIn } from '../utils/linkedinMentionFormatter';
+import type { TagEntry } from '../services/contentService';
+
 export function useLinkedInAccounts() {
   const { showToast } = useToast();
 
@@ -17,7 +20,7 @@ export function useLinkedInAccounts() {
   const loadAccounts = () => linkedinService.listAccounts().then(setAccounts).catch(() => {});
   const loadQueue = () => linkedinService.listScheduledPosts().then(setQueue).catch(() => {});
 
-  const handleSchedule = async (post: LinkedInPost, onSuccess: () => void) => {
+  const handleSchedule = async (post: LinkedInPost, onSuccess: () => void, tagBook?: TagEntry[]) => {
     if (!targetAccountId) {
       showToast('Choisis un compte LinkedIn connecté.', 'error');
       return;
@@ -33,15 +36,18 @@ export function useLinkedInAccounts() {
         imagePath = await linkedinService.uploadImage(imageFile);
       }
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
+      const formattedHook = tagBook ? formatPostForLinkedIn(post.hook, tagBook) : post.hook;
+      const formattedCorps = tagBook ? formatPostForLinkedIn(post.corps, tagBook) : post.corps;
+
       await linkedinService.schedulePost({
-        hook: post.hook,
-        corps: post.corps,
+        hook: formattedHook,
+        corps: formattedCorps,
         hashtags: post.hashtags,
         imagePath,
         targetAccountId,
         scheduledAt: scheduledDateTime,
       });
-      showToast('Post programmé.', 'success');
+      showToast('Post programmé avec succès (les tags seront créés automatiquement sur LinkedIn) !', 'success');
       setImageFile(null);
       setScheduledDate('');
       setScheduledTime('09:00');

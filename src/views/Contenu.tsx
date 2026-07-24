@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useToast } from '../context/ToastContext';
 import { useLinkedInContent } from '../hooks/useLinkedInContent';
 import { useLinkedInAccounts } from '../hooks/useLinkedInAccounts';
 import { useTagBook } from '../hooks/useTagBook';
+import type { TagEntry } from '../services/contentService';
 import { ContenuHeader } from './contenu/ContenuHeader';
 import { PostGeneratorForm } from './contenu/PostGeneratorForm';
 import { PostEditorPreview } from './contenu/PostEditorPreview';
@@ -16,6 +17,7 @@ interface ContenuProps {
 
 export const Contenu: React.FC<ContenuProps> = () => {
   const { showToast } = useToast();
+  const [selectedTags, setSelectedTags] = useState<TagEntry[]>([]);
 
   const {
     brief,
@@ -110,7 +112,11 @@ export const Contenu: React.FC<ContenuProps> = () => {
           language={language}
           setLanguage={setLanguage}
           loading={loading}
-          onGenerate={handleGenerate}
+          onGenerate={() => handleGenerate(selectedTags)}
+          tagBook={tagBook}
+          selectedTags={selectedTags}
+          setSelectedTags={setSelectedTags}
+          onTagAdded={loadTagBook}
         />
 
         {/* TagBook Manager */}
@@ -144,6 +150,8 @@ export const Contenu: React.FC<ContenuProps> = () => {
             insertMention={(tag) => insertMention(tag, post, setPost, fieldRefs)}
             handleCopy={handleCopy}
             handleLearn={handleLearn}
+            tagBook={tagBook}
+            onTagAdded={loadTagBook}
           />
         )}
 
@@ -161,10 +169,14 @@ export const Contenu: React.FC<ContenuProps> = () => {
           setImageFile={setImageFile}
           scheduling={scheduling}
           onSchedule={() =>
-            handleSchedule(post!, () => {
-              setPost(null as any);
-              setBrief('');
-            })
+            handleSchedule(
+              post!,
+              () => {
+                setPost(null as any);
+                setBrief('');
+              },
+              tagBook
+            )
           }
           onCancel={handleCancel}
           onRetry={handleRetry}

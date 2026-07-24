@@ -14,6 +14,8 @@ export interface TagEntry {
   alias: string;
   name: string;
   urn: string;
+  url?: string;
+  type?: 'organization' | 'person';
 }
 
 const TAG_BOOK_KEY = 'linkedin_tag_book';
@@ -39,12 +41,13 @@ export const contentService = {
   async generateLinkedInPost(
     brief: string,
     voice: ContentVoice,
-    language: ContentLanguage
+    language: ContentLanguage,
+    selectedTags?: TagEntry[]
   ): Promise<GeneratedPost> {
     try {
       const data = await callEdgeFunction<GeneratePostResult & { error?: string }>(
         'generate-linkedin-post',
-        { brief, voice, language }
+        { brief, voice, language, tags: selectedTags }
       );
 
       if (data && data.success && data.post) {
@@ -56,6 +59,10 @@ export const contentService = {
       const isJaafar = voice === 'jaafar';
       const isEn = language === 'en';
 
+      const tagMentions = selectedTags && selectedTags.length > 0 
+        ? `\n\nEn collaboration avec ${selectedTags.map(t => `@${t.name}`).join(', ')}` 
+        : '';
+
       const hook = isJaafar
         ? isEn
           ? `🚀 ${brief.slice(0, 80)}${brief.length > 80 ? '...' : ''}`
@@ -66,11 +73,11 @@ export const contentService = {
 
       const corps = isJaafar
         ? isEn
-          ? `Extremely excited to share our latest update:\n\n${brief}\n\nKey takeaways:\n• Accelerated data insights\n• Optimized team productivity\n• Actionable decision making\n\nLooking forward to hearing your thoughts! 🙌`
-          : `Ravi de vous partager notre dernière avancée chez Seiki :\n\n${brief}\n\nLes points clés à retenir :\n• Analyse haute précision des données de mobilité\n• Accélération des prises de décision stratégiques\n• Impact mesurable sur le terrain\n\nQu'en pensez-vous ? N'hésitez pas à partager vos retours en commentaire ! 🙌`
+          ? `Extremely excited to share our latest update:\n\n${brief}${tagMentions}\n\nKey takeaways:\n• Accelerated data insights\n• Optimized team productivity\n• Actionable decision making\n\nLooking forward to hearing your thoughts! 🙌`
+          : `Ravi de vous partager notre dernière avancée chez Seiki :\n\n${brief}${tagMentions}\n\nLes points clés à retenir :\n• Analyse haute précision des données de mobilité\n• Accélération des prises de décision stratégiques\n• Impact mesurable sur le terrain\n\nQu'en pensez-vous ? N'hésitez pas à partager vos retours en commentaire ! 🙌`
         : isEn
-        ? `Seiki is proud to announce a new milestone in Mobility Intelligence:\n\n${brief}\n\nOur key impact metrics:\n📊 100% data-driven audience measurement\n📈 Real-time population flow monitoring\n🎯 Predictive Insights for decision makers\n\nEmpowering smart cities and retail networks with meaningful mobility data.`
-        : `Seiki est fier d'annoncer une nouvelle étape majeure dans la Mobility Intelligence :\n\n${brief}\n\nNos métriques d'impact :\n📊 Mesure d'audience et de flux 100% basée sur la donnée\n📈 Suivi en temps réel des comportements de déplacement\n🎯 Indicateurs stratégiques pour les décideurs\n\nTransformons ensemble les données de mobilité en levier d'action concrète.`;
+        ? `Seiki is proud to announce a new milestone in Mobility Intelligence:\n\n${brief}${tagMentions}\n\nOur key impact metrics:\n📊 100% data-driven audience measurement\n📈 Real-time population flow monitoring\n🎯 Predictive Insights for decision makers\n\nEmpowering smart cities and retail networks with meaningful mobility data.`
+        : `Seiki est fier d'annoncer une nouvelle étape majeure dans la Mobility Intelligence :\n\n${brief}${tagMentions}\n\nNos métriques d'impact :\n📊 Mesure d'audience et de flux 100% basée sur la donnée\n📈 Suivi en temps réel des comportements de déplacement\n🎯 Indicateurs stratégiques pour les décideurs\n\nTransformons ensemble les données de mobilité en levier d'action concrète.`;
 
       const hashtags = isJaafar
         ? ['Seiki', 'Leadership', 'AI', 'MobilityIntelligence', 'Innovation']
