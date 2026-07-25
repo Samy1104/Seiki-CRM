@@ -55,6 +55,22 @@ Notre ambition : transformer les données de mobilité en indicateurs stratégiq
 #Monaco #MobilityIntelligence #Data #TourismAnalytics #SmartCity #MobilityData #Tourisme #Innovation #Seiki`,
       note: 'Post data/client : clôture tagline courte en 3 lignes.',
     },
+    {
+      text: `#2026 commence avec une certitude : la #data éclaire nos décisions et guide nos ambitions.
+
+Toute l'équipe Seiki vous adresse ses meilleurs vœux ! 💫`,
+      note: 'Vœux de nouvelle année : post très court, ton festif, pas de hashtags multiples.',
+    },
+    {
+      text: `Seiki figure dans le mapping 2026 des startups françaises de l'IA réalisé par France Digitale, avec le soutien de Sopra Steria Ventures.
+
+Un mapping qui place sous les projecteurs les startups qui mettent l'intelligence artificielle au cœur de leur activité pour changer la face du monde à la française 🇫🇷
+
+C'est par ici pour découvrir le mapping complet 👉 https://lnkd.in/eb6gxJRH
+
+#MappingIA`,
+      note: 'Mention presse/annonce : court, avec lien, hashtag unique.',
+    },
   ],
   tone: ['fier', 'factuel', 'orienté impact business et données concrètes', 'à la première personne du pluriel ("nous")'],
   hook: { minWords: 1, maxWords: 15, mustBe: 'portée par un ou deux emojis pertinents (pas décoratifs), jamais une formule générique' },

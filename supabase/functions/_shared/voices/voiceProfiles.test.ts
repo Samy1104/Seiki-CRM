@@ -34,5 +34,6 @@ it('seiki examples include the Neuilly and Monaco case studies', () => {
 });
 
 it('jaafar examples are written in first person', () => {
-  expect(jaafarProfile.examples.length).toBe(3);
+  expect(jaafarProfile.examples.length).toBeGreaterThanOrEqual(3);
+  expect(jaafarProfile.examples.some((e) => /\bI\b|\bje\b|J'aurai|J'ai eu/.test(e.text))).toBe(true);
 });
