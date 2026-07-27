@@ -41,7 +41,10 @@ export const Settings: React.FC = () => {
   const [aiScoring, setAiScoring] = useState(false);
 
   // Form states - Prospection
-  const [dailyQuota, setDailyQuota] = useState(100);
+  const [gmailDailyCap, setGmailDailyCap] = useState<number | null>(null);
+  const [gmailWarmupStartDate, setGmailWarmupStartDate] = useState<string | null>(null);
+  const [gmailWindowStart, setGmailWindowStart] = useState('08:00');
+  const [gmailWindowEnd, setGmailWindowEnd] = useState('18:00');
   const [followup1Days, setFollowup1Days] = useState(5);
   const [followup2Days, setFollowup2Days] = useState(10);
   const [archiveAfter, setArchiveAfter] = useState(2);
@@ -68,13 +71,18 @@ export const Settings: React.FC = () => {
   // Populate SLA & AI settings whenever the fetched settings change
   useEffect(() => {
     settingsRes.data.forEach(s => {
-      if (s.key === 'sla_media' && s.value.days !== undefined) setSlaMedia(s.value.days);
-      if (s.key === 'sla_retail' && s.value.days !== undefined) setSlaRetail(s.value.days);
-      if (s.key === 'sla_instit' && s.value.days !== undefined) setSlaInstit(s.value.days);
+      if (s.key === 'sla_media' && s.value.days !== undefined && typeof s.value.days === 'number') setSlaMedia(s.value.days);
+      if (s.key === 'sla_retail' && s.value.days !== undefined && typeof s.value.days === 'number') setSlaRetail(s.value.days);
+      if (s.key === 'sla_instit' && s.value.days !== undefined && typeof s.value.days === 'number') setSlaInstit(s.value.days);
       if (s.key === 'scoring_auto' && s.value.enabled !== undefined) setAiScoring(s.value.enabled);
-      if (s.key === 'daily_send_quota' && s.value.count !== undefined) setDailyQuota(s.value.count);
-      if (s.key === 'followup_1_days' && s.value.days !== undefined) setFollowup1Days(s.value.days);
-      if (s.key === 'followup_2_days' && s.value.days !== undefined) setFollowup2Days(s.value.days);
+      if (s.key === 'gmail_daily_cap' && s.value.count !== undefined) setGmailDailyCap(s.value.count);
+      if (s.key === 'gmail_warmup_start_date' && s.value.date !== undefined) setGmailWarmupStartDate(s.value.date);
+      if (s.key === 'gmail_send_window') {
+        if (s.value.start !== undefined) setGmailWindowStart(s.value.start);
+        if (s.value.end !== undefined) setGmailWindowEnd(s.value.end);
+      }
+      if (s.key === 'followup_1_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup1Days(s.value.days);
+      if (s.key === 'followup_2_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup2Days(s.value.days);
       if (s.key === 'archive_after_followups' && s.value.count !== undefined) setArchiveAfter(s.value.count);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -227,10 +235,12 @@ export const Settings: React.FC = () => {
     e.preventDefault();
     try {
       await settingsService.updateProspectionSettings({
-        daily_send_quota: dailyQuota,
         followup_1_days: followup1Days,
         followup_2_days: followup2Days,
         archive_after_followups: archiveAfter,
+        gmail_daily_cap: gmailDailyCap,
+        gmail_warmup_start_date: gmailWarmupStartDate,
+        gmail_send_window: { days: [1, 2, 3, 4, 5], start: gmailWindowStart, end: gmailWindowEnd },
       });
       showToast('Paramètres de prospection sauvegardés ✓');
       loadSettingsData();
@@ -321,14 +331,20 @@ export const Settings: React.FC = () => {
 
       {activeTab === 'prospection' && (
         <ProspectionSettingsTab
-          dailyQuota={dailyQuota}
           followup1Days={followup1Days}
           followup2Days={followup2Days}
           archiveAfter={archiveAfter}
-          onDailyQuotaChange={setDailyQuota}
+          gmailDailyCap={gmailDailyCap}
+          gmailWarmupStartDate={gmailWarmupStartDate}
+          gmailWindowStart={gmailWindowStart}
+          gmailWindowEnd={gmailWindowEnd}
           onFollowup1DaysChange={setFollowup1Days}
           onFollowup2DaysChange={setFollowup2Days}
           onArchiveAfterChange={setArchiveAfter}
+          onGmailDailyCapChange={setGmailDailyCap}
+          onGmailWarmupStartDateChange={setGmailWarmupStartDate}
+          onGmailWindowStartChange={setGmailWindowStart}
+          onGmailWindowEndChange={setGmailWindowEnd}
           onSubmit={handleSaveProspectionSettings}
         />
       )}
