@@ -8,7 +8,8 @@
 
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildEmailHtml, buildRawEmail } from "./gmailMime.ts";
-import { refreshAccessToken, sendRawMessage } from "./gmailApi.ts";
+import { getMessage, refreshAccessToken, sendRawMessage } from "./gmailApi.ts";
+import { getHeader } from "./gmailMessageParser.ts";
 
 interface GeneratedEmail {
   id: string;
@@ -94,11 +95,26 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
 
   // Relance : on thread avec le dernier email sortant du lead pour que Gmail
   // affiche la conversation groupée, des deux côtés.
+  // 1) email_logs.message_id porte le Message-Id RFC 5322 du dernier envoi —
+  //    c'est lui qui alimente les en-têtes In-Reply-To / References, seuls
+  //    reconnus par les clients mail du destinataire.
   const { data: lastOutbound } = await supabase
     .from("email_logs")
     .select("message_id")
     .eq("lead_id", ge.lead_id)
     .eq("direction", "outbound")
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // 2) generated_emails.gmail_thread_id porte l'identifiant de fil INTERNE
+  //    Gmail — à passer à l'API d'envoi pour que le message atterrisse dans
+  //    le même fil dans notre propre boîte.
+  const { data: lastThreaded } = await supabase
+    .from("generated_emails")
+    .select("gmail_thread_id")
+    .eq("lead_id", ge.lead_id)
+    .not("gmail_thread_id", "is", null)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -143,11 +159,23 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
 
   let sendResult: { id: string; threadId: string };
   try {
-    sendResult = await sendRawMessage(accessToken, rawMessage);
+    sendResult = await sendRawMessage(accessToken, rawMessage, lastThreaded?.gmail_thread_id ?? undefined);
   } catch (err) {
     const message = `Erreur envoi Gmail : ${err instanceof Error ? err.message : String(err)}`;
     await recordFailure(message);
     return { success: false, error: message };
+  }
+
+  // sendResult.id est l'identifiant de ressource INTERNE Gmail (hex, sans
+  // chevrons ni domaine) — inutilisable comme In-Reply-To/References. On
+  // relit le message envoyé pour récupérer son vrai en-tête Message-Id
+  // RFC 5322, seul format que les clients mail acceptent pour le threading.
+  let rfcMessageId = sendResult.id;
+  try {
+    const sentMsg = await getMessage(accessToken, sendResult.id);
+    rfcMessageId = getHeader(sentMsg, "Message-Id") ?? sendResult.id;
+  } catch (err) {
+    console.warn("[sendViaGmail] Relecture du Message-Id échouée (non bloquante) :", err instanceof Error ? err.message : err);
   }
 
   const sentAt = new Date().toISOString();
@@ -166,7 +194,7 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
     subject: ge.sujet,
     body_preview: ge.corps_du_mail.substring(0, 500),
     body_html: htmlBody,
-    message_id: sendResult.id,
+    message_id: rfcMessageId,
     status: "sent",
     sent_at: sentAt,
   }]);

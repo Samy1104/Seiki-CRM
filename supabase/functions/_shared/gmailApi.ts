@@ -61,11 +61,19 @@ export async function getCurrentHistoryId(accessToken: string): Promise<string> 
   return String(data.historyId);
 }
 
-export async function sendRawMessage(accessToken: string, rawBase64Url: string): Promise<{ id: string; threadId: string }> {
+/**
+ * Envoie un message MIME brut. `threadId` (optionnel) demande à Gmail de
+ * rattacher le message à un fil existant — indispensable pour que les
+ * relances apparaissent dans la même conversation côté boîte d'envoi.
+ */
+export async function sendRawMessage(accessToken: string, rawBase64Url: string, threadId?: string): Promise<{ id: string; threadId: string }> {
+  const body: Record<string, string> = { raw: rawBase64Url };
+  if (threadId) body.threadId = threadId;
+
   const res = await fetchWithTimeout("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ raw: rawBase64Url }),
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(`Gmail send error: ${JSON.stringify(data)}`);
@@ -86,22 +94,38 @@ export async function getMessage(accessToken: string, id: string): Promise<Gmail
  * Lève une erreur si startHistoryId est trop ancien (Gmail purge son
  * historique) — l'appelant (poll-gmail-inbox) doit alors resynchroniser
  * via getCurrentHistoryId().
+ *
+ * history.list est paginé (100 enregistrements par page par défaut) : on
+ * boucle sur nextPageToken jusqu'à épuisement. Sans cette boucle, seule la
+ * première page serait lue alors que le curseur persisté (data.historyId =
+ * état COURANT de la boîte) sauterait quand même au-delà — les messages des
+ * pages suivantes seraient perdus définitivement.
  */
 export async function listHistory(accessToken: string, startHistoryId: string): Promise<{ historyId: string; addedMessageIds: string[] }> {
-  const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/history");
-  url.searchParams.set("startHistoryId", startHistoryId);
-  url.searchParams.set("historyTypes", "messageAdded");
-  url.searchParams.set("labelId", "INBOX");
-
-  const res = await fetchWithTimeout(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
-  const data = await res.json();
-  if (!res.ok) throw new Error(`Gmail history error ${res.status}: ${JSON.stringify(data)}`);
-
   const addedMessageIds: string[] = [];
-  for (const h of data.history ?? []) {
-    for (const m of h.messagesAdded ?? []) {
-      addedMessageIds.push(m.message.id);
+  let pageToken: string | undefined;
+  let finalHistoryId = startHistoryId;
+
+  do {
+    const url = new URL("https://gmail.googleapis.com/gmail/v1/users/me/history");
+    url.searchParams.set("startHistoryId", startHistoryId);
+    url.searchParams.set("historyTypes", "messageAdded");
+    url.searchParams.set("labelId", "INBOX");
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
+
+    const res = await fetchWithTimeout(url.toString(), { headers: { Authorization: `Bearer ${accessToken}` } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(`Gmail history error ${res.status}: ${JSON.stringify(data)}`);
+
+    for (const h of data.history ?? []) {
+      for (const m of h.messagesAdded ?? []) {
+        addedMessageIds.push(m.message.id);
+      }
     }
-  }
-  return { historyId: data.historyId ?? startHistoryId, addedMessageIds };
+
+    if (data.historyId) finalHistoryId = data.historyId;
+    pageToken = data.nextPageToken;
+  } while (pageToken);
+
+  return { historyId: finalHistoryId, addedMessageIds };
 }
