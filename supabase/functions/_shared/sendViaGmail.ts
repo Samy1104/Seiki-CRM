@@ -17,6 +17,7 @@ interface GeneratedEmail {
   sujet: string;
   corps_du_mail: string;
   statut_envoi: string;
+  step: string;
 }
 
 interface LeadEmail {
@@ -103,6 +104,11 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
     .select("message_id")
     .eq("lead_id", ge.lead_id)
     .eq("direction", "outbound")
+    // recordFailure() insère des lignes d'échec avec sent_at NULL. En DESC,
+    // Postgres remonte les NULL en premier : sans ce filtre, une tentative
+    // ratée éclipserait le dernier envoi réellement abouti et fournirait un
+    // In-Reply-To vide. Seuls les envois réussis ont un sent_at.
+    .not("sent_at", "is", null)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -123,11 +129,21 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
   const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email?id=${generatedEmailId}&t=open`;
   const htmlBody = buildEmailHtml(ge.corps_du_mail, trackingPixelUrl);
 
+  // Les relances ont besoin d'un préfixe "Re: " pour que les heuristiques de
+  // regroupement propres à Gmail les rattachent effectivement à l'email
+  // initial chez le destinataire (Gmail se base sur la correspondance du
+  // sujet + References, pas seulement sur notre threadId). N'affecte que le
+  // sujet du MIME sortant — ge.sujet (donc ce qui est loggué/affiché) reste
+  // le sujet issu du template.
+  const outgoingSubject = ge.step !== "initial" && !ge.sujet.toLowerCase().startsWith("re:")
+    ? `Re: ${ge.sujet}`
+    : ge.sujet;
+
   const rawMessage = buildRawEmail({
     fromEmail: account.email,
     fromName: "Seiki CRM",
     toEmail: leadData.email,
-    subject: ge.sujet,
+    subject: outgoingSubject,
     textBody: ge.corps_du_mail,
     htmlBody,
     inReplyTo: lastOutbound?.message_id ?? undefined,
@@ -161,9 +177,24 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
   try {
     sendResult = await sendRawMessage(accessToken, rawMessage, lastThreaded?.gmail_thread_id ?? undefined);
   } catch (err) {
-    const message = `Erreur envoi Gmail : ${err instanceof Error ? err.message : String(err)}`;
-    await recordFailure(message);
-    return { success: false, error: message };
+    if (lastThreaded?.gmail_thread_id) {
+      // Gmail a refusé l'envoi threadé (sujet/fil incohérent, fil obsolète...)
+      // — on retente une fois sans threadId plutôt que de faire échouer tout
+      // l'envoi pour un confort de threading. Le destinataire reçoit bien le
+      // mail ; il ne sera simplement pas regroupé dans notre propre boîte.
+      console.warn("[sendViaGmail] Threaded send failed, retrying without threadId:", err instanceof Error ? err.message : err);
+      try {
+        sendResult = await sendRawMessage(accessToken, rawMessage);
+      } catch (retryErr) {
+        const message = `Erreur envoi Gmail : ${retryErr instanceof Error ? retryErr.message : String(retryErr)}`;
+        await recordFailure(message);
+        return { success: false, error: message };
+      }
+    } else {
+      const message = `Erreur envoi Gmail : ${err instanceof Error ? err.message : String(err)}`;
+      await recordFailure(message);
+      return { success: false, error: message };
+    }
   }
 
   // sendResult.id est l'identifiant de ressource INTERNE Gmail (hex, sans

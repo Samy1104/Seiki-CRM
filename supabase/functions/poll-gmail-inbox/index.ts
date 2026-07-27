@@ -211,6 +211,11 @@ async function processInboundMessage(
     .select("id, generated_email_id")
     .eq("lead_id", lead.id)
     .eq("direction", "outbound")
+    // Les lignes d'échec d'envoi ont sent_at NULL et remontent en tête d'un
+    // tri DESC : sans ce filtre, la garde passerait pour un lead qu'on n'a
+    // jamais réussi à contacter, et on marquerait 'replied' une ligne
+    // d'échec au lieu d'un envoi réel.
+    .not("sent_at", "is", null)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
