@@ -419,6 +419,17 @@ verify_jwt = false
 [functions.linkedin-oauth-callback]
 verify_jwt = false
 
+# gmail-oauth-start et gmail-oauth-callback sont atteintes par navigation
+# directe du navigateur (redirect vers/depuis Google) — aucun header
+# Authorization possible sur ce type de requête, donc la vérification JWT
+# par défaut doit être désactivée pour ces deux fonctions (même raison que
+# linkedin-oauth-start/callback ci-dessus).
+[functions.gmail-oauth-start]
+verify_jwt = false
+
+[functions.gmail-oauth-callback]
+verify_jwt = false
+
 # track-email est chargée comme <img> pixel par les clients mail (Gmail...) —
 # aucun header Authorization possible sur ce type de requête.
 [functions.track-email]
