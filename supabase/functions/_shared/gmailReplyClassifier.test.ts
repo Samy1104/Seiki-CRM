@@ -25,4 +25,24 @@ describe('classifyInboundMessage', () => {
   it('is case-insensitive on both sender and subject', () => {
     expect(classifyInboundMessage('MAILER-DAEMON@Example.com', 'DELIVERY STATUS NOTIFICATION')).toBe('bounce');
   });
+
+  it('classifies "mail-daemon@" sender as a bounce (hyphenated MTA variant)', () => {
+    expect(classifyInboundMessage('mail-daemon@example.com', 'Something')).toBe('bounce');
+  });
+
+  it('classifies "Returned mail" subject as a bounce', () => {
+    expect(classifyInboundMessage('system@example.com', 'Returned mail: see transcript for details')).toBe('bounce');
+  });
+
+  it('classifies "Message delivery failed" subject as a bounce', () => {
+    expect(classifyInboundMessage('system@example.com', 'Message delivery failed')).toBe('bounce');
+  });
+
+  it('does not classify "undeliverable" as a bounce when it appears mid-subject, not at the start', () => {
+    expect(classifyInboundMessage('lead@company.com', 'Re: your question about our undeliverable-package policy')).toBe('reply');
+  });
+
+  it('still classifies "Undeliverable: ..." as a bounce when it starts the subject', () => {
+    expect(classifyInboundMessage('mailer-daemon@example.com', 'Undeliverable: Your message')).toBe('bounce');
+  });
 });
