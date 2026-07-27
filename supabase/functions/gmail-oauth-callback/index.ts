@@ -43,6 +43,11 @@ serve(async (req: Request) => {
     const lastHistoryId = await getCurrentHistoryId(token.access_token);
     const expiresAt = new Date(Date.now() + token.expires_in * 1000).toISOString();
 
+    // Single-account tool: connecting a different address should replace
+    // the previous connection entirely, not create a second ambiguous row
+    // that every consumer's un-ordered .limit(1) would pick from arbitrarily.
+    await supabase.from("gmail_accounts").delete().neq("email", email);
+
     const { error: upsertErr } = await supabase.from("gmail_accounts").upsert(
       {
         email,
