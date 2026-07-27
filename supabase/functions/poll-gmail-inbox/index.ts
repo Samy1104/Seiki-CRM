@@ -74,14 +74,28 @@ serve(async (req: Request) => {
     try {
       historyResult = await listHistory(accessToken, acc.last_history_id);
     } catch (err) {
-      // startHistoryId trop ancien (Gmail purge son historique après un
-      // certain temps) — on resynchronise sur l'état courant plutôt que
-      // de planter, au prix de manquer les messages de l'intervalle.
-      console.warn("[poll-gmail-inbox] History resync needed:", err instanceof Error ? err.message : err);
-      const historyId = await getCurrentHistoryId(accessToken);
-      await supabase.from("gmail_accounts").update({ last_history_id: historyId }).eq("id", acc.id);
-      return new Response(JSON.stringify({ skipped: "history cursor resynced after gap" }), {
-        status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+      const message = err instanceof Error ? err.message : String(err);
+      const isHistoryTooOld = message.includes("Gmail history error 404");
+
+      if (isHistoryTooOld) {
+        // startHistoryId trop ancien (Gmail purge son historique après un
+        // certain temps) — on resynchronise sur l'état courant plutôt que
+        // de planter, au prix de manquer les messages de l'intervalle.
+        console.warn("[poll-gmail-inbox] History resync needed (cursor too old):", message);
+        const historyId = await getCurrentHistoryId(accessToken);
+        await supabase.from("gmail_accounts").update({ last_history_id: historyId }).eq("id", acc.id);
+        return new Response(JSON.stringify({ skipped: "history cursor resynced after gap" }), {
+          status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
+        });
+      }
+
+      // Erreur transitoire (429, 5xx, token expiré...) — on NE touche PAS
+      // au curseur, pour que le prochain passage du cron (5 min) puisse
+      // rejouer cet intervalle une fois le problème résolu, au lieu de
+      // perdre silencieusement les messages arrivés entre-temps.
+      console.error("[poll-gmail-inbox] listHistory failed (transient, cursor not advanced):", message);
+      return new Response(JSON.stringify({ error: message }), {
+        status: 500, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
       });
     }
 
@@ -137,12 +151,13 @@ async function processInboundMessage(
     if (!relatedEmail) return "ignored";
 
     const bodyPreview = extractPlainTextBody(msg).slice(0, 500);
-    await supabase
+    const { error: bounceUpdateErr } = await supabase
       .from("email_logs")
       .update({ status: "bounced", error_message: bodyPreview || `Bounce détecté (${subject})` })
       .eq("generated_email_id", relatedEmail.id)
       .eq("direction", "outbound")
       .neq("status", "replied");
+    if (bounceUpdateErr) console.error("[poll-gmail-inbox] Failed to update email_logs status to bounced:", bounceUpdateErr.message);
 
     return "bounce";
   }
@@ -158,18 +173,20 @@ async function processInboundMessage(
 
   if (!lead) return "ignored";
 
-  await supabase.from("leads").update({ sequence_status: "replied", updated_at: now }).eq("id", lead.id);
+  const { error: leadUpdateErr } = await supabase.from("leads").update({ sequence_status: "replied", updated_at: now }).eq("id", lead.id);
+  if (leadUpdateErr) console.error("[poll-gmail-inbox] Failed to update lead sequence_status:", leadUpdateErr.message);
 
   const textBody = extractPlainTextBody(msg);
   const textBodyPreview = textBody.length > 500 ? textBody.substring(0, 500) + "..." : textBody;
 
-  await supabase.from("history").insert([{
+  const { error: historyInsertErr } = await supabase.from("history").insert([{
     lead_id: lead.id,
     action_type: "email_received",
     content: `Email reçu de ${lead.contact_name || senderEmail} : ${subject}\n\n${textBodyPreview}`,
     metadata: { subject, from: fromHeader, gmail_message_id: msg.id },
     is_auto: true,
   }]);
+  if (historyInsertErr) console.error("[poll-gmail-inbox] Failed to insert history entry:", historyInsertErr.message);
 
   const { data: outboundLog } = await supabase
     .from("email_logs")
@@ -181,13 +198,14 @@ async function processInboundMessage(
     .maybeSingle();
 
   if (outboundLog) {
-    await supabase
+    const { error: outboundUpdateErr } = await supabase
       .from("email_logs")
       .update({ status: "replied", replied_at: now })
       .eq("id", outboundLog.id);
+    if (outboundUpdateErr) console.error("[poll-gmail-inbox] Failed to update outbound email_logs status to replied:", outboundUpdateErr.message);
   }
 
-  await supabase.from("email_logs").insert([{
+  const { error: inboundInsertErr } = await supabase.from("email_logs").insert([{
     lead_id: lead.id,
     direction: "inbound",
     from_email: senderEmail,
@@ -201,6 +219,7 @@ async function processInboundMessage(
     received_at: now,
     generated_email_id: outboundLog?.generated_email_id ?? null,
   }]);
+  if (inboundInsertErr) console.error("[poll-gmail-inbox] Failed to insert inbound email_logs entry:", inboundInsertErr.message);
 
   return "reply";
 }
