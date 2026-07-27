@@ -8,7 +8,7 @@
 
 const DEFAULT_DEV_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"];
 
-function getAllowedOrigins(): string[] {
+export function getAllowedOrigins(): string[] {
   const configured = Deno.env.get("ALLOWED_ORIGIN");
   if (configured && configured.trim().length > 0) {
     return configured.split(",").map((o) => o.trim());

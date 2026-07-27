@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { buildRedirectUri } from "../_shared/gmailApi.ts";
+import { getAllowedOrigins } from "../_shared/cors.ts";
 
 serve((req: Request) => {
   const clientId = Deno.env.get("GMAIL_CLIENT_ID")!;
@@ -19,6 +20,18 @@ serve((req: Request) => {
   // le corps du message).
   const scope = "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/gmail.readonly";
 
+  // L'origine appelante (window.location.origin côté front, voir
+  // gmailService.oauthConnectUrl) est transportée dans `state` pour que
+  // gmail-oauth-callback sache où rediriger l'utilisateur une fois la
+  // connexion terminée — au lieu d'un FRONTEND_URL fixe qui ne collait
+  // qu'à un seul environnement d'hébergement. Validée contre
+  // ALLOWED_ORIGIN (même liste que le CORS) pour ne jamais rediriger
+  // vers une origine non approuvée.
+  const requestedOrigin = new URL(req.url).searchParams.get("origin") ?? "";
+  const allowedOrigins = getAllowedOrigins();
+  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+  const state = btoa(JSON.stringify({ origin }));
+
   const authorizeUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("client_id", clientId);
@@ -26,6 +39,7 @@ serve((req: Request) => {
   authorizeUrl.searchParams.set("scope", scope);
   authorizeUrl.searchParams.set("access_type", "offline");
   authorizeUrl.searchParams.set("prompt", "consent"); // force la délivrance d'un refresh_token à chaque connexion
+  authorizeUrl.searchParams.set("state", state);
 
   return new Response(null, { status: 302, headers: { Location: authorizeUrl.toString() } });
 });

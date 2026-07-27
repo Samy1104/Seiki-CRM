@@ -25,6 +25,7 @@ export const gmailService = {
 
   oauthConnectUrl(): string {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    return `${supabaseUrl}/functions/v1/gmail-oauth-start`;
+    const params = new URLSearchParams({ origin: window.location.origin });
+    return `${supabaseUrl}/functions/v1/gmail-oauth-start?${params.toString()}`;
   },
 };

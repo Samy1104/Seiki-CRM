@@ -10,10 +10,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildRedirectUri, exchangeCodeForToken, fetchGmailAddress, getCurrentHistoryId } from "../_shared/gmailApi.ts";
+import { getAllowedOrigins } from "../_shared/cors.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
-  const frontendUrl = Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
+
+  // Récupère l'origine appelante depuis `state` (posée par gmail-oauth-start)
+  // plutôt qu'un FRONTEND_URL fixe — permet de revenir sur le même site
+  // quel que soit l'environnement (localhost, staging, prod) d'où la
+  // connexion a été lancée. Revalidée ici aussi (défense en profondeur :
+  // `state` transite par Google, pas de confiance aveugle au retour).
+  const stateRaw = url.searchParams.get("state");
+  const allowedOrigins = getAllowedOrigins();
+  let stateOrigin: string | null = null;
+  try {
+    if (stateRaw) stateOrigin = JSON.parse(atob(stateRaw)).origin ?? null;
+  } catch {
+    // state absent/invalide — retombe sur FRONTEND_URL ci-dessous
+  }
+  const frontendUrl = (stateOrigin && allowedOrigins.includes(stateOrigin))
+    ? stateOrigin
+    : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
   const code = url.searchParams.get("code");
   const errorParam = url.searchParams.get("error");
