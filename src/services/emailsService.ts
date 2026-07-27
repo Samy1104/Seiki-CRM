@@ -102,14 +102,14 @@ export const emailsService = {
   },
 
   /** Lance immédiatement un cycle pacing + dispatch (bouton manuel de test) */
-  async runPacingCycleNow(): Promise<{ scheduled: number; sent: number; failed: number }> {
+  async runPacingCycleNow(): Promise<{ scheduled: number; processed: number; sent: number; failed: number }> {
     const scheduleResult = await callEdgeFunction<{ scheduled?: number; skipped?: string }>(
       'schedule-gmail-sends', { triggeredBy: 'manual-button' }
     );
-    const dispatchResult = await callEdgeFunction<{ sent: number; failed: number }>(
+    const dispatchResult = await callEdgeFunction<{ processed: number; sent: number; failed: number }>(
       'dispatch-gmail-sends', { triggeredBy: 'manual-button' }
     );
-    return { scheduled: scheduleResult.scheduled ?? 0, sent: dispatchResult.sent, failed: dispatchResult.failed };
+    return { scheduled: scheduleResult.scheduled ?? 0, processed: dispatchResult.processed, sent: dispatchResult.sent, failed: dispatchResult.failed };
   },
 
   /** Supprime un email généré */
