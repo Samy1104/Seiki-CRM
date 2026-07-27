@@ -34,19 +34,33 @@ export function getTodaysWindowBounds(now: Date, window: SendWindow): { start: D
   return { start: effectiveStart, end: windowEnd };
 }
 
+/** Espacement moyen minimal entre deux créneaux d'une même passe de planification. */
+const MIN_GAP_MS = 3 * 60 * 1000; // 3 minutes
+
 /**
  * Répartit `count` créneaux entre start et end par échantillonnage stratifié :
- * la fenêtre est divisée en `count` tranches égales, un point aléatoire est
- * choisi dans chacune — garantit un espacement minimal sans motif régulier.
+ * la fenêtre est divisée en tranches égales, un point aléatoire est choisi
+ * dans chacune — garantit un espacement minimal sans motif régulier.
+ *
+ * Le nombre de tranches est plafonné pour respecter MIN_GAP_MS : en fin de
+ * journée (ou sur un clic manuel juste avant la fermeture de la fenêtre),
+ * répartir tous les envois sur les quelques minutes restantes produirait des
+ * intervalles très courts et très réguliers — un motif de bot en soi. Le
+ * surplus reste 'approved' et sera replanifié à la passe suivante, d'où un
+ * tableau potentiellement PLUS COURT que `count` : les appelants doivent
+ * itérer sur la longueur du résultat, pas sur `count`.
  */
 export function pickRandomSendTimes(count: number, start: Date, end: Date, rng: () => number = Math.random): Date[] {
   if (count <= 0) return [];
   const totalMs = end.getTime() - start.getTime();
   if (totalMs <= 0) return [];
 
-  const slotMs = totalMs / count;
+  const maxSlotsForWindow = Math.max(1, Math.floor(totalMs / MIN_GAP_MS));
+  const actualCount = Math.min(count, maxSlotsForWindow);
+
+  const slotMs = totalMs / actualCount;
   const times: Date[] = [];
-  for (let i = 0; i < count; i++) {
+  for (let i = 0; i < actualCount; i++) {
     const slotStart = start.getTime() + i * slotMs;
     times.push(new Date(slotStart + rng() * slotMs));
   }

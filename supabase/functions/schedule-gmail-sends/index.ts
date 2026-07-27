@@ -102,9 +102,13 @@ serve(async (req: Request) => {
       return skip(req, "no approved drafts waiting");
     }
 
+    // pickRandomSendTimes peut renvoyer MOINS de créneaux que demandé quand
+    // la fenêtre restante est trop courte pour respecter l'espacement minimal
+    // — on ne planifie donc que les lignes qui ont réellement un créneau ; le
+    // reste demeure 'approved' et sera repris à la prochaine passe.
     const sendTimes = pickRandomSendTimes(approved.length, bounds.start, bounds.end);
 
-    for (let i = 0; i < approved.length; i++) {
+    for (let i = 0; i < sendTimes.length; i++) {
       await supabase
         .from("generated_emails")
         .update({ statut_envoi: "scheduled", scheduled_at: sendTimes[i].toISOString() })
@@ -112,7 +116,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ scheduled: approved.length }),
+      JSON.stringify({ scheduled: sendTimes.length }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (err) {

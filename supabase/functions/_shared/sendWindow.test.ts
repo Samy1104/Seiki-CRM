@@ -48,6 +48,14 @@ describe('pickRandomSendTimes', () => {
     }
   });
 
+  it('clamps the number of slots when the window is too short for a 3-minute minimum gap', () => {
+    const start = new Date('2026-07-27T17:55:00'); // Monday, 5 min before an 18:00 close
+    const end = new Date('2026-07-27T18:00:00');
+    const times = pickRandomSendTimes(10, start, end); // asked for 10, only ~1-2 fit in 5 min at 3-min gaps
+    expect(times.length).toBeLessThan(10);
+    expect(times.length).toBeGreaterThan(0);
+  });
+
   it('spaces timestamps into distinct slots (stratified), not clustered, given a fixed rng', () => {
     const start = new Date('2026-07-27T08:00:00');
     const end = new Date('2026-07-27T18:00:00'); // 10h window = 600 min
