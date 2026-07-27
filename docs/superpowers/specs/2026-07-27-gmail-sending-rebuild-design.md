@@ -131,6 +131,16 @@ Manual mode (the existing `prospection_mode` toggle) still gates whether these c
 
 Idempotency: same guards as today (`.neq('status', 'replied')` before overwriting, dedup via `message_id` uniqueness on `email_logs`).
 
+## Connect UI
+
+Reuses the exact pattern already built for LinkedIn accounts (`ContenuHeader.tsx` + `linkedinService.oauthConnectUrl`): a pill-shaped `<a>` link styled identically (`Link2`/`CheckCircle2` icon, "Connecter X" / "X (Connecté)" label), pointing at `gmail-oauth-start` instead of `linkedin-oauth-start`. Since there's only one Gmail account (no personal/company split like LinkedIn), it's a single button, not a pair.
+
+- New `gmailService.ts` (mirrors `linkedinService.ts`'s `listAccounts`/`oauthConnectUrl` shape): `listAccount()` reads the single `gmail_accounts` row, `oauthConnectUrl()` builds the link to `gmail-oauth-start`.
+- Button placed in `ProspectionHeader.tsx`, next to the existing `ProspectionModeToggle`, in the same row.
+- Connected state label shows the connected Gmail address (e.g. "test@gmail.com (Connecté)") rather than a fixed name like "Jaafar"/"Seiki".
+
+**Testing plan**: the user will connect a personal test Gmail address (not `contact@seiki.fr`) through this button first, and exercise the full pipeline — send, warm-up pacing, open pixel, reply polling, bounce detection — end-to-end against that test inbox before ever pointing it at a real prospecting account. No code difference between "test" and "real" Gmail accounts; it's the same OAuth flow against whichever address is connected.
+
 ## Prerequisites / manual setup (user)
 
 Not yet done — needs to happen before any of this can run:
