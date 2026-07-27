@@ -102,19 +102,31 @@ serve(async (req: Request) => {
     let replies = 0;
     let bounces = 0;
     let ignored = 0;
+    let errors = 0;
 
+    // Chaque message est traité isolément : un échec ponctuel (getMessage en
+    // 404/429, payload inattendu...) ne doit pas faire échouer tout le lot.
+    // Conséquence assumée : le curseur avance quand même, sinon un seul
+    // message problématique bloquerait le poller indéfiniment et ferait
+    // rejouer en boucle les messages déjà traités. Les échecs sont comptés
+    // et loggués plutôt que retentés.
     for (const messageId of historyResult.addedMessageIds) {
-      const msg = await getMessage(accessToken, messageId);
-      const outcome = await processInboundMessage(supabase, msg);
-      if (outcome === "reply") replies++;
-      else if (outcome === "bounce") bounces++;
-      else ignored++;
+      try {
+        const msg = await getMessage(accessToken, messageId);
+        const outcome = await processInboundMessage(supabase, msg);
+        if (outcome === "reply") replies++;
+        else if (outcome === "bounce") bounces++;
+        else ignored++;
+      } catch (err) {
+        console.error("[poll-gmail-inbox] Failed to process message", messageId, ":", err instanceof Error ? err.message : err);
+        errors++;
+      }
     }
 
     await supabase.from("gmail_accounts").update({ last_history_id: historyResult.historyId }).eq("id", acc.id);
 
     return new Response(
-      JSON.stringify({ processed: historyResult.addedMessageIds.length, replies, bounces, ignored }),
+      JSON.stringify({ processed: historyResult.addedMessageIds.length, replies, bounces, ignored, errors }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (err) {
@@ -159,6 +171,20 @@ async function processInboundMessage(
       .neq("status", "replied");
     if (bounceUpdateErr) console.error("[poll-gmail-inbox] Failed to update email_logs status to bounced:", bounceUpdateErr.message);
 
+    // L'adresse ne fonctionne pas : on arrête la séquence pour ce lead.
+    // Sans ça, getFollowUpCandidates() (qui n'exclut que 'replied' et
+    // 'completed') continuerait à proposer des relances vers une adresse
+    // morte — le signal le plus toxique pour la réputation du compte Gmail
+    // personnel que tout ce pacing cherche justement à protéger.
+    // 'completed' = valeur existante du CHECK sur leads.sequence_status,
+    // sémantiquement "plus aucune action automatique".
+    const { error: bouncedLeadErr } = await supabase
+      .from("leads")
+      .update({ sequence_status: "completed", updated_at: now })
+      .eq("id", relatedEmail.lead_id)
+      .in("sequence_status", ["idle", "active"]); // ne pas écraser un lead déjà 'replied'
+    if (bouncedLeadErr) console.error("[poll-gmail-inbox] Failed to stop sequence for bounced lead:", bouncedLeadErr.message);
+
     return "bounce";
   }
 
@@ -173,21 +199,13 @@ async function processInboundMessage(
 
   if (!lead) return "ignored";
 
-  const { error: leadUpdateErr } = await supabase.from("leads").update({ sequence_status: "replied", updated_at: now }).eq("id", lead.id);
-  if (leadUpdateErr) console.error("[poll-gmail-inbox] Failed to update lead sequence_status:", leadUpdateErr.message);
-
-  const textBody = extractPlainTextBody(msg);
-  const textBodyPreview = textBody.length > 500 ? textBody.substring(0, 500) + "..." : textBody;
-
-  const { error: historyInsertErr } = await supabase.from("history").insert([{
-    lead_id: lead.id,
-    action_type: "email_received",
-    content: `Email reçu de ${lead.contact_name || senderEmail} : ${subject}\n\n${textBodyPreview}`,
-    metadata: { subject, from: fromHeader, gmail_message_id: msg.id },
-    is_auto: true,
-  }]);
-  if (historyInsertErr) console.error("[poll-gmail-inbox] Failed to insert history entry:", historyInsertErr.message);
-
+  // On ne traite le message comme une réponse de prospection que si on a
+  // effectivement envoyé quelque chose à ce lead auparavant. Ce poller lit
+  // la boîte Gmail personnelle ENTIÈRE (pas une adresse dédiée comme du
+  // temps de Resend) : sans cette garde, un simple mail personnel ou
+  // professionnel venant de quelqu'un qui est aussi un lead du CRM
+  // basculerait sa séquence en 'replied' et son contenu serait recopié dans
+  // history/email_logs — bug de données autant que problème de vie privée.
   const { data: outboundLog } = await supabase
     .from("email_logs")
     .select("id, generated_email_id")
@@ -197,13 +215,43 @@ async function processInboundMessage(
     .limit(1)
     .maybeSingle();
 
-  if (outboundLog) {
-    const { error: outboundUpdateErr } = await supabase
-      .from("email_logs")
-      .update({ status: "replied", replied_at: now })
-      .eq("id", outboundLog.id);
-    if (outboundUpdateErr) console.error("[poll-gmail-inbox] Failed to update outbound email_logs status to replied:", outboundUpdateErr.message);
+  if (!outboundLog) return "ignored";
+
+  const { error: leadUpdateErr } = await supabase.from("leads").update({ sequence_status: "replied", updated_at: now }).eq("id", lead.id);
+  if (leadUpdateErr) console.error("[poll-gmail-inbox] Failed to update lead sequence_status:", leadUpdateErr.message);
+
+  const textBody = extractPlainTextBody(msg);
+  const textBodyPreview = textBody.length > 500 ? textBody.substring(0, 500) + "..." : textBody;
+
+  // history n'a pas de contrainte d'unicité sur le message Gmail : si le lot
+  // de polling est rejoué (échec partiel, retry), le même message créerait
+  // une seconde entrée de timeline. On vérifie donc la présence avant
+  // insertion. (email_logs.message_id est UNIQUE, donc protégé côté base.)
+  const { data: existingHistory } = await supabase
+    .from("history")
+    .select("id")
+    .eq("lead_id", lead.id)
+    .eq("action_type", "email_received")
+    .contains("metadata", { gmail_message_id: msg.id })
+    .limit(1)
+    .maybeSingle();
+
+  if (!existingHistory) {
+    const { error: historyInsertErr } = await supabase.from("history").insert([{
+      lead_id: lead.id,
+      action_type: "email_received",
+      content: `Email reçu de ${lead.contact_name || senderEmail} : ${subject}\n\n${textBodyPreview}`,
+      metadata: { subject, from: fromHeader, gmail_message_id: msg.id },
+      is_auto: true,
+    }]);
+    if (historyInsertErr) console.error("[poll-gmail-inbox] Failed to insert history entry:", historyInsertErr.message);
   }
+
+  const { error: outboundUpdateErr } = await supabase
+    .from("email_logs")
+    .update({ status: "replied", replied_at: now })
+    .eq("id", outboundLog.id);
+  if (outboundUpdateErr) console.error("[poll-gmail-inbox] Failed to update outbound email_logs status to replied:", outboundUpdateErr.message);
 
   const { error: inboundInsertErr } = await supabase.from("email_logs").insert([{
     lead_id: lead.id,
@@ -217,7 +265,7 @@ async function processInboundMessage(
     in_reply_to: getHeader(msg, "In-Reply-To"),
     status: "replied",
     received_at: now,
-    generated_email_id: outboundLog?.generated_email_id ?? null,
+    generated_email_id: outboundLog.generated_email_id,
   }]);
   if (inboundInsertErr) console.error("[poll-gmail-inbox] Failed to insert inbound email_logs entry:", inboundInsertErr.message);
 
