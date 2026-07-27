@@ -1,6 +1,7 @@
 import React from 'react';
-import { Mail, FileEdit, RefreshCw } from 'lucide-react';
+import { Mail, FileEdit, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
 import { ProspectionModeToggle } from '../../components/ProspectionModeToggle';
+import type { GmailAccount } from '../../services/gmailService';
 
 export type Tab = 'validation' | 'templates' | 'followup';
 
@@ -9,6 +10,8 @@ interface ProspectionHeaderProps {
   onModeChange: (newMode: 'manual' | 'auto') => void;
   activeTab: Tab;
   setActiveTab: (tab: Tab) => void;
+  gmailAccount: GmailAccount | null;
+  gmailConnectUrl: string;
 }
 
 export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
@@ -16,6 +19,8 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
   onModeChange,
   activeTab,
   setActiveTab,
+  gmailAccount,
+  gmailConnectUrl,
 }) => {
   return (
     <div className="flex flex-col gap-5 mb-6">
@@ -34,7 +39,20 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
             Prospection
           </h1>
         </div>
-        <ProspectionModeToggle mode={mode} onChange={onModeChange} />
+        <div className="flex items-center gap-3">
+          <a
+            href={gmailConnectUrl}
+            className="text-xs flex items-center gap-2 px-3.5 py-2 rounded-control border border-line-strong bg-surface text-ink-soft hover:text-ink hover:border-line-focus transition-all duration-200 cursor-pointer"
+          >
+            {gmailAccount ? (
+              <CheckCircle2 size={15} strokeWidth={2} className="text-success" />
+            ) : (
+              <Link2 size={15} strokeWidth={2} className="text-[#D4C4A8]" />
+            )}
+            <span className="font-medium">{gmailAccount ? `${gmailAccount.email} (Connecté)` : 'Connecter Gmail'}</span>
+          </a>
+          <ProspectionModeToggle mode={mode} onChange={onModeChange} />
+        </div>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap font-ui">
