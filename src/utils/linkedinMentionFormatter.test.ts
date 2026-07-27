@@ -9,19 +9,19 @@ describe('formatPostForLinkedIn', () => {
     { alias: 'seiki-tech', name: 'Seiki Tech', urn: 'urn:li:organization:99999', type: 'organization' },
   ];
 
-  it('replaces organization @alias tokens with full LinkedIn URN mention format and person tags with clean @Name text', () => {
+  it('replaces @alias tokens with full LinkedIn URN mention format', () => {
     const raw = 'Merci à @seiki et @jaafar pour ce projet !';
     const formatted = formatPostForLinkedIn(raw, mockTagBook);
     expect(formatted).toBe(
-      'Merci à @[Seiki Mobility](urn:li:organization:12345) et @Jaafar Bounaim pour ce projet !'
+      'Merci à @[Seiki Mobility](urn:li:organization:12345) et @[Jaafar Bounaim](urn:li:person:67890) pour ce projet !'
     );
   });
 
-  it('replaces @Name tokens appropriately based on entity type', () => {
+  it('replaces @Name tokens with LinkedIn URN mention format', () => {
     const raw = 'Projet co-réalisé avec @Jaafar Bounaim et @Seiki Mobility';
     const formatted = formatPostForLinkedIn(raw, mockTagBook);
     expect(formatted).toBe(
-      'Projet co-réalisé avec @Jaafar Bounaim et @[Seiki Mobility](urn:li:organization:12345)'
+      'Projet co-réalisé avec @[Jaafar Bounaim](urn:li:person:67890) et @[Seiki Mobility](urn:li:organization:12345)'
     );
   });
 
@@ -29,7 +29,7 @@ describe('formatPostForLinkedIn', () => {
     const raw = 'Top post par @seiki-tech, reposté par @seiki et mentionnant @jaafar.';
     const formatted = formatPostForLinkedIn(raw, mockTagBook);
     expect(formatted).toBe(
-      'Top post par @[Seiki Tech](urn:li:organization:99999), reposté par @[Seiki Mobility](urn:li:organization:12345) et mentionnant @Jaafar Bounaim.'
+      'Top post par @[Seiki Tech](urn:li:organization:99999), reposté par @[Seiki Mobility](urn:li:organization:12345) et mentionnant @[Jaafar Bounaim](urn:li:person:67890).'
     );
   });
 

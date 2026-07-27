@@ -28,8 +28,7 @@ export function formatPostForLinkedIn(text: string, tagBook: TagEntry[]): string
 
   tagBook.forEach((tag) => {
     if (!tag.urn) return;
-    const isPerson = tag.type === 'person' || tag.urn.startsWith('urn:li:person:');
-    const replacement = isPerson ? `@${tag.name}` : `@[${tag.name}](${tag.urn})`;
+    const replacement = `@[${tag.name}](${tag.urn})`;
 
     if (tag.alias && tag.name) {
       rules.push({
