@@ -10,7 +10,7 @@
 -- ============================================================
 CREATE TABLE IF NOT EXISTS public.gmail_accounts (
   id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  email            TEXT NOT NULL,
+  email            TEXT NOT NULL UNIQUE,
   access_token     TEXT NOT NULL,
   refresh_token    TEXT NOT NULL,
   expires_at       TIMESTAMPTZ NOT NULL,
@@ -32,8 +32,6 @@ DROP TRIGGER IF EXISTS trg_gmail_accounts_updated ON public.gmail_accounts;
 CREATE TRIGGER trg_gmail_accounts_updated
   BEFORE UPDATE ON public.gmail_accounts
   FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
-
-ALTER TABLE public.gmail_accounts ADD CONSTRAINT gmail_accounts_email_key UNIQUE (email);
 
 -- ============================================================
 -- 2. GENERATED_EMAILS — remplace les colonnes Resend par Gmail
