@@ -16,7 +16,7 @@ export interface GeneratedEmail {
   sujet: string;
   corps_du_mail: string;
   icebreaker: string | null;
-  statut_envoi: 'draft' | 'approved' | 'sending' | 'sent' | 'failed';
+  statut_envoi: 'draft' | 'approved' | 'scheduled' | 'sending' | 'sent' | 'failed';
   model_used: string;
   prompt_used: string | null;
   generation_ms: number | null;
@@ -24,9 +24,9 @@ export interface GeneratedEmail {
   approved_at: string | null;
   sent_at: string | null;
   scheduled_at: string | null;
-  resend_message_id: string | null;
+  gmail_message_id: string | null;
+  gmail_thread_id: string | null;
   created_at: string;
-  // Données du lead joinées
   lead?: {
     contact_name: string;
     company_name: string;
@@ -36,12 +36,6 @@ export interface GeneratedEmail {
   } | null;
 }
 
-export interface SendResult {
-  success: boolean;
-  resendMessageId: string;
-  sentAt: string;
-  to: string;
-}
 
 // ── Service ────────────────────────────────────────────────────────────────────
 
@@ -98,35 +92,24 @@ export const emailsService = {
     if (error) throw error;
   },
 
-  /** Approuve un email ET le planifie sous quota */
-  async approveAndSchedule(generatedEmailId: string): Promise<{ scheduledAt: string }> {
-    const { data, error } = await supabase.rpc('schedule_send', { p_generated_email_id: generatedEmailId });
+  /** Approuve un email — rejoint la file de pacing (schedule-gmail-sends l'y prendra) */
+  async approveAndSchedule(generatedEmailId: string): Promise<void> {
+    const { error } = await supabase
+      .from('generated_emails')
+      .update({ statut_envoi: 'approved', scheduled_at: null, approved_at: new Date().toISOString() })
+      .eq('id', generatedEmailId);
     if (error) throw error;
-    return { scheduledAt: data as string };
   },
 
-  /**
-   * Envoie un email approuvé via l'Edge Function Resend.
-   */
-  async sendEmail(
-    generatedEmailId: string,
-    options?: { fromEmail?: string; fromName?: string }
-  ): Promise<SendResult> {
-    const data = await callEdgeFunction<SendResult & { success: boolean; error?: string }>(
-      'send-email',
-      { generatedEmailId, ...options }
+  /** Lance immédiatement un cycle pacing + dispatch (bouton manuel de test) */
+  async runPacingCycleNow(): Promise<{ scheduled: number; sent: number; failed: number }> {
+    const scheduleResult = await callEdgeFunction<{ scheduled?: number; skipped?: string }>(
+      'schedule-gmail-sends', { triggeredBy: 'manual-button' }
     );
-
-    if (!data.success) {
-      throw new Error(data.error || 'Erreur envoi');
-    }
-
-    return data;
-  },
-
-  /** Déclenche la purge de la file d'envoi du jour (bouton manuel) */
-  async flushSendQueue(): Promise<{ processed: number; sent: number; failed: number; skipped?: string }> {
-    return callEdgeFunction('flush-send-queue', { triggeredBy: 'manual-button' });
+    const dispatchResult = await callEdgeFunction<{ sent: number; failed: number }>(
+      'dispatch-gmail-sends', { triggeredBy: 'manual-button' }
+    );
+    return { scheduled: scheduleResult.scheduled ?? 0, sent: dispatchResult.sent, failed: dispatchResult.failed };
   },
 
   /** Supprime un email généré */

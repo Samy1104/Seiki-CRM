@@ -4,11 +4,14 @@ export interface AppSetting {
   id: string;
   key: string;
   value: {
-    days?: number;
+    days?: number | number[];
     name?: string;
     enabled?: boolean;
     count?: number;
     mode?: string;
+    date?: string;
+    start?: string;
+    end?: string;
   };
   label: string;
   category: string;
@@ -16,10 +19,12 @@ export interface AppSetting {
 
 export interface ProspectionSettings {
   prospection_mode: 'manual' | 'auto';
-  daily_send_quota: number;
   followup_1_days: number;
   followup_2_days: number;
   archive_after_followups: number;
+  gmail_daily_cap: number | null;
+  gmail_warmup_start_date: string | null;
+  gmail_send_window: { days: number[]; start: string; end: string };
 }
 
 export interface SlaLimits {
@@ -62,10 +67,13 @@ export const settingsService = {
     const find = (key: string) => all.find((s) => s.key === key)?.value as Record<string, unknown> | undefined;
     return {
       prospection_mode: (find('prospection_mode')?.mode as 'manual' | 'auto') ?? 'manual',
-      daily_send_quota: (find('daily_send_quota')?.count as number) ?? 100,
       followup_1_days: (find('followup_1_days')?.days as number) ?? 5,
       followup_2_days: (find('followup_2_days')?.days as number) ?? 10,
       archive_after_followups: (find('archive_after_followups')?.count as number) ?? 2,
+      gmail_daily_cap: (find('gmail_daily_cap')?.count as number) ?? null,
+      gmail_warmup_start_date: (find('gmail_warmup_start_date')?.date as string) ?? null,
+      gmail_send_window: (find('gmail_send_window') as { days: number[]; start: string; end: string } | undefined)
+        ?? { days: [1, 2, 3, 4, 5], start: '08:00', end: '18:00' },
     };
   },
 
@@ -74,9 +82,9 @@ export const settingsService = {
     const all = await this.getSettings();
     const limits: SlaLimits = { Media: 5, Retail: 7, Instit: 14 };
     all.forEach((s) => {
-      if (s.key === 'sla_media' && s.value.days) limits.Media = s.value.days;
-      if (s.key === 'sla_retail' && s.value.days) limits.Retail = s.value.days;
-      if (s.key === 'sla_instit' && s.value.days) limits.Instit = s.value.days;
+      if (s.key === 'sla_media' && s.value.days && typeof s.value.days === 'number') limits.Media = s.value.days;
+      if (s.key === 'sla_retail' && s.value.days && typeof s.value.days === 'number') limits.Retail = s.value.days;
+      if (s.key === 'sla_instit' && s.value.days && typeof s.value.days === 'number') limits.Instit = s.value.days;
     });
     return limits;
   },
@@ -84,10 +92,12 @@ export const settingsService = {
   async updateProspectionSettings(updates: Partial<ProspectionSettings>): Promise<void> {
     const jobs: Promise<void>[] = [];
     if (updates.prospection_mode !== undefined) jobs.push(this.updateSetting('prospection_mode', { mode: updates.prospection_mode }));
-    if (updates.daily_send_quota !== undefined) jobs.push(this.updateSetting('daily_send_quota', { count: updates.daily_send_quota }));
     if (updates.followup_1_days !== undefined) jobs.push(this.updateSetting('followup_1_days', { days: updates.followup_1_days }));
     if (updates.followup_2_days !== undefined) jobs.push(this.updateSetting('followup_2_days', { days: updates.followup_2_days }));
     if (updates.archive_after_followups !== undefined) jobs.push(this.updateSetting('archive_after_followups', { count: updates.archive_after_followups }));
+    if (updates.gmail_daily_cap !== undefined) jobs.push(this.updateSetting('gmail_daily_cap', { count: updates.gmail_daily_cap }));
+    if (updates.gmail_warmup_start_date !== undefined) jobs.push(this.updateSetting('gmail_warmup_start_date', { date: updates.gmail_warmup_start_date }));
+    if (updates.gmail_send_window !== undefined) jobs.push(this.updateSetting('gmail_send_window', updates.gmail_send_window));
     await Promise.all(jobs);
   },
 
