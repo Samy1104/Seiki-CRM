@@ -19,40 +19,19 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
   const [editedCorps, setEditedCorps] = useState(email.corps_du_mail);
   const [editedSujet, setEditedSujet] = useState(email.sujet);
 
-  const handleApproveAndSend = async () => {
+  const handleApprove = async () => {
     setIsSending(true);
     try {
-      const { scheduledAt } = await emailsService.approveAndSchedule(email.id);
-      const scheduledDate = new Date(scheduledAt);
-      const isToday = scheduledDate.toDateString() === new Date().toDateString();
-
-      if (!isToday) {
-        showToast(
-          `Quota du jour atteint — email planifié pour le ${scheduledDate.toLocaleDateString('fr-FR')}`,
-          'info'
-        );
-        onUpdate();
-        return;
-      }
-
-      try {
-        await emailsService.sendEmail(email.id);
-        showToast(`Email envoyé à ${email.lead?.contact_name || 'le prospect'} !`, 'success');
-        onUpdate();
-      } catch (sendErr) {
-        try {
-          await emailsService.updateGeneratedEmail(email.id, { statut_envoi: 'draft' });
-        } catch (rollbackErr) {
-          console.error('Rollback to draft failed after send failure:', rollbackErr);
-          showToast(
-            "Échec d'envoi ET du retour en brouillon — cet email est bloqué en statut 'approuvé', contactez un admin",
-            'error'
-          );
-        }
-        throw sendErr;
-      }
+      await emailsService.approveAndSchedule(email.id);
+      showToast(
+        email.statut_envoi === 'failed'
+          ? `Remis en file d'envoi pour ${email.lead?.contact_name || 'le prospect'}.`
+          : `Approuvé — sera envoyé automatiquement selon la planification (${email.lead?.contact_name || 'le prospect'}).`,
+        'success'
+      );
+      onUpdate();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur envoi', 'error');
+      showToast(err instanceof Error ? err.message : 'Erreur approbation', 'error');
     } finally {
       setIsSending(false);
     }
@@ -168,7 +147,7 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
             <div className="flex items-center gap-2 pt-1 flex-wrap">
               <AccentButton
                 variant="primary"
-                onClick={handleApproveAndSend}
+                onClick={handleApprove}
                 disabled={isSending}
                 icon={
                   isSending ? (
@@ -178,7 +157,7 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
                   )
                 }
               >
-                {isSending ? 'Envoi...' : email.statut_envoi === 'failed' ? 'Réessayer l\'envoi' : 'Approuver & Envoyer'}
+                {isSending ? 'Approbation...' : email.statut_envoi === 'failed' ? 'Remettre en file' : 'Approuver'}
               </AccentButton>
               <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit3 size={13} strokeWidth={2} className="text-[#D4C4A8]" /> Modifier

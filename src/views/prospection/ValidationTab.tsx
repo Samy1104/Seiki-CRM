@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Send, Loader2 } from 'lucide-react';
 import { emailsService, type GeneratedEmail } from '../../services/emailsService';
-import { settingsService } from '../../services/settingsService';
 import { EmailPreviewCard } from './EmailPreviewCard';
 import { AccentButton } from '../../components/ui/AccentButton';
 
@@ -12,8 +11,7 @@ interface ValidationTabProps {
 export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
   const [drafts, setDrafts] = useState<GeneratedEmail[]>([]);
   const [loading, setLoading] = useState(true);
-  const [flushing, setFlushing] = useState(false);
-  const [quota, setQuota] = useState<number | null>(null);
+  const [running, setRunning] = useState(false);
 
   const loadDrafts = useCallback(async () => {
     setLoading(true);
@@ -31,24 +29,20 @@ export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
     loadDrafts();
   }, [loadDrafts]);
 
-  useEffect(() => {
-    settingsService.getProspectionSettings().then((s) => setQuota(s.daily_send_quota));
-  }, []);
-
-  const handleFlush = async () => {
-    setFlushing(true);
+  const handleRunNow = async () => {
+    setRunning(true);
     try {
-      const result = await emailsService.flushSendQueue();
-      if (result.skipped) {
-        showToast(`Rien à envoyer : ${result.skipped}`, 'info');
+      const result = await emailsService.runPacingCycleNow();
+      if (result.scheduled === 0 && result.sent === 0) {
+        showToast('Rien à envoyer pour le moment (hors fenêtre, quota du jour atteint, ou aucun brouillon approuvé)', 'info');
       } else {
-        showToast(`${result.sent}/${result.processed} emails envoyés`, result.failed > 0 ? 'info' : 'success');
+        showToast(`${result.sent} email(s) envoyé(s)${result.failed > 0 ? `, ${result.failed} échec(s)` : ''}`, result.failed > 0 ? 'info' : 'success');
       }
       loadDrafts();
     } catch (err) {
-      showToast(err instanceof Error ? err.message : 'Erreur envoi du lot', 'error');
+      showToast(err instanceof Error ? err.message : 'Erreur cycle d\'envoi', 'error');
     } finally {
-      setFlushing(false);
+      setRunning(false);
     }
   };
 
@@ -60,17 +54,17 @@ export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
         </h2>
         <AccentButton
           variant="primary"
-          onClick={handleFlush}
-          disabled={flushing}
+          onClick={handleRunNow}
+          disabled={running}
           icon={
-            flushing ? (
+            running ? (
               <Loader2 size={14} strokeWidth={2} className="animate-spin" />
             ) : (
               <Send size={14} strokeWidth={2} />
             )
           }
         >
-          {flushing ? 'Envoi...' : `Envoyer le lot du jour ${quota !== null ? `(quota: ${quota}/j)` : ''}`}
+          {running ? 'Cycle en cours...' : 'Lancer un cycle d\'envoi maintenant'}
         </AccentButton>
       </div>
 
