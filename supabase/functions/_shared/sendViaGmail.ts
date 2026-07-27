@@ -1,0 +1,179 @@
+// ============================================================
+// _shared/sendViaGmail.ts
+// Logique d'envoi Gmail — remplace _shared/sendViaResend.ts.
+// Rafraîchit le token si besoin, construit le MIME (avec
+// In-Reply-To si c'est une relance), envoie via Gmail API,
+// journalise dans generated_emails + email_logs.
+// ============================================================
+
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { buildEmailHtml, buildRawEmail } from "./gmailMime.ts";
+import { refreshAccessToken, sendRawMessage } from "./gmailApi.ts";
+
+interface GeneratedEmail {
+  id: string;
+  lead_id: string;
+  sujet: string;
+  corps_du_mail: string;
+  statut_envoi: string;
+}
+
+interface LeadEmail {
+  email: string;
+  contact_name: string;
+}
+
+interface GmailAccount {
+  id: string;
+  email: string;
+  access_token: string;
+  refresh_token: string;
+  expires_at: string;
+}
+
+export type SendOutcome =
+  | { success: true; gmailMessageId: string; gmailThreadId: string; sentAt: string; to: string }
+  | { success: false; error: string; alreadySent?: boolean };
+
+async function getValidAccessToken(supabase: SupabaseClient, account: GmailAccount): Promise<string> {
+  const expiresInMs = new Date(account.expires_at).getTime() - Date.now();
+  if (expiresInMs > 5 * 60 * 1000) return account.access_token;
+
+  const refreshed = await refreshAccessToken(account.refresh_token);
+  await supabase
+    .from("gmail_accounts")
+    .update({
+      access_token: refreshed.access_token,
+      expires_at: new Date(Date.now() + refreshed.expires_in * 1000).toISOString(),
+    })
+    .eq("id", account.id);
+
+  return refreshed.access_token;
+}
+
+export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, generatedEmailId: string): Promise<SendOutcome> {
+  const { data: account, error: accErr } = await supabase
+    .from("gmail_accounts")
+    .select("id, email, access_token, refresh_token, expires_at")
+    .limit(1)
+    .maybeSingle();
+
+  if (accErr || !account) {
+    return { success: false, error: "Aucun compte Gmail connecté" };
+  }
+
+  const { data: genEmail, error: genErr } = await supabase
+    .from("generated_emails")
+    .select("*")
+    .eq("id", generatedEmailId)
+    .single();
+
+  if (genErr || !genEmail) {
+    return { success: false, error: `Email généré introuvable : ${genErr?.message}` };
+  }
+
+  const ge = genEmail as GeneratedEmail;
+
+  if (ge.statut_envoi === "sent") {
+    return { success: false, error: "Cet email a déjà été envoyé", alreadySent: true };
+  }
+
+  const { data: lead, error: leadErr } = await supabase
+    .from("leads")
+    .select("email, contact_name")
+    .eq("id", ge.lead_id)
+    .single();
+
+  if (leadErr || !lead?.email) {
+    return { success: false, error: `Lead sans email valide : ${leadErr?.message}` };
+  }
+
+  const leadData = lead as LeadEmail;
+
+  await supabase.from("generated_emails").update({ statut_envoi: "sending" }).eq("id", generatedEmailId);
+
+  // Relance : on thread avec le dernier email sortant du lead pour que Gmail
+  // affiche la conversation groupée, des deux côtés.
+  const { data: lastOutbound } = await supabase
+    .from("email_logs")
+    .select("message_id")
+    .eq("lead_id", ge.lead_id)
+    .eq("direction", "outbound")
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email?id=${generatedEmailId}&t=open`;
+  const htmlBody = buildEmailHtml(ge.corps_du_mail, trackingPixelUrl);
+
+  const rawMessage = buildRawEmail({
+    fromEmail: account.email,
+    fromName: "Seiki CRM",
+    toEmail: leadData.email,
+    subject: ge.sujet,
+    textBody: ge.corps_du_mail,
+    htmlBody,
+    inReplyTo: lastOutbound?.message_id ?? undefined,
+    references: lastOutbound?.message_id ?? undefined,
+  });
+
+  const recordFailure = async (errorMessage: string) => {
+    await supabase.from("generated_emails").update({ statut_envoi: "failed" }).eq("id", generatedEmailId);
+    await supabase.from("email_logs").insert([{
+      lead_id: ge.lead_id,
+      generated_email_id: generatedEmailId,
+      direction: "outbound",
+      from_email: account.email,
+      to_email: leadData.email,
+      subject: ge.sujet,
+      status: "failed",
+      error_message: errorMessage,
+    }]);
+  };
+
+  let accessToken: string;
+  try {
+    accessToken = await getValidAccessToken(supabase, account as GmailAccount);
+  } catch (err) {
+    const message = `Rafraîchissement du token Gmail échoué : ${err instanceof Error ? err.message : String(err)}`;
+    await recordFailure(message);
+    return { success: false, error: message };
+  }
+
+  let sendResult: { id: string; threadId: string };
+  try {
+    sendResult = await sendRawMessage(accessToken, rawMessage);
+  } catch (err) {
+    const message = `Erreur envoi Gmail : ${err instanceof Error ? err.message : String(err)}`;
+    await recordFailure(message);
+    return { success: false, error: message };
+  }
+
+  const sentAt = new Date().toISOString();
+
+  await supabase
+    .from("generated_emails")
+    .update({ statut_envoi: "sent", sent_at: sentAt, gmail_message_id: sendResult.id, gmail_thread_id: sendResult.threadId })
+    .eq("id", generatedEmailId);
+
+  const { error: logErr } = await supabase.from("email_logs").insert([{
+    lead_id: ge.lead_id,
+    generated_email_id: generatedEmailId,
+    direction: "outbound",
+    from_email: account.email,
+    to_email: leadData.email,
+    subject: ge.sujet,
+    body_preview: ge.corps_du_mail.substring(0, 500),
+    body_html: htmlBody,
+    message_id: sendResult.id,
+    status: "sent",
+    sent_at: sentAt,
+  }]);
+
+  if (logErr) {
+    console.warn("[sendViaGmail] Erreur insertion log (non bloquante) :", logErr.message);
+  }
+
+  return { success: true, gmailMessageId: sendResult.id, gmailThreadId: sendResult.threadId, sentAt, to: leadData.email };
+}
