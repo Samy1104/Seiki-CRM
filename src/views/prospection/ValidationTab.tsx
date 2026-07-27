@@ -33,10 +33,17 @@ export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
     setRunning(true);
     try {
       const result = await emailsService.runPacingCycleNow();
+      // Les créneaux fraîchement planifiés tombent dans la fenêtre horaire
+      // restante (donc dans le futur) : le dispatch lancé dans la foulée ne
+      // les voit presque jamais comme échus, et `sent` vaut 0 même quand le
+      // cycle a parfaitement fonctionné. On distingue donc explicitement
+      // "planifié" de "envoyé" plutôt que d'annoncer "0 email envoyé".
       if (result.scheduled === 0 && result.sent === 0) {
         showToast('Rien à envoyer pour le moment (hors fenêtre, quota du jour atteint, ou aucun brouillon approuvé)', 'info');
-      } else {
+      } else if (result.sent > 0) {
         showToast(`${result.sent} email(s) envoyé(s)${result.failed > 0 ? `, ${result.failed} échec(s)` : ''}`, result.failed > 0 ? 'info' : 'success');
+      } else {
+        showToast(`${result.scheduled} email(s) planifié(s) — envoi automatique dans la fenêtre horaire configurée`, 'success');
       }
       loadDrafts();
     } catch (err) {
