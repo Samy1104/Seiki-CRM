@@ -112,6 +112,15 @@ export const emailsService = {
     return { scheduled: scheduleResult.scheduled ?? 0, processed: dispatchResult.processed, sent: dispatchResult.sent, failed: dispatchResult.failed };
   },
 
+  /** Envoi manuel ad-hoc (test) — hors pipeline de pacing, pas de lead requis */
+  async sendTestEmail(toEmail: string, subject: string, body: string): Promise<{ to: string; sentAt: string }> {
+    const data = await callEdgeFunction<{ success: boolean; to: string; sentAt: string; error?: string }>(
+      'send-test-email', { toEmail, subject, body }
+    );
+    if (!data.success) throw new Error(data.error || 'Erreur envoi test');
+    return { to: data.to, sentAt: data.sentAt };
+  },
+
   /** Supprime un email généré */
   async deleteGeneratedEmail(id: string): Promise<void> {
     const { error } = await supabase

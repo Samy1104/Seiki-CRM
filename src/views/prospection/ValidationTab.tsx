@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Mail, Send, Loader2 } from 'lucide-react';
 import { emailsService, type GeneratedEmail } from '../../services/emailsService';
 import { EmailPreviewCard } from './EmailPreviewCard';
+import { TestSendPanel } from './TestSendPanel';
 import { AccentButton } from '../../components/ui/AccentButton';
 
 interface ValidationTabProps {
@@ -74,6 +75,8 @@ export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
           {running ? 'Cycle en cours...' : 'Lancer un cycle d\'envoi maintenant'}
         </AccentButton>
       </div>
+
+      <TestSendPanel showToast={showToast} />
 
       {loading ? (
         <div className="py-12 text-center text-sm font-ui text-ink-soft flex items-center justify-center gap-2">

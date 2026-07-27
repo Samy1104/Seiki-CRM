@@ -25,7 +25,7 @@ interface LeadEmail {
   contact_name: string;
 }
 
-interface GmailAccount {
+export interface GmailAccount {
   id: string;
   email: string;
   access_token: string;
@@ -37,7 +37,7 @@ export type SendOutcome =
   | { success: true; gmailMessageId: string; gmailThreadId: string; sentAt: string; to: string }
   | { success: false; error: string; alreadySent?: boolean };
 
-async function getValidAccessToken(supabase: SupabaseClient, account: GmailAccount): Promise<string> {
+export async function getValidAccessToken(supabase: SupabaseClient, account: GmailAccount): Promise<string> {
   const expiresInMs = new Date(account.expires_at).getTime() - Date.now();
   if (expiresInMs > 5 * 60 * 1000) return account.access_token;
 
