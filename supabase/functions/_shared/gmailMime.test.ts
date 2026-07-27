@@ -60,4 +60,22 @@ describe('buildRawEmail', () => {
     expect(decoded).not.toContain('In-Reply-To');
     expect(decoded).not.toContain('References');
   });
+
+  it('strips CR/LF from header-value fields to prevent header injection', () => {
+    const decoded = decodeRaw(buildRawEmail({
+      ...base,
+      fromName: 'Evil\r\nBcc: attacker@evil.com',
+      toEmail: 'lead@example.com\r\nBcc: attacker2@evil.com',
+    }));
+    // Check that no new Bcc header line was injected (lines starting with "Bcc:")
+    const lines = decoded.split(/\r?\n/);
+    const bccHeaderLines = lines.filter((line) => line.match(/^Bcc:/i));
+    expect(bccHeaderLines).toHaveLength(0);
+  });
+
+  it('declares 8bit Content-Transfer-Encoding on both MIME parts', () => {
+    const decoded = decodeRaw(buildRawEmail(base));
+    const matches = decoded.match(/Content-Transfer-Encoding: 8bit/g);
+    expect(matches).toHaveLength(2);
+  });
 });

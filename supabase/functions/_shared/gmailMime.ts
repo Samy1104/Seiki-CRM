@@ -51,26 +51,32 @@ function encodeSubject(subject: string): string {
   return `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
 }
 
+function sanitizeHeaderValue(value: string): string {
+  return value.replace(/[\r\n]/g, '');
+}
+
 export function buildRawEmail(params: RawEmailParams): string {
   const boundary = `seiki_boundary_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 
   const headers = [
-    `From: ${params.fromName} <${params.fromEmail}>`,
-    `To: ${params.toEmail}`,
+    `From: ${sanitizeHeaderValue(params.fromName)} <${sanitizeHeaderValue(params.fromEmail)}>`,
+    `To: ${sanitizeHeaderValue(params.toEmail)}`,
     `Subject: ${encodeSubject(params.subject)}`,
     'MIME-Version: 1.0',
     `Content-Type: multipart/alternative; boundary="${boundary}"`,
   ];
-  if (params.inReplyTo) headers.push(`In-Reply-To: ${params.inReplyTo}`);
-  if (params.references) headers.push(`References: ${params.references}`);
+  if (params.inReplyTo) headers.push(`In-Reply-To: ${sanitizeHeaderValue(params.inReplyTo)}`);
+  if (params.references) headers.push(`References: ${sanitizeHeaderValue(params.references)}`);
 
   const body = [
     `--${boundary}`,
     'Content-Type: text/plain; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
     '',
     params.textBody,
     `--${boundary}`,
     'Content-Type: text/html; charset="UTF-8"',
+    'Content-Transfer-Encoding: 8bit',
     '',
     params.htmlBody,
     `--${boundary}--`,
