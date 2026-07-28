@@ -6,6 +6,7 @@ import { ProspectionHeader, type Tab } from './prospection/ProspectionHeader';
 import { ValidationTab } from './prospection/ValidationTab';
 import { TemplatesTab } from './prospection/TemplatesTab';
 import { FollowUpTab } from './prospection/FollowUpTab';
+import { TrackingTab } from './prospection/TrackingTab';
 import './prospection.css';
 
 export const Prospection: React.FC = () => {
@@ -62,6 +63,7 @@ export const Prospection: React.FC = () => {
           {activeTab === 'validation' && <ValidationTab showToast={showToast} />}
           {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
           {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}
+          {activeTab === 'tracking' && <TrackingTab showToast={showToast} />}
         </div>
       </div>
     </div>

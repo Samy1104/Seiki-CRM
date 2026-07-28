@@ -1,9 +1,9 @@
 import React from 'react';
-import { Mail, FileEdit, RefreshCw, Link2, CheckCircle2 } from 'lucide-react';
+import { Mail, FileEdit, RefreshCw, Link2, CheckCircle2, Activity } from 'lucide-react';
 import { ProspectionModeToggle } from '../../components/ProspectionModeToggle';
 import type { GmailAccount } from '../../services/gmailService';
 
-export type Tab = 'validation' | 'templates' | 'followup';
+export type Tab = 'validation' | 'templates' | 'followup' | 'tracking';
 
 interface ProspectionHeaderProps {
   mode: 'manual' | 'auto';
@@ -85,6 +85,16 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
           onClick={() => setActiveTab('followup')}
         >
           <RefreshCw size={14} strokeWidth={2} /> Relances
+        </button>
+        <button
+          className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-control transition-all cursor-pointer border ${
+            activeTab === 'tracking'
+              ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+              : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
+          }`}
+          onClick={() => setActiveTab('tracking')}
+        >
+          <Activity size={14} strokeWidth={2} /> Suivi
         </button>
       </div>
     </div>

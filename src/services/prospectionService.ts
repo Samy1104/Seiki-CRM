@@ -19,17 +19,21 @@ export interface ProspectionLead extends Lead {
 
 export interface EmailLog {
   id: string;
-  lead_id: string;
+  lead_id: string | null;
   generated_email_id: string | null;
   direction: 'outbound' | 'inbound';
   from_email: string;
   to_email: string;
   subject: string | null;
   status: 'pending' | 'sent' | 'delivered' | 'opened' | 'replied' | 'bounced' | 'failed';
+  body_preview: string | null;
+  error_message: string | null;
   opened_at: string | null;
   replied_at: string | null;
   sent_at: string | null;
+  received_at: string | null;
   created_at: string;
+  lead?: { contact_name: string; company_name: string } | null;
 }
 
 export interface FollowUpCandidate {
@@ -197,6 +201,24 @@ export const prospectionService = {
       .select('*')
       .eq('lead_id', leadId)
       .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as EmailLog[];
+  },
+
+  /**
+   * Récupère les logs email les plus récents, tous leads confondus (vue de
+   * suivi globale). Les envois de test (lead_id NULL) ressortent avec lead: null.
+   */
+  async getRecentEmailLogs(limit = 100): Promise<EmailLog[]> {
+    const { data, error } = await supabase
+      .from('email_logs')
+      .select(`
+        *,
+        lead:leads!lead_id(contact_name, company_name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(limit);
 
     if (error) throw error;
     return (data || []) as EmailLog[];
