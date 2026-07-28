@@ -40,14 +40,9 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
         </span>
       </div>
 
-      {/* Line 2: Segment, Contact & Metrics */}
+      {/* Line 2: Segment & Metrics */}
       <div className="mt-1.5 flex items-center justify-between gap-1.5 text-[10.5px]">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
-          {lead.contact_name && (
-            <span className="truncate text-ink-soft" title={lead.contact_name}>{lead.contact_name}</span>
-          )}
-        </div>
+        <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
         <div className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
           <span className={`font-bold ${scoreColorClass(lead.score)}`}>{lead.score}</span>
           <span className={`text-[10px] ${slaBreached ? 'font-semibold text-danger' : 'text-ink-faint'}`}>
