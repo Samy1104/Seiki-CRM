@@ -9,16 +9,7 @@ interface PageTitleProps {
 export const PageTitle: React.FC<PageTitleProps> = ({ children, subtitle, className = '' }) => {
   return (
     <div className={className}>
-      <h1
-        style={{
-          fontFamily: "'Playfair Display', serif",
-          fontWeight: 900,
-          fontSize: '2.25rem',
-          color: 'var(--color-charcoal-fg, #f2ede4)',
-          letterSpacing: '-0.02em',
-          lineHeight: 1.1,
-        }}
-      >
+      <h1 className="font-display text-3xl font-bold tracking-tight text-[#f2ede4]">
         {children}
       </h1>
       {subtitle && <p className="mt-1 text-xs text-ink-soft">{subtitle}</p>}
