@@ -29,3 +29,18 @@ export function computeSegmentStats(leads: Lead[]): SegmentStats {
   });
   return stats;
 }
+
+/** Format d'affichage épuré de la valeur monétaire (ex: 500 -> "500 €", 45000 -> "45 k€", 1500000 -> "1.5 M€") */
+export function formatCurrency(value: number | undefined | null): string {
+  if (value === undefined || value === null || isNaN(value)) return '0 €';
+  const abs = Math.abs(value);
+  if (abs >= 1_000_000) {
+    const formatted = (value / 1_000_000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted} M€`;
+  }
+  if (abs >= 1_000) {
+    const formatted = (value / 1_000).toFixed(1).replace(/\.0$/, '');
+    return `${formatted} k€`;
+  }
+  return `${value.toLocaleString()} €`;
+}
