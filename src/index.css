@@ -565,6 +565,42 @@ body {
   min-width: 0;
 }
 
+/* Ensure Kanban Board fits 100% inside available viewport height without page scrollbar */
+.rkk-seiki-board {
+  display: flex !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+}
+
+.rkk-seiki-board > div:not(.rkk-column-adder) {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+}
+
+.rkk-seiki-board .rkk-column-outer {
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  max-height: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.rkk-seiki-board .rkk-column {
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-right: 4px !important;
+}
+
 /* ============================================================
    KANBAN PIPELINE BOARD
    ============================================================ */

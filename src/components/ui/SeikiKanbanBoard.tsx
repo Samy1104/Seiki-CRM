@@ -213,6 +213,11 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         borderRadius: '12px',
         border: '1px solid rgba(242, 237, 228, 0.08)',
         padding: '12px',
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        maxHeight: '100%',
+        boxSizing: 'border-box',
         ...(fillWidth
           ? { flex: '1 1 0%', minWidth: '0', maxWidth: '100%' }
           : { minWidth: '260px' }),

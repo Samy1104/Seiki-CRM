@@ -99,15 +99,15 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   }
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="flex h-full min-h-0 flex-1 flex-col space-y-4 p-6 overflow-hidden">
+      <div className="flex flex-shrink-0 items-center justify-between">
         <div>
           <PageTitle>Pipeline</PageTitle>
         </div>
         <AccentButton icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setView('add')}>Nouveau lead</AccentButton>
       </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid flex-shrink-0 grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiTile label="Deals actifs" value={activeLeads.length} sub={`${wonLeads.length} closés gagnés`} accent="amber" />
         <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => `${Math.round(v).toLocaleString()} €`} sub="Valeur totale" accent="neutral" />
         <KpiTile label="Score moyen" value={avgScore} formatValue={(v) => `${Math.round(v)}/100`} sub={`${hotCount} chauds ≥ 80`} accent="success" />
@@ -115,13 +115,13 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
       </div>
 
       {slaBreaches.length > 0 && (
-        <div className="mb-6 flex items-start gap-3 rounded-surface border border-danger/25 bg-danger/10 px-4 py-3">
-          <AlertTriangle size={18} className="mt-0.5 flex-shrink-0 text-danger" />
-          <div className="flex flex-col gap-1">
-            <span className="text-sm font-bold text-ink">
+        <div className="flex flex-shrink-0 items-start gap-3 rounded-surface border border-danger/25 bg-danger/10 px-4 py-2.5">
+          <AlertTriangle size={16} className="mt-0.5 flex-shrink-0 text-danger" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-bold text-ink">
               {slaBreaches.length} lead{slaBreaches.length > 1 ? 's' : ''} avec SLA dépassé — action requise aujourd'hui
             </span>
-            <div className="text-xs text-ink-soft">
+            <div className="text-[11px] text-ink-soft">
               {slaBreaches.map((l, i) => (
                 <span key={l.id}>
                   {l.company_name} (J+{l.days_in_stage}, max {slaLimits[l.segment] || 7}j)
@@ -133,47 +133,50 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
         </div>
       )}
 
-      <SeikiKanbanBoard<Lead, PipelineStage>
-        columns={stages}
-        cards={leads}
-        getColumnId={(st) => st.id}
-        getColumnTitle={(st) => st.name}
-        getColumnColor={(st) => st.color}
-        getCardId={(l) => l.id}
-        getCardColumnId={(l) => l.stage_id}
-        renderColumnHeaderExtra={(st, count) => {
-          const stageLeads = leads.filter((l) => l.stage_id === st.id);
-          const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
-          return (
-            <span className="text-[11px] font-normal text-ink-soft">
-              {count} · {stageVal.toLocaleString()} €
-            </span>
-          );
-        }}
-        renderCard={(lead) => (
-          <DealCard
-            lead={lead}
-            slaBreached={isSlaBreached(lead, slaLimits)}
-            isTaskOverdue={getLeadPriorityTask(lead.id)}
-            onOpen={handleOpenLead}
-          />
-        )}
-        renderColumnFooter={() => (
-          <button
-            className="mt-2.5 w-full rounded-control border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
-            onClick={() => setView('add')}
-          >
-            + Ajouter
-          </button>
-        )}
-        onCardMove={async (leadId, _fromCol, toCol) => {
-          await leadsService.updateLead(leadId, { stage_id: toCol });
-          leadsRes.setData((prev) =>
-            prev.map((l) => (l.id === leadId ? { ...l, stage_id: toCol } : l))
-          );
-        }}
-        onCardClick={(lead) => handleOpenLead(lead.id)}
-      />
+      <div className="flex-1 min-h-0 w-full overflow-hidden">
+        <SeikiKanbanBoard<Lead, PipelineStage>
+          columns={stages}
+          cards={leads}
+          getColumnId={(st) => st.id}
+          getColumnTitle={(st) => st.name}
+          getColumnColor={(st) => st.color}
+          getCardId={(l) => l.id}
+          getCardColumnId={(l) => l.stage_id}
+          fillWidth={true}
+          renderColumnHeaderExtra={(st, count) => {
+            const stageLeads = leads.filter((l) => l.stage_id === st.id);
+            const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
+            return (
+              <span className="text-[11px] font-normal text-ink-soft">
+                {count} · {stageVal.toLocaleString()} €
+              </span>
+            );
+          }}
+          renderCard={(lead) => (
+            <DealCard
+              lead={lead}
+              slaBreached={isSlaBreached(lead, slaLimits)}
+              isTaskOverdue={getLeadPriorityTask(lead.id)}
+              onOpen={handleOpenLead}
+            />
+          )}
+          renderColumnFooter={() => (
+            <button
+              className="mt-2.5 w-full rounded-control border border-dashed border-line-strong py-2 text-xs font-medium text-ink-soft transition-colors hover:border-line-focus hover:text-ink cursor-pointer"
+              onClick={() => setView('add')}
+            >
+              + Ajouter
+            </button>
+          )}
+          onCardMove={async (leadId, _fromCol, toCol) => {
+            await leadsService.updateLead(leadId, { stage_id: toCol });
+            leadsRes.setData((prev) =>
+              prev.map((l) => (l.id === leadId ? { ...l, stage_id: toCol } : l))
+            );
+          }}
+          onCardClick={(lead) => handleOpenLead(lead.id)}
+        />
+      </div>
 
       {/* LEAD MODAL DETAILS */}
       {modalOpen && selectedLead && (
