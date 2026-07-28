@@ -30,7 +30,6 @@ export const StatsDateFilter: React.FC<StatsDateFilterProps> = ({
   const endRef = useRef<HTMLButtonElement | null>(null);
 
   const presets: { key: DateFilterState['preset']; label: string }[] = [
-    { key: 'today', label: "Aujourd'hui" },
     { key: '7d', label: '7 derniers jours' },
     { key: 'month', label: 'Ce mois' },
     { key: 'quarter', label: 'Ce trimestre' },

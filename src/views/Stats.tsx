@@ -68,7 +68,7 @@ export const Stats: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 font-ui">
       {/* Title Header */}
-      <div className="space-y-1">
+      <div>
         <h1
           style={{
             fontFamily: "'Playfair Display', serif",
@@ -81,9 +81,6 @@ export const Stats: React.FC = () => {
         >
           Statistiques & Performance
         </h1>
-        <p className="text-xs text-ink-soft">
-          Analyse globale de l'activité commerciale, des conversions et des prévisions de pipeline.
-        </p>
       </div>
 
       {/* Global Filter Bar */}

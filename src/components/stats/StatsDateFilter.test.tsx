@@ -20,7 +20,6 @@ describe('StatsDateFilter', () => {
     render(<StatsDateFilter {...defaultProps} onFilterChange={onFilterChange} />);
 
     expect(screen.getByText('Ce mois')).toBeInTheDocument();
-    expect(screen.getByText("Aujourd'hui")).toBeInTheDocument();
     expect(screen.getByText('7 derniers jours')).toBeInTheDocument();
     expect(screen.getByText('Ce trimestre')).toBeInTheDocument();
     expect(screen.getByText('Année en cours')).toBeInTheDocument();
