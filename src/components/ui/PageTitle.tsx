@@ -10,13 +10,13 @@ export const PageTitle: React.FC<PageTitleProps> = ({ children, subtitle, classN
   return (
     <div className={className}>
       <h1
-        className="page-title-heading"
+        className="page-title-heading font-display text-3xl font-extrabold text-white"
         style={{
-          fontFamily: "'Playfair Display', Georgia, serif",
-          fontWeight: 900,
+          fontFamily: "'Sora', 'Codan', system-ui, sans-serif",
+          fontWeight: 800,
           fontSize: '2.25rem',
-          color: 'var(--color-charcoal-fg, #f2ede4)',
-          letterSpacing: '-0.02em',
+          color: '#ffffff',
+          letterSpacing: '-0.03em',
           lineHeight: 1.1,
         }}
       >
