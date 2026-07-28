@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Calendar, Download, User } from 'lucide-react';
+import CalendarModal from '../CalendarModal';
 import type { DateFilterState } from '../../utils/statsCalculations';
 
 export interface StatsDateFilterProps {
@@ -22,6 +23,11 @@ export const StatsDateFilter: React.FC<StatsDateFilterProps> = ({
   const [showCustomModal, setShowCustomModal] = useState(false);
   const [startDate, setStartDate] = useState(filter.startDate || '');
   const [endDate, setEndDate] = useState(filter.endDate || '');
+
+  const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null);
+
+  const startRef = useRef<HTMLButtonElement | null>(null);
+  const endRef = useRef<HTMLButtonElement | null>(null);
 
   const presets: { key: DateFilterState['preset']; label: string }[] = [
     { key: 'today', label: "Aujourd'hui" },
@@ -123,40 +129,50 @@ export const StatsDateFilter: React.FC<StatsDateFilterProps> = ({
                 <label htmlFor="custom-start-date" className="block text-xs text-ink-soft mb-1">
                   Date de début
                 </label>
-                <input
+                <button
                   id="custom-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
-                  className="w-full rounded-lg bg-[#1e1e1e] border border-line px-3 py-2 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                  required
-                />
+                  ref={startRef}
+                  type="button"
+                  onClick={() => setActivePicker('start')}
+                  className="w-full flex items-center justify-between rounded-lg bg-[#1e1e1e] border border-line px-3 py-2 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8] cursor-pointer"
+                >
+                  <span>{startDate || 'Choisir une date'}</span>
+                  <Calendar className="w-3.5 h-3.5 text-[#D4C4A8]" />
+                </button>
               </div>
+
               <div>
                 <label htmlFor="custom-end-date" className="block text-xs text-ink-soft mb-1">
                   Date de fin
                 </label>
-                <input
+                <button
                   id="custom-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  className="w-full rounded-lg bg-[#1e1e1e] border border-line px-3 py-2 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                  required
-                />
+                  ref={endRef}
+                  type="button"
+                  onClick={() => setActivePicker('end')}
+                  className="w-full flex items-center justify-between rounded-lg bg-[#1e1e1e] border border-line px-3 py-2 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8] cursor-pointer"
+                >
+                  <span>{endDate || 'Choisir une date'}</span>
+                  <Calendar className="w-3.5 h-3.5 text-[#D4C4A8]" />
+                </button>
               </div>
             </div>
+
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowCustomModal(false)}
+                onClick={() => {
+                  setShowCustomModal(false);
+                  setActivePicker(null);
+                }}
                 className="px-3 py-1.5 text-xs font-semibold text-ink-soft hover:text-white cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#D4C4A8] text-black hover:bg-[#c3b296] cursor-pointer"
+                disabled={!startDate || !endDate}
+                className="px-4 py-1.5 text-xs font-semibold rounded-lg bg-[#D4C4A8] text-black hover:bg-[#c3b296] cursor-pointer disabled:opacity-50"
               >
                 Appliquer
               </button>
@@ -164,6 +180,34 @@ export const StatsDateFilter: React.FC<StatsDateFilterProps> = ({
           </form>
         </div>
       )}
+
+      {/* App Calendar Modal for Start Date */}
+      {activePicker === 'start' && (
+        <CalendarModal
+          value={startDate}
+          onChange={(date) => {
+            setStartDate(date);
+            setActivePicker(null);
+          }}
+          onClose={() => setActivePicker(null)}
+          anchorRef={startRef}
+        />
+      )}
+
+      {/* App Calendar Modal for End Date */}
+      {activePicker === 'end' && (
+        <CalendarModal
+          value={endDate}
+          onChange={(date) => {
+            setEndDate(date);
+            setActivePicker(null);
+          }}
+          onClose={() => setActivePicker(null)}
+          anchorRef={endRef}
+          minDate={startDate}
+        />
+      )}
     </div>
   );
 };
+
