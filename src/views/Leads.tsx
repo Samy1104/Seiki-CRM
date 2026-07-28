@@ -172,14 +172,14 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
 
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-surface border border-line bg-elevated p-3">
         <div className="relative flex min-w-[240px] flex-1 items-center">
-          <Search size={14} className="pointer-events-none absolute left-3 text-ink-faint" />
           <input
             type="text"
             placeholder="Rechercher par société, contact, note..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full rounded-control border border-line-strong bg-base py-2 pl-9 pr-3 text-sm text-ink outline-none transition-colors focus:border-line-focus"
+            className="w-full rounded-control border border-line-strong bg-base py-2 pl-3 pr-9 text-sm text-ink outline-none transition-colors focus:border-line-focus"
           />
+          <Search size={14} className="pointer-events-none absolute right-3 text-ink-faint" />
         </div>
 
         <div className="flex flex-wrap gap-2.5">
