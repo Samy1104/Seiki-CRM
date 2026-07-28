@@ -15,9 +15,9 @@ export const PageTitle: React.FC<PageTitleProps> = ({ children, subtitle, classN
           fontFamily: "'Playfair Display', Georgia, serif",
           fontWeight: 900,
           fontSize: '2.25rem',
+          lineHeight: 1,
           color: 'var(--color-charcoal-fg, #f2ede4)',
           letterSpacing: '-0.02em',
-          lineHeight: 1.1,
         }}
       >
         {children}

@@ -101,7 +101,9 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <PageTitle>Pipeline</PageTitle>
+        <div>
+          <PageTitle>Pipeline</PageTitle>
+        </div>
         <AccentButton icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setView('add')}>Nouveau lead</AccentButton>
       </div>
 

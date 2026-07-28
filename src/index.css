@@ -43,9 +43,9 @@ html, body {
   font-family: 'Playfair Display', Georgia, serif !important;
   font-weight: 900 !important;
   font-size: 2.25rem !important;
+  line-height: 1 !important;
   color: var(--color-charcoal-fg, #f2ede4) !important;
   letter-spacing: -0.02em !important;
-  line-height: 1.1 !important;
 }
 
 ::selection {

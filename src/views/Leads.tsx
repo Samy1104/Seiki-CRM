@@ -126,7 +126,9 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <PageTitle>Tous les leads</PageTitle>
+        <div>
+          <PageTitle>Tous les leads</PageTitle>
+        </div>
 
         <div className="flex items-center gap-4">
           <SegmentedToggle
