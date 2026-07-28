@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { leadsService } from '../../services/leadsService';
 import type { Lead } from '../../services/leadsService';
 import type { PipelineStage, TeamMember, SlaLimits } from '../../services/settingsService';
@@ -24,12 +24,14 @@ import {
   Sparkles,
   CheckCircle2,
   Circle,
+  Calendar,
 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
 import { Badge } from '../../components/ui/Badge';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
+import CalendarModal from '../../components/CalendarModal';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -75,6 +77,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [newTaskDate, setNewTaskDate] = useState('');
   const [newTaskPriority, setNewTaskPriority] = useState<'high' | 'medium' | 'low'>('medium');
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
+  const [showTaskCalendar, setShowTaskCalendar] = useState(false);
+  const taskDateInputRef = useRef<HTMLButtonElement>(null);
 
   const refreshLead = async () => {
     const leadDetails = await leadsService.getLeadById(lead.id);
@@ -313,8 +317,8 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 key={tab.id}
                 type="button"
                 className={`flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-control transition-all cursor-pointer border ${isActive
-                    ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
-                    : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
+                  ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+                  : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
                   }`}
                 onClick={() => setModalTab(tab.id as any)}
               >
@@ -400,7 +404,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         {/* 2. EDIT TAB */}
         {modalTab === 'edit' && (
           <form onSubmit={handleSaveLead} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Field label="Société *">
                 <input
                   type="text"
@@ -469,7 +473,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 </Select>
               </Field>
 
-              <Field label="Propriétaire">
+              <Field label="Propriétaire" className="sm:col-span-2">
                 <Select value={editForm.owner_id} onValueChange={(val) => setEditForm({ ...editForm, owner_id: val })}>
                   <SelectTrigger>
                     <SelectValue placeholder="— Aucun" />
@@ -483,19 +487,21 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 </Select>
               </Field>
 
-              <Field label="Note commerciale" className="sm:col-span-2">
+              <Field label="Note" className="sm:col-span-3">
                 <textarea
                   value={editForm.note}
                   onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-                  rows={3}
-                  className={`${inputClass} py-2`}
+                  rows={2}
+                  className={`${inputClass} py-1.5`}
                 />
               </Field>
             </div>
 
-            <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>
-              Enregistrer les modifications
-            </AccentButton>
+            <div className="pt-2 border-t border-line flex justify-end">
+              <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>
+                Enregistrer les modifications
+              </AccentButton>
+            </div>
           </form>
         )}
 
@@ -593,12 +599,33 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 required
                 className={`${inputClass} sm:col-span-2`}
               />
-              <input
-                type="date"
-                value={newTaskDate}
-                onChange={(e) => setNewTaskDate(e.target.value)}
-                className={inputClass}
-              />
+              <div className="relative">
+                <button
+                  ref={taskDateInputRef}
+                  type="button"
+                  onClick={() => setShowTaskCalendar(true)}
+                  className={`${inputClass} flex items-center justify-between gap-2 text-left cursor-pointer`}
+                >
+                  <span className={newTaskDate ? 'text-ink font-mono text-xs' : 'text-ink-faint text-xs'}>
+                    {newTaskDate
+                      ? new Date(newTaskDate + 'T12:00:00').toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                        })
+                      : 'Échéance'}
+                  </span>
+                  <Calendar size={14} className="text-ink-soft shrink-0" />
+                </button>
+
+                {showTaskCalendar && (
+                  <CalendarModal
+                    value={newTaskDate}
+                    onChange={(val) => setNewTaskDate(val)}
+                    onClose={() => setShowTaskCalendar(false)}
+                    anchorRef={taskDateInputRef}
+                  />
+                )}
+              </div>
               <AccentButton type="submit" variant="primary" icon={<Plus size={14} />}>
                 Créer
               </AccentButton>

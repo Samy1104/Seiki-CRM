@@ -83,10 +83,27 @@ input:-webkit-autofill:active {
   transition: background-color 5000s ease-in-out 0s;
 }
 
+input,
+textarea,
+select {
+  color-scheme: dark !important;
+}
+
 input[type="text"],
-input[type="text"]:focus,
-input[type="text"]:active {
-  background-color: transparent !important;
+input[type="email"],
+input[type="url"],
+input[type="number"],
+input[type="date"],
+input[type="password"],
+input[type="search"],
+textarea {
+  background-color: #141414 !important;
+  color: #f2ede4 !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
 }
 
 :root {
