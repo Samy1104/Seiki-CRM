@@ -265,22 +265,38 @@ export const Settings: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-5">
-        <div className="font-display text-3xl font-bold text-ink">Paramètres</div>
+        <h1
+          style={{
+            fontFamily: "'Playfair Display', serif",
+            fontWeight: 900,
+            fontSize: "2.25rem",
+            color: "var(--color-charcoal-fg, #f2ede4)",
+            letterSpacing: "-0.02em",
+            lineHeight: 1,
+          }}
+        >
+          Paramètres
+        </h1>
+        <p className="mt-1 text-xs text-ink-soft">
+          Gérez les membres de l'équipe, le pipeline commercial, les règles SLA et la prospection.
+        </p>
       </div>
 
-      <div className="mb-5 flex gap-1 border-b border-line">
-        {TABS.map(tab => {
+      <div className="flex items-center gap-2 flex-wrap font-ui my-6">
+        {TABS.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
-              className={`flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-semibold transition-colors cursor-pointer ${
-                isActive ? 'border-amber text-ink' : 'border-transparent text-ink-soft hover:text-ink'
+              className={`flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-control transition-all cursor-pointer border ${
+                isActive
+                  ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
+                  : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
               }`}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => setActiveTab(tab.id as any)}
             >
-              <Icon size={14} />
+              <Icon size={14} strokeWidth={2} />
               {tab.label}
             </button>
           );
