@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { settingsService } from '../services/settingsService';
-import type { AppSetting, TeamMember } from '../services/settingsService';
+import type { AppSetting, TeamMember, PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Users, Target, Sliders } from 'lucide-react';
 import { useCachedResource } from '../hooks/useCachedResource';
@@ -33,6 +33,7 @@ export const Settings: React.FC = () => {
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#6B5FE6');
   const [newStageIsWon, setNewStageIsWon] = useState(false);
+  const [editingStageId, setEditingStageId] = useState<string | null>(null);
 
   // Form states - SLA & General
   const [slaMedia, setSlaMedia] = useState(5);
@@ -99,20 +100,16 @@ export const Settings: React.FC = () => {
     }
 
     try {
-      // 1. Format First Name (Title Case)
       const firstName = newMemberFirstName.trim()
         .split('-')
         .map(sub => sub.charAt(0).toUpperCase() + sub.slice(1).toLowerCase())
         .join('-');
 
-      // 2. Format Last Name (UPPERCASE with accents)
       const lastName = newMemberLastName.trim().toUpperCase();
-
       const fullName = `${firstName} ${lastName}`;
       const initials = (firstName[0] + (lastName[0] || '')).toUpperCase();
 
       if (editingMemberId) {
-        // Update member
         await settingsService.updateTeamMember(editingMemberId, {
           full_name: fullName,
           email: newMemberEmail.trim() || null,
@@ -121,7 +118,6 @@ export const Settings: React.FC = () => {
         showToast('Membre modifié avec succès');
         setEditingMemberId(null);
       } else {
-        // Create member
         const assignedColor = AVATAR_COLORS[members.length % AVATAR_COLORS.length];
         await settingsService.addTeamMember({
           full_name: fullName,
@@ -178,24 +174,49 @@ export const Settings: React.FC = () => {
     if (!newStageName.trim()) return;
 
     try {
-      const maxPosition = stages.length ? Math.max(...stages.map(s => s.position)) : 0;
-      await settingsService.addPipelineStage({
-        name: newStageName.trim(),
-        position: maxPosition + 1,
-        color: newStageColor,
-        is_closed_won: newStageIsWon,
-        is_active: true
-      });
+      if (editingStageId) {
+        await settingsService.updatePipelineStage(editingStageId, {
+          name: newStageName.trim(),
+          color: newStageColor,
+          is_closed_won: newStageIsWon,
+        });
+        showToast('Étape modifiée avec succès');
+        setEditingStageId(null);
+      } else {
+        const maxPosition = stages.length ? Math.max(...stages.map(s => s.position)) : 0;
+        await settingsService.addPipelineStage({
+          name: newStageName.trim(),
+          position: maxPosition + 1,
+          color: newStageColor,
+          is_closed_won: newStageIsWon,
+          is_active: true
+        });
+        showToast('Étape ajoutée au pipeline');
+      }
 
       setNewStageName('');
+      setNewStageColor('#6B5FE6');
       setNewStageIsWon(false);
 
-      showToast('Étape ajoutée au pipeline');
       loadSettingsData();
     } catch (err) {
-      console.error('Error adding stage:', err);
-      showToast('Erreur lors de la création de l\'étape', 'error');
+      console.error('Error saving stage:', err);
+      showToast('Erreur lors de la sauvegarde de l\'étape', 'error');
     }
+  };
+
+  const handleStartEditStage = (stage: PipelineStage) => {
+    setEditingStageId(stage.id);
+    setNewStageName(stage.name);
+    setNewStageColor(stage.color || '#6B5FE6');
+    setNewStageIsWon(!!stage.is_closed_won);
+  };
+
+  const handleCancelEditStage = () => {
+    setEditingStageId(null);
+    setNewStageName('');
+    setNewStageColor('#6B5FE6');
+    setNewStageIsWon(false);
   };
 
   const handleDeleteStage = async (id: string) => {
@@ -213,6 +234,28 @@ export const Settings: React.FC = () => {
         console.error('Error deleting stage:', err);
         showToast('Erreur de suppression', 'error');
       }
+    }
+  };
+
+  const handleMoveStage = async (id: string, direction: 'up' | 'down') => {
+    const index = stages.findIndex(s => s.id === id);
+    if (index === -1) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= stages.length) return;
+
+    const currentStage = stages[index];
+    const targetStage = stages[targetIndex];
+
+    try {
+      await settingsService.reorderPipelineStages(
+        currentStage.id, currentStage.position,
+        targetStage.id, targetStage.position
+      );
+      showToast('Ordre des étapes mis à jour');
+      loadSettingsData();
+    } catch (err) {
+      console.error('Error reordering stages:', err);
+      showToast('Erreur lors du réordonnancement', 'error');
     }
   };
 
@@ -323,6 +366,7 @@ export const Settings: React.FC = () => {
       {activeTab === 'pipeline' && (
         <PipelineStagesTab
           stages={stages}
+          editingStageId={editingStageId}
           newStageName={newStageName}
           newStageColor={newStageColor}
           newStageIsWon={newStageIsWon}
@@ -330,7 +374,10 @@ export const Settings: React.FC = () => {
           onColorChange={setNewStageColor}
           onIsWonChange={setNewStageIsWon}
           onSubmit={handleAddStage}
+          onStartEdit={handleStartEditStage}
+          onCancelEdit={handleCancelEditStage}
           onDelete={handleDeleteStage}
+          onMoveStage={handleMoveStage}
         />
       )}
 

@@ -22,5 +22,27 @@ describe('Settings View', () => {
     expect(screen.getAllByText("Membres de l'équipe").length).toBeGreaterThan(0);
     expect(screen.getByText('Étapes du Pipeline')).toBeDefined();
   });
+
+  it('supports pipeline stage editing state', async () => {
+    const mockStages = [
+      { id: 'stg_1', name: 'Négociation', position: 1, color: '#6B5FE6', is_closed_won: false, is_active: true }
+    ];
+
+    const { settingsService } = await import('../services/settingsService');
+    vi.mocked(settingsService.getPipelineStages).mockResolvedValueOnce(mockStages);
+
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>
+    );
+
+    const pipelineTab = screen.getByText('Étapes du Pipeline');
+    pipelineTab.click();
+
+    expect(await screen.findByText('Négociation')).toBeDefined();
+    const editBtn = screen.getByTitle("Modifier l'étape");
+    expect(editBtn).toBeDefined();
+  });
 });
 

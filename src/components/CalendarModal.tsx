@@ -108,7 +108,7 @@ export default function CalendarModal({ value, onChange, onClose, anchorRef, min
         top: pos.top,
         left: pos.left,
         width: Math.max(pos.width, 264),
-        background: "#111",
+        background: "#141414",
         borderTop: "1px solid var(--color-beige, #D4C4A8)",
         borderLeft: "1px solid rgba(242,237,228,0.08)",
         borderRight: "1px solid rgba(242,237,228,0.08)",

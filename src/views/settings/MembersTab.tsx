@@ -1,7 +1,6 @@
 import React from 'react';
 import type { TeamMember } from '../../services/settingsService';
-import { Trash2, Edit2, UserPlus, UserCheck } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { Trash2, Edit2, UserPlus, UserCheck, X } from 'lucide-react';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
 
@@ -151,7 +150,9 @@ export const MembersTab: React.FC<MembersTabProps> = ({
               {editingMemberId ? 'Enregistrer' : 'Ajouter le membre'}
             </AccentButton>
             {editingMemberId && (
-              <Button type="button" variant="secondary" onClick={onCancelEdit}>Annuler</Button>
+              <AccentButton type="button" variant="secondary" icon={<X size={14} />} onClick={onCancelEdit}>
+                Annuler
+              </AccentButton>
             )}
           </div>
         </form>

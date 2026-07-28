@@ -161,7 +161,7 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         return (
           <div
             style={{
-              backgroundColor: '#1e2026',
+              backgroundColor: '#141414',
               borderRadius: '8px',
               border: '1.5px solid #c8b89a',
               boxShadow: '0 12px 28px rgba(0, 0, 0, 0.8)',

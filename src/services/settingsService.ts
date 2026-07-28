@@ -180,5 +180,19 @@ export const settingsService = {
       .delete()
       .eq('id', id);
     if (error) throw error;
+  },
+
+  async reorderPipelineStages(stage1Id: string, pos1: number, stage2Id: string, pos2: number): Promise<void> {
+    const { error: err1 } = await supabase
+      .from('pipeline_stages')
+      .update({ position: pos2 })
+      .eq('id', stage1Id);
+    if (err1) throw err1;
+
+    const { error: err2 } = await supabase
+      .from('pipeline_stages')
+      .update({ position: pos1 })
+      .eq('id', stage2Id);
+    if (err2) throw err2;
   }
 };
