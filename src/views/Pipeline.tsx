@@ -107,9 +107,9 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiTile label="Deals actifs" value={activeLeads.length} sub={`${wonLeads.length} closés gagnés`} accent="amber" />
-        <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => `${Math.round(v)}k€`} sub="Valeur totale" accent="neutral" />
+        <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => `${Math.round(v).toLocaleString()} €`} sub="Valeur totale" accent="neutral" />
         <KpiTile label="Score moyen" value={avgScore} formatValue={(v) => `${Math.round(v)}/100`} sub={`${hotCount} chauds ≥ 80`} accent="success" />
-        <KpiTile label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v)}k€`} sub="Deals signés" accent="success" />
+        <KpiTile label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v).toLocaleString()} €`} sub="Deals signés" accent="success" />
       </div>
 
       {slaBreaches.length > 0 && (
@@ -144,7 +144,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
           return (
             <span className="text-[11px] font-normal text-ink-soft">
-              {count} · {stageVal}k€
+              {count} · {stageVal.toLocaleString()} €
             </span>
           );
         }}

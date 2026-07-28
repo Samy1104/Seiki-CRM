@@ -250,7 +250,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
                   <td className="px-4 py-3"><Badge tone="neutral">{l.segment}</Badge></td>
                   <td className="px-4 py-3 text-ink-soft">{l.stage?.name || 'Prospect'}</td>
                   <td className={`px-4 py-3 font-bold tabular-nums ${scoreClass(l.score)}`}>{l.score}</td>
-                  <td className="px-4 py-3 font-medium tabular-nums text-ink">{l.deal_value}k€</td>
+                  <td className="px-4 py-3 font-medium tabular-nums text-ink">{l.deal_value?.toLocaleString()} €</td>
                   <td className="px-4 py-3 text-ink-soft">{l.owner ? l.owner.full_name : '—'}</td>
                   <td className="px-4 py-3 text-[11px] text-ink-faint">
                     {new Date(l.created_at).toLocaleDateString('fr-FR')}

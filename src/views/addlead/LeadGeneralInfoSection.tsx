@@ -130,10 +130,10 @@ export const LeadGeneralInfoSection: React.FC<LeadGeneralInfoSectionProps> = ({
             </Select>
           </Field>
 
-          <Field label="Valeur (k€)">
+          <Field label="Valeur (€)">
             <input
               type="number"
-              placeholder="ex : 45"
+              placeholder="ex : 45000"
               value={form.deal_value}
               onChange={(e) => setForm({ ...form, deal_value: e.target.value })}
               className={inputClass}

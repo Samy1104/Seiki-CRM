@@ -353,7 +353,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               )}
               <div className="flex items-center justify-between text-xs py-1 border-b border-line/50">
                 <span className="text-ink-soft flex items-center gap-1.5"><DollarSign size={13} /> Valeur estimée</span>
-                <span className="font-semibold text-ink font-display">{lead.deal_value} k€</span>
+                <span className="font-semibold text-ink font-display">{lead.deal_value?.toLocaleString()} €</span>
               </div>
               <div className="flex items-center justify-between text-xs py-1">
                 <span className="text-ink-soft">Source de prospection</span>
@@ -451,7 +451,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                 />
               </Field>
 
-              <Field label="Valeur (k€)">
+              <Field label="Valeur (€)">
                 <input
                   type="number"
                   value={editForm.deal_value}
