@@ -4,7 +4,7 @@ import type { Lead } from '../../services/leadsService';
 import type { PipelineStage, TeamMember, SlaLimits } from '../../services/settingsService';
 import { tasksService } from '../../services/tasksService';
 import type { Task } from '../../services/tasksService';
-import { isSlaBreached, formatCurrency } from '../../utils/leadMetrics';
+import { isSlaBreached } from '../../utils/leadMetrics';
 import { confirmAction } from '../../utils/confirmAction';
 import {
   Trash2,
@@ -353,7 +353,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               )}
               <div className="flex items-center justify-between text-xs py-1 border-b border-line/50">
                 <span className="text-ink-soft flex items-center gap-1.5"><DollarSign size={13} /> Valeur estimée</span>
-                <span className="font-semibold text-ink font-display">{formatCurrency(lead.deal_value)}</span>
+                <span className="font-semibold text-ink font-display">{lead.deal_value?.toLocaleString()} €</span>
               </div>
               <div className="flex items-center justify-between text-xs py-1">
                 <span className="text-ink-soft">Source de prospection</span>

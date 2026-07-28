@@ -77,7 +77,7 @@ export const StatsOverviewTab: React.FC<StatsOverviewTabProps> = ({ leads, stage
           </div>
           {kpis.wonValDeltaPct !== undefined && (
             <div className={`text-xs font-semibold ${kpis.wonValDeltaPct >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {kpis.wonValDeltaPct >= 0 ? `+${kpis.wonValDeltaPct}%` : `${kpis.wonValDeltaPct}%`} vs préc.
+              {kpis.wonValDeltaPct >= 0 ? `+${kpis.wonValDeltaPct} %` : `${kpis.wonValDeltaPct}%`} vs préc.
             </div>
           )}
         </div>
@@ -87,29 +87,29 @@ export const StatsOverviewTab: React.FC<StatsOverviewTabProps> = ({ leads, stage
             Taux de conversion
           </div>
           <div className="text-4xl font-extrabold text-[#f2ede4] tracking-tight tabular-nums">
-            {kpis.winRate}<span className="text-2xl font-normal text-[#D4C4A8]">%</span>
+            {kpis.winRate}<span className="text-xl font-normal text-ink-soft"> %</span>
           </div>
           <div className="text-xs text-ink-faint">{kpis.wonCount} gagnés sur {kpis.totalLeadsCount} deals</div>
         </div>
 
         <div className="rounded-2xl border border-line-strong bg-[#141414] p-6 space-y-2 hover:border-[#D4C4A8]/40 transition-colors">
           <div className="text-xs uppercase tracking-widest font-semibold text-[#D4C4A8]">
-            Panier Moyen
+            Valeur moyenne
           </div>
           <div className="text-4xl font-extrabold text-[#f2ede4] tracking-tight tabular-nums">
             {kpis.averageDealSize.toLocaleString()} <span className="text-xl font-normal text-ink-soft">€</span>
           </div>
-          <div className="text-xs text-ink-faint">Valeur moyenne des ventes</div>
+          <div className="text-xs text-ink-faint">Valeur moyenne des leads</div>
         </div>
 
         <div className="rounded-2xl border border-line-strong bg-[#141414] p-6 space-y-2 hover:border-[#D4C4A8]/40 transition-colors">
           <div className="text-xs uppercase tracking-widest font-semibold text-[#D4C4A8]">
-            Pipeline Actif
+            Pipeline actif
           </div>
           <div className="text-4xl font-extrabold text-[#f2ede4] tracking-tight tabular-nums">
             {kpis.activeVal.toLocaleString()} <span className="text-xl font-normal text-ink-soft">€</span>
           </div>
-          <div className="text-xs text-ink-faint">{kpis.activeCount} affaires en cours</div>
+          <div className="text-xs text-ink-faint">{kpis.activeCount} leads en cours</div>
         </div>
       </div>
 

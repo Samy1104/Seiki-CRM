@@ -2,7 +2,6 @@ import React from 'react';
 import { motion } from 'motion/react';
 import type { Lead } from '../../services/leadsService';
 import { Badge } from '../../components/ui/Badge';
-import { formatCurrency } from '../../utils/leadMetrics';
 
 export interface DealCardProps {
   lead: Lead;
@@ -37,7 +36,7 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
       </div>
 
       <div className="mt-1 truncate text-[11px] text-ink-soft">{lead.contact_name || '—'}</div>
-      <div className="mt-0.5 font-display text-[13px] font-semibold text-ink">{formatCurrency(lead.deal_value)}</div>
+      <div className="mt-0.5 font-display text-[13px] font-semibold text-ink">{lead.deal_value?.toLocaleString()} €</div>
 
       <div className="mt-2.5 flex items-center justify-between border-t border-line pt-2">
         <Badge tone="neutral">{lead.segment}</Badge>
