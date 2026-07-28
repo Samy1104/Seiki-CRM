@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
+import { settingsService } from '../services/settingsService';
+import type { SlaLimits } from '../services/settingsService';
+import { tasksService } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
-import { Search, Filter, Layers, Plus } from 'lucide-react';
+import { Search, Filter, Layers, Plus, Pencil, Trash2 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
-import { Modal } from '../components/ui/Modal';
 import { PageTitle } from '../components/ui/PageTitle';
 import { Button } from '../components/ui/Button';
 import { AccentButton } from '../components/ui/AccentButton';
@@ -12,11 +14,13 @@ import { SegmentedToggle } from '../components/ui/SegmentedToggle';
 import { Badge } from '../components/ui/Badge';
 import { confirmAction } from '../utils/confirmAction';
 import { useCachedResource } from '../hooks/useCachedResource';
+import { LeadDetailModal } from './pipeline/LeadDetailModal';
 
 interface LeadsProps {
   setView: (view: string) => void;
 }
 
+const DEFAULT_SLA_LIMITS: SlaLimits = { Media: 5, Retail: 7, Instit: 14 };
 const scoreClass = (score: number) => (score >= 80 ? 'text-success' : score >= 60 ? 'text-amber' : 'text-danger');
 
 export const Leads: React.FC<LeadsProps> = ({ setView }) => {
@@ -31,6 +35,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   // Modal State
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalInitialTab, setModalInitialTab] = useState<'info' | 'edit'>('info');
 
   const onError = (err: unknown) => {
     console.error('Error loading leads data:', err);
@@ -39,24 +44,53 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
 
   const leadsRes = useCachedResource(`leads:${archiveFilter}`, () => leadsService.getLeads(archiveFilter), [], { onError });
   const mergeProposalsRes = useCachedResource('mergeProposals', () => leadsService.getMergeProposals(), [], { onError });
+  const stagesRes = useCachedResource('stages', () => settingsService.getPipelineStages(), [], { onError });
+  const tasksRes = useCachedResource('tasks', () => tasksService.getTasks(), [], { onError });
+  const slaLimitsRes = useCachedResource('slaLimits', () => settingsService.getSlaLimits(), DEFAULT_SLA_LIMITS, { onError });
 
   const leads = leadsRes.data;
   const mergeProposals = mergeProposalsRes.data;
-  const loading = leadsRes.loading || mergeProposalsRes.loading;
+  const stages = stagesRes.data;
+  const tasks = tasksRes.data;
+  const slaLimits = slaLimitsRes.data;
+
+  const loading = leadsRes.loading || mergeProposalsRes.loading || stagesRes.loading || tasksRes.loading;
 
   const loadLeadsData = () => Promise.all([
     leadsRes.reload(),
     mergeProposalsRes.reload(),
+    stagesRes.reload(),
+    tasksRes.reload(),
   ]).then(() => {});
 
-  const handleOpenLead = async (leadId: string) => {
+  const handleOpenLead = async (leadId: string, initialTab: 'info' | 'edit' = 'info') => {
     try {
       const leadDetails = await leadsService.getLeadById(leadId);
       setSelectedLead(leadDetails);
+      setModalInitialTab(initialTab);
       setModalOpen(true);
     } catch (err) {
       console.error('Error loading lead details:', err);
       showToast('Erreur de chargement du lead', 'error');
+    }
+  };
+
+  const handleEditLead = (e: React.MouseEvent, leadId: string) => {
+    e.stopPropagation();
+    handleOpenLead(leadId, 'edit');
+  };
+
+  const handleDeleteLead = async (e: React.MouseEvent, leadId: string) => {
+    e.stopPropagation();
+    if (confirmAction('Voulez-vous supprimer ce lead définitivement ?')) {
+      try {
+        await leadsService.deleteLead(leadId);
+        showToast('Lead supprimé avec succès', 'success');
+        loadLeadsData();
+      } catch (err) {
+        console.error('Error deleting lead:', err);
+        showToast('Erreur lors de la suppression', 'error');
+      }
     }
   };
 
@@ -212,6 +246,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               <th className="px-4 py-3">Score ICP</th>
               <th className="px-4 py-3">Valeur</th>
               <th className="px-4 py-3">Créé le</th>
+              <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -219,7 +254,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               filteredLeads.map(l => (
                 <tr
                   key={l.id}
-                  onClick={() => handleOpenLead(l.id)}
+                  onClick={() => handleOpenLead(l.id, 'info')}
                   className="cursor-pointer border-b border-line bg-surface transition-colors last:border-b-0 hover:bg-hover"
                 >
                   <td className="px-4 py-3 font-semibold text-ink">{l.company_name}</td>
@@ -231,11 +266,31 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
                   <td className="px-4 py-3 text-[11px] text-ink-faint">
                     {new Date(l.created_at).toLocaleDateString('fr-FR')}
                   </td>
+                  <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        title="Modifier le lead"
+                        onClick={(e) => handleEditLead(e, l.id)}
+                        className="rounded-control p-1.5 text-ink-soft hover:bg-elevated hover:text-ink transition-colors cursor-pointer"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        title="Supprimer le lead"
+                        onClick={(e) => handleDeleteLead(e, l.id)}
+                        className="rounded-control p-1.5 text-ink-soft hover:bg-elevated hover:text-danger transition-colors cursor-pointer"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-ink-faint">
+                <td colSpan={8} className="px-4 py-8 text-center text-ink-faint">
                   Aucun lead ne correspond aux critères
                 </td>
               </tr>
@@ -244,56 +299,19 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
         </table>
       </div>
 
-      {selectedLead && (
-        <Modal
-          open={modalOpen}
+      {modalOpen && selectedLead && (
+        <LeadDetailModal
+          key={selectedLead.id}
+          lead={selectedLead}
+          stages={stages}
+          teamMembers={[]}
+          tasks={tasks}
+          slaLimits={slaLimits}
+          showToast={showToast}
           onClose={() => setModalOpen(false)}
-          header={
-            <>
-              <div className="font-display text-base font-bold text-ink">{selectedLead.company_name}</div>
-              <div className="mt-0.5 text-xs text-ink-soft">
-                {selectedLead.contact_name || '—'}
-                {selectedLead.email ? ` · ${selectedLead.email}` : ''}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                <Badge tone="neutral">{selectedLead.segment}</Badge>
-                <Badge tone="neutral">{selectedLead.stage?.name}</Badge>
-                <span className={`text-xs font-semibold ${scoreClass(selectedLead.score)}`}>
-                  Score : {selectedLead.score}/100
-                </span>
-              </div>
-            </>
-          }
-        >
-          <div className="flex flex-col gap-3 p-6">
-            <div className="flex justify-between border-b border-line pb-3 text-sm">
-              <span className="text-ink-soft">Email</span>
-              <span className="text-ink">{selectedLead.email || '—'}</span>
-            </div>
-            <div className="flex justify-between border-b border-line pb-3 text-sm">
-              <span className="text-ink-soft">Téléphone</span>
-              <span className="text-ink">{selectedLead.phone || '—'}</span>
-            </div>
-            <div className="flex justify-between border-b border-line pb-3 text-sm">
-              <span className="text-ink-soft">LinkedIn</span>
-              <span className="text-ink">{selectedLead.linkedin_url || '—'}</span>
-            </div>
-            <div className="flex justify-between pb-1 text-sm">
-              <span className="text-ink-soft">Valeur</span>
-              <span className="font-semibold text-ink">{selectedLead.deal_value}k€</span>
-            </div>
-            {selectedLead.note && (
-              <div className="flex flex-col gap-1 border-t border-line pt-3 text-sm">
-                <span className="text-ink-soft">Note</span>
-                <span className="text-ink-soft">{selectedLead.note}</span>
-              </div>
-            )}
-          </div>
-
-          <div className="flex justify-end border-t border-line px-6 py-4">
-            <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>Fermer</Button>
-          </div>
-        </Modal>
+          onChanged={loadLeadsData}
+          initialTab={modalInitialTab}
+        />
       )}
     </div>
   );

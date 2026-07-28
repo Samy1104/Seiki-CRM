@@ -42,6 +42,7 @@ interface LeadDetailModalProps {
   showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
   onClose: () => void;
   onChanged: () => void;
+  initialTab?: 'info' | 'edit' | 'history' | 'tasks';
 }
 
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
@@ -53,9 +54,10 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   showToast,
   onClose,
   onChanged,
+  initialTab = 'info',
 }) => {
   const [lead, setLead] = useState(initialLead);
-  const [modalTab, setModalTab] = useState<'info' | 'edit' | 'history' | 'tasks'>('info');
+  const [modalTab, setModalTab] = useState<'info' | 'edit' | 'history' | 'tasks'>(initialTab);
 
   const [editForm, setEditForm] = useState({
     company_name: initialLead.company_name,
