@@ -47,7 +47,7 @@ interface LeadDetailModalProps {
 export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   lead: initialLead,
   stages,
-  teamMembers,
+  teamMembers: _teamMembers,
   tasks,
   slaLimits,
   showToast,
@@ -468,20 +468,6 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   <SelectContent>
                     {stages.map((st) => (
                       <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              <Field label="Propriétaire" className="sm:col-span-2">
-                <Select value={editForm.owner_id} onValueChange={(val) => setEditForm({ ...editForm, owner_id: val })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="— Aucun" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">— Aucun</SelectItem>
-                    {teamMembers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

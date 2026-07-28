@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
-import { settingsService } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
@@ -27,7 +26,6 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [segmentFilter, setSegmentFilter] = useState('');
   const [scoreFilter, setScoreFilter] = useState(''); // 'hot' (>=80), 'qualified' (60-79), 'nurturing' (<60)
-  const [ownerFilter, setOwnerFilter] = useState('');
   const [archiveFilter, setArchiveFilter] = useState<boolean>(false);
 
   // Modal State
@@ -40,17 +38,14 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   };
 
   const leadsRes = useCachedResource(`leads:${archiveFilter}`, () => leadsService.getLeads(archiveFilter), [], { onError });
-  const teamMembersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
   const mergeProposalsRes = useCachedResource('mergeProposals', () => leadsService.getMergeProposals(), [], { onError });
 
   const leads = leadsRes.data;
-  const teamMembers = teamMembersRes.data;
   const mergeProposals = mergeProposalsRes.data;
-  const loading = leadsRes.loading || teamMembersRes.loading || mergeProposalsRes.loading;
+  const loading = leadsRes.loading || mergeProposalsRes.loading;
 
   const loadLeadsData = () => Promise.all([
     leadsRes.reload(),
-    teamMembersRes.reload(),
     mergeProposalsRes.reload(),
   ]).then(() => {});
 
@@ -69,11 +64,10 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
     if (confirmAction('Êtes-vous sûr de vouloir fusionner ces deux leads ? L\'historique et les tâches seront fusionnés.')) {
       try {
         await leadsService.resolveMergeProposal(proposalId, 'approved');
-        showToast('Leads fusionnés avec succès');
+        showToast('Fusion effectuée avec succès !', 'success');
         loadLeadsData();
-      } catch (err) {
-        console.error('Error resolving merge:', err);
-        showToast('Erreur de fusion', 'error');
+      } catch {
+        showToast('Erreur lors de la fusion', 'error');
       }
     }
   };
@@ -81,23 +75,22 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   const handleMergeReject = async (proposalId: string) => {
     try {
       await leadsService.resolveMergeProposal(proposalId, 'rejected');
-      showToast('Proposition ignorée');
+      showToast('Proposition ignorée', 'info');
       loadLeadsData();
-    } catch (err) {
-      console.error('Error rejecting merge:', err);
-      showToast('Erreur lors du rejet', 'error');
+    } catch {
+      showToast('Erreur', 'error');
     }
   };
 
   // Filter Logic
   const filteredLeads = useMemo(() => leads.filter(l => {
-    // Search query
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch =
-      (l.company_name || '').toLowerCase().includes(searchLower) ||
-      (l.contact_name || '').toLowerCase().includes(searchLower) ||
-      (l.email && l.email.toLowerCase().includes(searchLower)) ||
-      (l.note && l.note.toLowerCase().includes(searchLower));
+    // Search
+    const q = searchQuery.toLowerCase();
+    const matchesSearch = !q || (
+      l.company_name.toLowerCase().includes(q) ||
+      (l.contact_name && l.contact_name.toLowerCase().includes(q)) ||
+      (l.note && l.note.toLowerCase().includes(q))
+    );
 
     // Segment
     const matchesSegment = !segmentFilter || l.segment === segmentFilter;
@@ -108,11 +101,8 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
     else if (scoreFilter === 'qualified') matchesScore = l.score >= 60 && l.score < 80;
     else if (scoreFilter === 'nurturing') matchesScore = l.score < 60;
 
-    // Owner
-    const matchesOwner = !ownerFilter || l.owner_id === ownerFilter;
-
-    return matchesSearch && matchesSegment && matchesScore && matchesOwner;
-  }), [leads, searchQuery, segmentFilter, scoreFilter, ownerFilter]);
+    return matchesSearch && matchesSegment && matchesScore;
+  }), [leads, searchQuery, segmentFilter, scoreFilter]);
 
   if (loading) {
     return (
@@ -208,19 +198,6 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex items-center gap-1.5">
-            <Filter size={12} className="flex-shrink-0 text-ink-faint" />
-            <Select value={ownerFilter} onValueChange={val => setOwnerFilter(val)}>
-              <SelectTrigger className="w-48"><SelectValue placeholder="Tous les propriétaires" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Tous les propriétaires</SelectItem>
-                {teamMembers.map(m => (
-                  <SelectItem key={m.id} value={m.id}>{m.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
       </div>
 
@@ -234,7 +211,6 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               <th className="px-4 py-3">Étape</th>
               <th className="px-4 py-3">Score ICP</th>
               <th className="px-4 py-3">Valeur</th>
-              <th className="px-4 py-3">Propriétaire</th>
               <th className="px-4 py-3">Créé le</th>
             </tr>
           </thead>
@@ -252,7 +228,6 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
                   <td className="px-4 py-3 text-ink-soft">{l.stage?.name || 'Prospect'}</td>
                   <td className={`px-4 py-3 font-bold tabular-nums ${scoreClass(l.score)}`}>{l.score}</td>
                   <td className="px-4 py-3 font-medium tabular-nums text-ink">{l.deal_value?.toLocaleString()} €</td>
-                  <td className="px-4 py-3 text-ink-soft">{l.owner ? l.owner.full_name : '—'}</td>
                   <td className="px-4 py-3 text-[11px] text-ink-faint">
                     {new Date(l.created_at).toLocaleDateString('fr-FR')}
                   </td>
@@ -260,7 +235,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
               ))
             ) : (
               <tr>
-                <td colSpan={8} className="px-4 py-8 text-center text-ink-faint">
+                <td colSpan={7} className="px-4 py-8 text-center text-ink-faint">
                   Aucun lead ne correspond aux critères
                 </td>
               </tr>
