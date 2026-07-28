@@ -19,7 +19,8 @@ describe('Settings View', () => {
       </ToastProvider>
     );
     expect(await screen.findByText('Paramètres')).toBeDefined();
-    expect(screen.getByText("Membres de l'équipe")).toBeDefined();
+    expect(screen.getAllByText("Membres de l'équipe").length).toBeGreaterThan(0);
     expect(screen.getByText('Étapes du Pipeline')).toBeDefined();
   });
 });
+

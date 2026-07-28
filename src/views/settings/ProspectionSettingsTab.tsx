@@ -1,6 +1,7 @@
 import React from 'react';
-import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
+import { Save, ShieldCheck, MailCheck } from 'lucide-react';
 
 interface ProspectionSettingsTabProps {
   followup1Days: number;
@@ -41,16 +42,23 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
   onGmailFromNameChange,
   onSubmit,
 }) => (
-  <div className="space-y-4">
-    <div className="rounded-surface border border-line bg-elevated p-5">
-      <div className="mb-3.5 text-sm font-bold text-ink">Envoi Gmail — pacing anti-spam</div>
-      <p className="text-[11px] text-ink-faint mb-4">
-        Le volume envoyé chaque jour monte progressivement depuis la date de début de warm-up jusqu'au plafond cible ci-dessous,
-        et reste confiné à la fenêtre horaire indiquée (jours ouvrés, heures de bureau) — protège le compte Gmail personnel
-        contre les signalements spam en prospection à froid.
-      </p>
+  <div className="space-y-6 max-w-4xl">
+    {/* Anti-spam Gmail Section */}
+    <div className="rounded-surface border border-line bg-elevated p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-line">
+        <div>
+          <h2 className="font-display text-base font-bold text-ink flex items-center gap-2">
+            <ShieldCheck size={18} className="text-[#D4C4A8]" />
+            Envoi Gmail & Warm-up Anti-Spam
+          </h2>
+          <p className="text-[11px] text-ink-soft mt-0.5">
+            Pacing quotidien et plage horaire pour protéger la délivrabilité de votre compte.
+          </p>
+        </div>
+      </div>
+
       <form onSubmit={onSubmit}>
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
           <Field label="Date de début du warm-up">
             <input
               type="date"
@@ -68,14 +76,14 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
               min={1}
               className={inputClass}
             />
-            <span className="text-[10px] text-ink-faint">Volume max/jour une fois le warm-up terminé.</span>
+            <span className="text-[10px] text-ink-soft mt-1 block">Volume max emails/jour.</span>
           </Field>
 
-          <Field label="Début de la fenêtre d'envoi">
+          <Field label="Fenêtre d'envoi (Début)">
             <input type="time" value={gmailWindowStart} onChange={(e) => onGmailWindowStartChange(e.target.value)} className={inputClass} />
           </Field>
 
-          <Field label="Fin de la fenêtre d'envoi">
+          <Field label="Fenêtre d'envoi (Fin)">
             <input type="time" value={gmailWindowEnd} onChange={(e) => onGmailWindowEndChange(e.target.value)} className={inputClass} />
           </Field>
 
@@ -86,22 +94,34 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
               className={inputClass}
               placeholder="Seiki CRM"
             />
-            <span className="text-[10px] text-ink-faint">Nom affiché avant l'adresse dans le champ "De" (ex: "{gmailFromName || 'Seiki CRM'} &lt;{'{votre adresse}'}&gt;").</span>
+            <span className="text-[10px] text-ink-soft mt-1 block">Nom affiché avant l'adresse (ex: "{gmailFromName || 'Seiki CRM'}").</span>
           </Field>
         </div>
-        <Button type="submit" variant="primary">Enregistrer les paramètres</Button>
+        <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>
+          Enregistrer la prospection
+        </AccentButton>
       </form>
     </div>
 
-    <div className="rounded-surface border border-line bg-elevated p-5">
-      <div className="mb-3.5 text-sm font-bold text-ink">Relances</div>
+    {/* Relances Section */}
+    <div className="rounded-surface border border-line bg-elevated p-6 shadow-sm">
+      <div className="flex items-center justify-between mb-4 pb-3 border-b border-line">
+        <div>
+          <h2 className="font-display text-base font-bold text-ink flex items-center gap-2">
+            <MailCheck size={18} className="text-[#D4C4A8]" />
+            Séquence de Relance Automatique
+          </h2>
+          <p className="text-[11px] text-ink-soft mt-0.5">Intervalle de jours entre relances et règles d'archivage.</p>
+        </div>
+      </div>
+
       <form onSubmit={onSubmit}>
-        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Field label="Délai avant 1ère relance (jours)">
+        <div className="mb-6 grid grid-cols-1 gap-5 sm:grid-cols-3">
+          <Field label="Délai 1ère relance (jours)">
             <input type="number" value={followup1Days} onChange={(e) => onFollowup1DaysChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
           </Field>
 
-          <Field label="Délai avant 2ème relance (jours)">
+          <Field label="Délai 2ème relance (jours)">
             <input type="number" value={followup2Days} onChange={(e) => onFollowup2DaysChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
           </Field>
 
@@ -109,8 +129,11 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
             <input type="number" value={archiveAfter} onChange={(e) => onArchiveAfterChange(parseInt(e.target.value) || 1)} min={1} className={inputClass} />
           </Field>
         </div>
-        <Button type="submit" variant="primary">Enregistrer les paramètres</Button>
+        <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>
+          Enregistrer les relances
+        </AccentButton>
       </form>
     </div>
   </div>
 );
+
