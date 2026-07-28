@@ -152,38 +152,44 @@ async function processInboundMessage(
   const now = new Date().toISOString();
 
   if (classification === "bounce") {
-    const { data: relatedEmail } = await supabase
-      .from("generated_emails")
+    // Recherche directement dans email_logs (pas generated_emails) : couvre
+    // aussi bien le pipeline normal (lié à un lead) que les envois de test
+    // ad-hoc (send-test-email, sans generated_emails/lead), les deux
+    // renseignent désormais gmail_thread_id sur leur propre ligne.
+    const { data: relatedLog } = await supabase
+      .from("email_logs")
       .select("id, lead_id")
       .eq("gmail_thread_id", msg.threadId)
+      .eq("direction", "outbound")
       .order("sent_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
-    if (!relatedEmail) return "ignored";
+    if (!relatedLog) return "ignored";
 
     const bodyPreview = extractPlainTextBody(msg).slice(0, 500);
     const { error: bounceUpdateErr } = await supabase
       .from("email_logs")
       .update({ status: "bounced", error_message: bodyPreview || `Bounce détecté (${subject})` })
-      .eq("generated_email_id", relatedEmail.id)
-      .eq("direction", "outbound")
+      .eq("id", relatedLog.id)
       .neq("status", "replied");
     if (bounceUpdateErr) console.error("[poll-gmail-inbox] Failed to update email_logs status to bounced:", bounceUpdateErr.message);
 
-    // L'adresse ne fonctionne pas : on arrête la séquence pour ce lead.
-    // Sans ça, getFollowUpCandidates() (qui n'exclut que 'replied' et
-    // 'completed') continuerait à proposer des relances vers une adresse
-    // morte — le signal le plus toxique pour la réputation du compte Gmail
-    // personnel que tout ce pacing cherche justement à protéger.
-    // 'completed' = valeur existante du CHECK sur leads.sequence_status,
-    // sémantiquement "plus aucune action automatique".
-    const { error: bouncedLeadErr } = await supabase
-      .from("leads")
-      .update({ sequence_status: "completed", updated_at: now })
-      .eq("id", relatedEmail.lead_id)
-      .in("sequence_status", ["idle", "active"]); // ne pas écraser un lead déjà 'replied'
-    if (bouncedLeadErr) console.error("[poll-gmail-inbox] Failed to stop sequence for bounced lead:", bouncedLeadErr.message);
+    // L'adresse ne fonctionne pas : on arrête la séquence pour ce lead, s'il
+    // y en a un (un envoi de test n'en a pas). Sans ça, getFollowUpCandidates()
+    // (qui n'exclut que 'replied' et 'completed') continuerait à proposer des
+    // relances vers une adresse morte — le signal le plus toxique pour la
+    // réputation du compte Gmail personnel que tout ce pacing cherche
+    // justement à protéger. 'completed' = valeur existante du CHECK sur
+    // leads.sequence_status, sémantiquement "plus aucune action automatique".
+    if (relatedLog.lead_id) {
+      const { error: bouncedLeadErr } = await supabase
+        .from("leads")
+        .update({ sequence_status: "completed", updated_at: now })
+        .eq("id", relatedLog.lead_id)
+        .in("sequence_status", ["idle", "active"]); // ne pas écraser un lead déjà 'replied'
+      if (bouncedLeadErr) console.error("[poll-gmail-inbox] Failed to stop sequence for bounced lead:", bouncedLeadErr.message);
+    }
 
     return "bounce";
   }
@@ -197,7 +203,7 @@ async function processInboundMessage(
     .limit(1)
     .maybeSingle();
 
-  if (!lead) return "ignored";
+  if (!lead) return await processReplyWithoutLead(supabase, msg, senderEmail, subject, now);
 
   // On ne traite le message comme une réponse de prospection que si on a
   // effectivement envoyé quelque chose à ce lead auparavant. Ce poller lit
@@ -273,6 +279,59 @@ async function processInboundMessage(
     generated_email_id: outboundLog.generated_email_id,
   }]);
   if (inboundInsertErr) console.error("[poll-gmail-inbox] Failed to insert inbound email_logs entry:", inboundInsertErr.message);
+
+  return "reply";
+}
+
+// Réponse d'un expéditeur qui ne correspond à aucun lead actif — le cas
+// normal pour un envoi de test ad-hoc (send-test-email, pas de lead requis).
+// Retrouve le dernier email sortant envoyé à cette adresse via email_logs
+// directement, sans passer par `leads`/`history` (rien à mettre à jour côté
+// séquence puisqu'il n'y a pas de lead).
+async function processReplyWithoutLead(
+  supabase: ReturnType<typeof createClient>,
+  msg: GmailMessage,
+  senderEmail: string,
+  subject: string,
+  now: string,
+): Promise<"reply" | "ignored"> {
+  const { data: outboundLog } = await supabase
+    .from("email_logs")
+    .select("id")
+    .eq("to_email", senderEmail)
+    .eq("direction", "outbound")
+    .not("sent_at", "is", null)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!outboundLog) return "ignored";
+
+  const { error: outboundUpdateErr } = await supabase
+    .from("email_logs")
+    .update({ status: "replied", replied_at: now })
+    .eq("id", outboundLog.id)
+    .neq("status", "replied");
+  if (outboundUpdateErr) console.error("[poll-gmail-inbox] Failed to update outbound email_logs status to replied (no-lead path):", outboundUpdateErr.message);
+
+  const textBody = extractPlainTextBody(msg);
+  const textBodyPreview = textBody.length > 500 ? textBody.substring(0, 500) + "..." : textBody;
+
+  const { error: inboundInsertErr } = await supabase.from("email_logs").insert([{
+    lead_id: null,
+    direction: "inbound",
+    from_email: senderEmail,
+    to_email: getHeader(msg, "To") ?? "",
+    subject,
+    body_preview: textBodyPreview,
+    body_html: textBody,
+    message_id: msg.id,
+    in_reply_to: getHeader(msg, "In-Reply-To"),
+    status: "replied",
+    received_at: now,
+    generated_email_id: null,
+  }]);
+  if (inboundInsertErr) console.error("[poll-gmail-inbox] Failed to insert inbound email_logs entry (no-lead path):", inboundInsertErr.message);
 
   return "reply";
 }

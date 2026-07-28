@@ -226,6 +226,7 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
     body_preview: ge.corps_du_mail.substring(0, 500),
     body_html: htmlBody,
     message_id: rfcMessageId,
+    gmail_thread_id: sendResult.threadId,
     status: "sent",
     sent_at: sentAt,
   }]);

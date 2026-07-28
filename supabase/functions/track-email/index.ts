@@ -20,7 +20,7 @@ const TRANSPARENT_PIXEL = new Uint8Array([
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
-  const generatedEmailId = url.searchParams.get("id");
+  const trackedId = url.searchParams.get("id");
   const eventType = url.searchParams.get("t") || "open"; // 'open' ou 'click'
 
   // Toujours retourner le pixel immédiatement (non bloquant)
@@ -33,7 +33,7 @@ serve(async (req: Request) => {
   });
 
   // Traitement asynchrone (fire-and-forget)
-  if (generatedEmailId) {
+  if (trackedId) {
     try {
       const supabase = createClient(
         Deno.env.get("SUPABASE_URL")!,
@@ -47,12 +47,26 @@ serve(async (req: Request) => {
         // pas d'INSERT à chaque hit — les proxies image (Gmail...) déclenchent le
         // pixel plusieurs fois par ouverture réelle, ce qui gonflait artificiellement
         // le taux d'ouverture quand chaque hit créait sa propre ligne).
+        //
+        // Deux tentatives distinctes (paramétrées, donc sûres même si `id`
+        // est arbitraire côté requête) plutôt qu'un seul filtre `.or()` :
+        // le pipeline normal (generated_emails) connaît le pixel via
+        // generated_email_id, tandis qu'un envoi de test ad-hoc (sans ligne
+        // generated_emails/lead, voir send-test-email) utilise l'id de la
+        // ligne email_logs elle-même. Au plus une des deux trouve une ligne.
         await supabase
           .from("email_logs")
           .update({ status: "opened", opened_at: now })
-          .eq("generated_email_id", generatedEmailId)
+          .eq("generated_email_id", trackedId)
           .eq("direction", "outbound")
           .neq("status", "replied"); // Ne pas écraser un statut 'replied'
+
+        await supabase
+          .from("email_logs")
+          .update({ status: "opened", opened_at: now })
+          .eq("id", trackedId)
+          .eq("direction", "outbound")
+          .neq("status", "replied");
       }
     } catch (err) {
       console.error("[track-email] Erreur (non bloquante) :", err);

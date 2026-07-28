@@ -36,20 +36,28 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  const loadLogs = useCallback(async () => {
-    setLoading(true);
+  // `silent` évite de remplacer la liste par un spinner plein écran à chaque
+  // tick d'auto-refresh (30s) — seul le premier chargement doit bloquer l'UI.
+  const loadLogs = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const data = await prospectionService.getRecentEmailLogs();
       setLogs(data);
     } catch {
-      showToast('Erreur chargement du suivi', 'error');
+      if (!silent) showToast('Erreur chargement du suivi', 'error');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [showToast]);
 
   useEffect(() => {
     loadLogs();
+    // Auto-refresh pendant que l'onglet est ouvert — les statuts changent en
+    // arrière-plan (pixel d'ouverture quasi instantané, réponses/bounces via
+    // le cron poll-gmail-inbox toutes les 5 min) sans qu'aucune action de
+    // l'utilisateur ne les déclenche ici.
+    const interval = setInterval(() => loadLogs(true), 30_000);
+    return () => clearInterval(interval);
   }, [loadLogs]);
 
   return (
@@ -59,7 +67,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
           Suivi des emails
         </h2>
         <button
-          onClick={loadLogs}
+          onClick={() => loadLogs()}
           disabled={loading}
           className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-ink-soft hover:text-ink rounded-control border border-line-strong hover:border-line-focus transition-all cursor-pointer disabled:opacity-50"
         >
