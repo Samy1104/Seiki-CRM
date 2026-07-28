@@ -26,6 +26,7 @@ export interface EmailLog {
   to_email: string;
   subject: string | null;
   status: 'pending' | 'sent' | 'delivered' | 'opened' | 'replied' | 'bounced' | 'failed';
+  gmail_thread_id: string | null;
   body_preview: string | null;
   error_message: string | null;
   opened_at: string | null;

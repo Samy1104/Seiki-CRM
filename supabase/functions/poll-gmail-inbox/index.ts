@@ -18,6 +18,7 @@ import { classifyInboundMessage } from "../_shared/gmailReplyClassifier.ts";
 
 interface GmailAccount {
   id: string;
+  email: string;
   access_token: string;
   refresh_token: string;
   expires_at: string;
@@ -39,7 +40,7 @@ serve(async (req: Request) => {
 
     const { data: account, error: accErr } = await supabase
       .from("gmail_accounts")
-      .select("id, access_token, refresh_token, expires_at, last_history_id")
+      .select("id, email, access_token, refresh_token, expires_at, last_history_id")
       .limit(1)
       .maybeSingle();
 
@@ -113,7 +114,7 @@ serve(async (req: Request) => {
     for (const messageId of historyResult.addedMessageIds) {
       try {
         const msg = await getMessage(accessToken, messageId);
-        const outcome = await processInboundMessage(supabase, msg);
+        const outcome = await processInboundMessage(supabase, msg, acc.email);
         if (outcome === "reply") replies++;
         else if (outcome === "bounce") bounces++;
         else ignored++;
@@ -142,11 +143,20 @@ serve(async (req: Request) => {
 async function processInboundMessage(
   supabase: ReturnType<typeof createClient>,
   msg: GmailMessage,
+  accountEmail: string,
 ): Promise<"reply" | "bounce" | "ignored"> {
   const fromHeader = getHeader(msg, "From") ?? "";
   const subject = getHeader(msg, "Subject") ?? "(sans sujet)";
   const match = fromHeader.match(/<([^>]+)>/);
   const senderEmail = (match ? match[1] : fromHeader).trim().toLowerCase();
+
+  // Envoyer un email de test À SA PROPRE adresse connectée (auto-test) fait
+  // atterrir une copie du message dans sa propre boîte de réception — Gmail
+  // livre normalement au(x) destinataire(s), et ici le destinataire EST le
+  // compte connecté. Cette copie apparaît dans l'historique INBOX comme un
+  // nouveau message "de" soi-même, et serait sinon classée à tort comme une
+  // réponse du prospect alors qu'il ne s'agit que de l'écho du propre envoi.
+  if (senderEmail === accountEmail.toLowerCase()) return "ignored";
 
   const classification = classifyInboundMessage(senderEmail, subject);
   const now = new Date().toISOString();
@@ -273,6 +283,7 @@ async function processInboundMessage(
     body_preview: textBodyPreview,
     body_html: textBody,
     message_id: msg.id,
+    gmail_thread_id: msg.threadId,
     in_reply_to: getHeader(msg, "In-Reply-To"),
     status: "replied",
     received_at: now,
@@ -326,6 +337,7 @@ async function processReplyWithoutLead(
     body_preview: textBodyPreview,
     body_html: textBody,
     message_id: msg.id,
+    gmail_thread_id: msg.threadId,
     in_reply_to: getHeader(msg, "In-Reply-To"),
     status: "replied",
     received_at: now,
