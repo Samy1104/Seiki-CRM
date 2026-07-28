@@ -123,7 +123,7 @@
      custom properties already declared (unlayered) in src/index.css, which
      always win the cascade over anything in this @theme block regardless of
      import order (unlayered CSS beats layered CSS unconditionally) */
-  --font-display: 'Sora', system-ui, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
   --font-ui: 'General Sans', system-ui, sans-serif;
 
   /* radius — named to avoid colliding with Tailwind's own built-in default
