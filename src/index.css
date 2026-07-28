@@ -147,7 +147,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   --instit-tc: #A78BFA;
 
   /* Fonts */
-  --font-heading: 'Playfair Display', Georgia, serif;
+  --font-heading: var(--font-display, 'Sora', system-ui, sans-serif);
   --font-body: var(--font-ui, 'General Sans', system-ui, sans-serif);
 
   /* Radii */
