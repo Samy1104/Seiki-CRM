@@ -21,28 +21,39 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
     ? 'border-l-danger'
     : isTaskOverdue
       ? 'border-l-amber'
-      : 'border-l-line-strong';
+      : 'border-l-[#c8b89a]/50';
 
   return (
     <motion.div
       onClick={() => onOpen(lead.id)}
-      whileHover={{ y: -2 }}
-      transition={{ duration: 0.15, ease: 'easeOut' }}
-      className={`cursor-pointer rounded-surface border border-[#c8b89a]/50 border-l-[3px] bg-elevated p-3 hover:border-[#c8b89a] hover:shadow-hover ${borderClass}`}
+      whileHover={{ y: -1.5 }}
+      transition={{ duration: 0.12, ease: 'easeOut' }}
+      className={`cursor-pointer rounded-control border border-line-strong border-l-[3px] bg-elevated px-2.5 py-2 hover:border-[#c8b89a] hover:shadow-hover transition-all ${borderClass}`}
     >
-      <div className="flex items-start justify-between text-[12.5px] font-bold text-ink">
-        <span>{lead.company_name}</span>
-        <span className={scoreColorClass(lead.score)}>{lead.score}</span>
+      {/* Line 1: Company Name & Deal Value */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-[12px] font-bold text-ink" title={lead.company_name}>
+          {lead.company_name}
+        </span>
+        <span className="font-display text-[12px] font-bold text-ink whitespace-nowrap">
+          {lead.deal_value?.toLocaleString()} €
+        </span>
       </div>
 
-      <div className="mt-1 truncate text-[11px] text-ink-soft">{lead.contact_name || '—'}</div>
-      <div className="mt-0.5 font-display text-[13px] font-semibold text-ink">{lead.deal_value?.toLocaleString()} €</div>
-
-      <div className="mt-2.5 flex items-center justify-between border-t border-line pt-2">
-        <Badge tone="neutral">{lead.segment}</Badge>
-        <span className={`text-[10px] font-semibold ${slaBreached ? 'text-danger' : 'text-ink-faint'}`}>
-          J+{lead.days_in_stage}
-        </span>
+      {/* Line 2: Segment, Contact & Metrics */}
+      <div className="mt-1.5 flex items-center justify-between gap-1.5 text-[10.5px]">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
+          {lead.contact_name && (
+            <span className="truncate text-ink-soft" title={lead.contact_name}>{lead.contact_name}</span>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
+          <span className={`font-bold ${scoreColorClass(lead.score)}`}>{lead.score}</span>
+          <span className={`text-[10px] ${slaBreached ? 'font-semibold text-danger' : 'text-ink-faint'}`}>
+            J+{lead.days_in_stage}
+          </span>
+        </div>
       </div>
     </motion.div>
   );
