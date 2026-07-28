@@ -1,5 +1,6 @@
 import React from 'react';
 import { Download, Link } from 'lucide-react';
+import { PageTitle } from '../../components/ui/PageTitle';
 
 interface AgendaHeaderProps {
   onExportIcal: () => void;
@@ -12,18 +13,7 @@ export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
 }) => {
   return (
     <div className="flex items-end justify-between mb-10">
-      <h1
-        style={{
-          fontFamily: "'Playfair Display', serif",
-          fontWeight: 900,
-          fontSize: "2.25rem",
-          color: "var(--color-charcoal-fg, #f2ede4)",
-          letterSpacing: "-0.02em",
-          lineHeight: 1,
-        }}
-      >
-        Agenda
-      </h1>
+      <PageTitle>Agenda</PageTitle>
       <div className="flex items-center gap-5">
         <button
           type="button"

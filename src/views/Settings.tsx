@@ -9,6 +9,7 @@ import { MembersTab } from './settings/MembersTab';
 import { PipelineStagesTab } from './settings/PipelineStagesTab';
 import { SlaTab } from './settings/SlaTab';
 import { ProspectionSettingsTab } from './settings/ProspectionSettingsTab';
+import { PageTitle } from '../components/ui/PageTitle';
 
 const AVATAR_COLORS = ['#6B5FE6', '#F5B731', '#4ADE80', '#EC4899', '#3B82F6', '#8B5CF6', '#10B981', '#F97316'];
 
@@ -308,21 +309,9 @@ export const Settings: React.FC = () => {
   return (
     <div className="p-6">
       <div className="mb-5">
-        <h1
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 900,
-            fontSize: "2.25rem",
-            color: "var(--color-charcoal-fg, #f2ede4)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1,
-          }}
-        >
+        <PageTitle subtitle="Gérez les membres de l'équipe, le pipeline commercial, les règles SLA et la prospection.">
           Paramètres
-        </h1>
-        <p className="mt-1 text-xs text-ink-soft">
-          Gérez les membres de l'équipe, le pipeline commercial, les règles SLA et la prospection.
-        </p>
+        </PageTitle>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap font-ui my-6">

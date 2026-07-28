@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link2, CheckCircle2 } from 'lucide-react';
 import { linkedinService, type LinkedinAccount } from '../../services/linkedinService';
+import { PageTitle } from '../../components/ui/PageTitle';
 
 interface ContenuHeaderProps {
   accounts: LinkedinAccount[];
@@ -13,18 +14,7 @@ export const ContenuHeader: React.FC<ContenuHeaderProps> = ({ accounts }) => {
   return (
     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
       <div>
-        <h1
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 900,
-            fontSize: "2.25rem",
-            color: "var(--color-charcoal-fg, #f2ede4)",
-            letterSpacing: "-0.02em",
-            lineHeight: 1,
-          }}
-        >
-          LinkedIn
-        </h1>
+        <PageTitle>LinkedIn</PageTitle>
       </div>
 
       <div className="flex items-center gap-3 flex-wrap font-ui">

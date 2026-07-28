@@ -1,6 +1,7 @@
 import React from 'react';
 import { Maximize2, FileDown } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { PageTitle } from '../../components/ui/PageTitle';
 
 interface CodirHeaderProps {
   isFullscreen: boolean;
@@ -15,9 +16,7 @@ export const CodirHeader: React.FC<CodirHeaderProps> = ({
 }) => {
   return (
     <div className="no-print mb-6 flex items-center justify-between">
-      <div>
-        <div className="font-display text-3xl font-bold text-ink">Dashboard CODIR</div>
-      </div>
+      <PageTitle>Dashboard CODIR</PageTitle>
 
       <div className="flex gap-2">
         <Button variant="secondary" size="sm" onClick={onToggleFullscreen}>

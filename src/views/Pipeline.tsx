@@ -5,7 +5,7 @@ import { settingsService } from '../services/settingsService';
 import type { PipelineStage } from '../services/settingsService';
 import { tasksService } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
-import { isSlaBreached, formatCurrency } from '../utils/leadMetrics';
+import { isSlaBreached } from '../utils/leadMetrics';
 import { useCachedResource } from '../hooks/useCachedResource';
 import { AlertTriangle, Plus } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
@@ -13,6 +13,8 @@ import { AccentButton } from '../components/ui/AccentButton';
 import { KpiTile } from '../components/ui/KpiTile';
 import { DealCard } from './pipeline/DealCard';
 import { SeikiKanbanBoard } from '../components/ui/SeikiKanbanBoard';
+
+import { PageTitle } from '../components/ui/PageTitle';
 
 interface PipelineProps {
   setView: (view: string) => void;
@@ -99,17 +101,15 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <div className="font-display text-3xl font-bold text-ink">Pipeline</div>
-        </div>
+        <PageTitle>Pipeline</PageTitle>
         <AccentButton icon={<Plus size={15} strokeWidth={2.5} />} onClick={() => setView('add')}>Nouveau lead</AccentButton>
       </div>
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiTile label="Deals actifs" value={activeLeads.length} sub={`${wonLeads.length} closés gagnés`} accent="amber" />
-        <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => formatCurrency(v)} sub="Valeur totale" accent="neutral" />
+        <KpiTile label="Pipeline" value={totalVal} formatValue={(v) => `${Math.round(v).toLocaleString()} €`} sub="Valeur totale" accent="neutral" />
         <KpiTile label="Score moyen" value={avgScore} formatValue={(v) => `${Math.round(v)}/100`} sub={`${hotCount} chauds ≥ 80`} accent="success" />
-        <KpiTile label="Closés Gagnés" value={wonVal} formatValue={(v) => formatCurrency(v)} sub="Deals signés" accent="success" />
+        <KpiTile label="Closés Gagnés" value={wonVal} formatValue={(v) => `${Math.round(v).toLocaleString()} €`} sub="Deals signés" accent="success" />
       </div>
 
       {slaBreaches.length > 0 && (
@@ -144,7 +144,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
           return (
             <span className="text-[11px] font-normal text-ink-soft">
-              {count} · {formatCurrency(stageVal)}
+              {count} · {stageVal.toLocaleString()} €
             </span>
           );
         }}

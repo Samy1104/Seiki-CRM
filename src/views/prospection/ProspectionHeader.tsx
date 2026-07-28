@@ -2,6 +2,7 @@ import React from 'react';
 import { Mail, FileEdit, RefreshCw, Link2, CheckCircle2, Activity } from 'lucide-react';
 import { ProspectionModeToggle } from '../../components/ProspectionModeToggle';
 import type { GmailAccount } from '../../services/gmailService';
+import { PageTitle } from '../../components/ui/PageTitle';
 
 export type Tab = 'validation' | 'templates' | 'followup' | 'tracking';
 
@@ -26,18 +27,7 @@ export const ProspectionHeader: React.FC<ProspectionHeaderProps> = ({
     <div className="flex flex-col gap-5 mb-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1
-            style={{
-              fontFamily: "'Playfair Display', serif",
-              fontWeight: 900,
-              fontSize: "2.25rem",
-              color: "var(--color-charcoal-fg, #f2ede4)",
-              letterSpacing: "-0.02em",
-              lineHeight: 1,
-            }}
-          >
-            Prospection
-          </h1>
+          <PageTitle>Prospection</PageTitle>
         </div>
         <div className="flex items-center gap-3">
           <a

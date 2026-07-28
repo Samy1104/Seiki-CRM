@@ -2,6 +2,7 @@ import React from 'react';
 import { useAddLeadForm } from '../hooks/useAddLeadForm';
 import { LeadGeneralInfoSection } from './addlead/LeadGeneralInfoSection';
 import { LeadScoringSection } from './addlead/LeadScoringSection';
+import { PageTitle } from '../components/ui/PageTitle';
 
 interface AddLeadProps {
   setView: (view: string) => void;
@@ -27,7 +28,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6">
-        <div className="font-display text-3xl font-bold text-ink">Ajouter un lead</div>
+        <PageTitle>Ajouter un lead</PageTitle>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">

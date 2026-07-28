@@ -9,6 +9,7 @@ import {
   generateStatsCsv,
 } from '../utils/statsCalculations';
 import type { DateFilterState } from '../utils/statsCalculations';
+import { PageTitle } from '../components/ui/PageTitle';
 import { StatsDateFilter } from '../components/stats/StatsDateFilter';
 import { StatsOverviewTab } from '../components/stats/StatsOverviewTab';
 import { StatsPipelineTab } from '../components/stats/StatsPipelineTab';
@@ -68,20 +69,7 @@ export const Stats: React.FC = () => {
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-8 font-ui">
       {/* Title Header */}
-      <div>
-        <h1
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontWeight: 900,
-            fontSize: '2.75rem',
-            color: '#f2ede4',
-            letterSpacing: '-0.03em',
-            lineHeight: 1.05,
-          }}
-        >
-          Statistiques & Performance
-        </h1>
-      </div>
+      <PageTitle>Statistiques & Performance</PageTitle>
 
       {/* Global Filter Bar */}
       <StatsDateFilter

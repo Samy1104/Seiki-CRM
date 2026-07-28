@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { formatCurrency } from '../utils/leadMetrics';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
@@ -7,6 +6,7 @@ import { useToast } from '../context/ToastContext';
 import { Search, Filter, Layers, Plus } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { Modal } from '../components/ui/Modal';
+import { PageTitle } from '../components/ui/PageTitle';
 import { Button } from '../components/ui/Button';
 import { AccentButton } from '../components/ui/AccentButton';
 import { SegmentedToggle } from '../components/ui/SegmentedToggle';
@@ -126,9 +126,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
   return (
     <div className="p-6">
       <div className="mb-6 flex items-center justify-between">
-        <div>
-          <div className="font-display text-3xl font-bold text-ink">Tous les leads</div>
-        </div>
+        <PageTitle>Tous les leads</PageTitle>
 
         <div className="flex items-center gap-4">
           <SegmentedToggle
@@ -251,7 +249,7 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
                   <td className="px-4 py-3"><Badge tone="neutral">{l.segment}</Badge></td>
                   <td className="px-4 py-3 text-ink-soft">{l.stage?.name || 'Prospect'}</td>
                   <td className={`px-4 py-3 font-bold tabular-nums ${scoreClass(l.score)}`}>{l.score}</td>
-                  <td className="px-4 py-3 font-medium tabular-nums text-ink">{formatCurrency(l.deal_value)}</td>
+                  <td className="px-4 py-3 font-medium tabular-nums text-ink">{l.deal_value?.toLocaleString()} €</td>
                   <td className="px-4 py-3 text-ink-soft">{l.owner ? l.owner.full_name : '—'}</td>
                   <td className="px-4 py-3 text-[11px] text-ink-faint">
                     {new Date(l.created_at).toLocaleDateString('fr-FR')}
