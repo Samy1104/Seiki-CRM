@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Calendar, Download, User } from 'lucide-react';
-import { DateFilterState } from '../../utils/statsCalculations';
+import type { DateFilterState } from '../../utils/statsCalculations';
 
 export interface StatsDateFilterProps {
   filter: DateFilterState;

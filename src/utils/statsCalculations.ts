@@ -1,4 +1,4 @@
-import { Lead } from '../services/leadsService';
+import type { Lead } from '../services/leadsService';
 
 export interface DateFilterState {
   preset: 'today' | '7d' | 'month' | 'quarter' | 'year' | 'all' | 'custom';

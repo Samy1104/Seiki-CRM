@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { filterLeadsByDateAndRep, computeKpiMetrics, generateStatsCsv } from './statsCalculations';
-import { Lead } from '../services/leadsService';
+import type { Lead } from '../services/leadsService';
 
 describe('statsCalculations', () => {
   const mockLeads: Partial<Lead>[] = [
