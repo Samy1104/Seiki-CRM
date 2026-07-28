@@ -44,10 +44,10 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
       <div className="mt-1.5 flex items-center justify-between gap-1.5 text-[10.5px]">
         <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
         <div className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
-          <span className={`font-bold ${scoreColorClass(lead.score)}`}>{lead.score}</span>
           <span className={`text-[10px] ${slaBreached ? 'font-semibold text-danger' : 'text-ink-faint'}`}>
             J+{lead.days_in_stage}
           </span>
+          <span className={`font-bold ${scoreColorClass(lead.score)}`}>{lead.score}</span>
         </div>
       </div>
     </motion.div>
