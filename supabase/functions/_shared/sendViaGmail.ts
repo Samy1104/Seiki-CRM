@@ -37,6 +37,15 @@ export type SendOutcome =
   | { success: true; gmailMessageId: string; gmailThreadId: string; sentAt: string; to: string }
   | { success: false; error: string; alreadySent?: boolean };
 
+export async function getFromName(supabase: SupabaseClient): Promise<string> {
+  const { data } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "gmail_from_name")
+    .maybeSingle();
+  return (data?.value as { name?: string } | null)?.name || "Seiki CRM";
+}
+
 export async function getValidAccessToken(supabase: SupabaseClient, account: GmailAccount): Promise<string> {
   const expiresInMs = new Date(account.expires_at).getTime() - Date.now();
   if (expiresInMs > 5 * 60 * 1000) return account.access_token;
@@ -139,9 +148,10 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
     ? `Re: ${ge.sujet}`
     : ge.sujet;
 
+  const fromName = await getFromName(supabase);
   const rawMessage = buildRawEmail({
     fromEmail: account.email,
-    fromName: "Seiki CRM",
+    fromName,
     toEmail: leadData.email,
     subject: outgoingSubject,
     textBody: ge.corps_du_mail,

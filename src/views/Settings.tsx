@@ -45,6 +45,7 @@ export const Settings: React.FC = () => {
   const [gmailWarmupStartDate, setGmailWarmupStartDate] = useState<string | null>(null);
   const [gmailWindowStart, setGmailWindowStart] = useState('08:00');
   const [gmailWindowEnd, setGmailWindowEnd] = useState('18:00');
+  const [gmailFromName, setGmailFromName] = useState('Seiki CRM');
   const [followup1Days, setFollowup1Days] = useState(5);
   const [followup2Days, setFollowup2Days] = useState(10);
   const [archiveAfter, setArchiveAfter] = useState(2);
@@ -81,6 +82,7 @@ export const Settings: React.FC = () => {
         if (s.value.start !== undefined) setGmailWindowStart(s.value.start);
         if (s.value.end !== undefined) setGmailWindowEnd(s.value.end);
       }
+      if (s.key === 'gmail_from_name' && s.value.name !== undefined) setGmailFromName(s.value.name);
       if (s.key === 'followup_1_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup1Days(s.value.days);
       if (s.key === 'followup_2_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup2Days(s.value.days);
       if (s.key === 'archive_after_followups' && s.value.count !== undefined) setArchiveAfter(s.value.count);
@@ -241,6 +243,7 @@ export const Settings: React.FC = () => {
         gmail_daily_cap: gmailDailyCap,
         gmail_warmup_start_date: gmailWarmupStartDate,
         gmail_send_window: { days: [1, 2, 3, 4, 5], start: gmailWindowStart, end: gmailWindowEnd },
+        gmail_from_name: gmailFromName,
       });
       showToast('Paramètres de prospection sauvegardés ✓');
       loadSettingsData();
@@ -338,6 +341,7 @@ export const Settings: React.FC = () => {
           gmailWarmupStartDate={gmailWarmupStartDate}
           gmailWindowStart={gmailWindowStart}
           gmailWindowEnd={gmailWindowEnd}
+          gmailFromName={gmailFromName}
           onFollowup1DaysChange={setFollowup1Days}
           onFollowup2DaysChange={setFollowup2Days}
           onArchiveAfterChange={setArchiveAfter}
@@ -345,6 +349,7 @@ export const Settings: React.FC = () => {
           onGmailWarmupStartDateChange={setGmailWarmupStartDate}
           onGmailWindowStartChange={setGmailWindowStart}
           onGmailWindowEndChange={setGmailWindowEnd}
+          onGmailFromNameChange={setGmailFromName}
           onSubmit={handleSaveProspectionSettings}
         />
       )}

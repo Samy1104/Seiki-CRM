@@ -25,6 +25,7 @@ export interface ProspectionSettings {
   gmail_daily_cap: number | null;
   gmail_warmup_start_date: string | null;
   gmail_send_window: { days: number[]; start: string; end: string };
+  gmail_from_name: string;
 }
 
 export interface SlaLimits {
@@ -74,6 +75,7 @@ export const settingsService = {
       gmail_warmup_start_date: (find('gmail_warmup_start_date')?.date as string) ?? null,
       gmail_send_window: (find('gmail_send_window') as { days: number[]; start: string; end: string } | undefined)
         ?? { days: [1, 2, 3, 4, 5], start: '08:00', end: '18:00' },
+      gmail_from_name: (find('gmail_from_name')?.name as string) ?? 'Seiki CRM',
     };
   },
 
@@ -98,6 +100,7 @@ export const settingsService = {
     if (updates.gmail_daily_cap !== undefined) jobs.push(this.updateSetting('gmail_daily_cap', { count: updates.gmail_daily_cap }));
     if (updates.gmail_warmup_start_date !== undefined) jobs.push(this.updateSetting('gmail_warmup_start_date', { date: updates.gmail_warmup_start_date }));
     if (updates.gmail_send_window !== undefined) jobs.push(this.updateSetting('gmail_send_window', updates.gmail_send_window));
+    if (updates.gmail_from_name !== undefined) jobs.push(this.updateSetting('gmail_from_name', { name: updates.gmail_from_name }));
     await Promise.all(jobs);
   },
 

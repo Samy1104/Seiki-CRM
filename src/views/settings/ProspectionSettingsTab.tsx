@@ -10,6 +10,7 @@ interface ProspectionSettingsTabProps {
   gmailWarmupStartDate: string | null;
   gmailWindowStart: string;
   gmailWindowEnd: string;
+  gmailFromName: string;
   onFollowup1DaysChange: (v: number) => void;
   onFollowup2DaysChange: (v: number) => void;
   onArchiveAfterChange: (v: number) => void;
@@ -17,6 +18,7 @@ interface ProspectionSettingsTabProps {
   onGmailWarmupStartDateChange: (v: string | null) => void;
   onGmailWindowStartChange: (v: string) => void;
   onGmailWindowEndChange: (v: string) => void;
+  onGmailFromNameChange: (v: string) => void;
   onSubmit: (e: React.FormEvent) => void;
 }
 
@@ -28,6 +30,7 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
   gmailWarmupStartDate,
   gmailWindowStart,
   gmailWindowEnd,
+  gmailFromName,
   onFollowup1DaysChange,
   onFollowup2DaysChange,
   onArchiveAfterChange,
@@ -35,6 +38,7 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
   onGmailWarmupStartDateChange,
   onGmailWindowStartChange,
   onGmailWindowEndChange,
+  onGmailFromNameChange,
   onSubmit,
 }) => (
   <div className="space-y-4">
@@ -73,6 +77,16 @@ export const ProspectionSettingsTab: React.FC<ProspectionSettingsTabProps> = ({
 
           <Field label="Fin de la fenêtre d'envoi">
             <input type="time" value={gmailWindowEnd} onChange={(e) => onGmailWindowEndChange(e.target.value)} className={inputClass} />
+          </Field>
+
+          <Field label="Nom d'expéditeur affiché" className="sm:col-span-2">
+            <input
+              value={gmailFromName}
+              onChange={(e) => onGmailFromNameChange(e.target.value)}
+              className={inputClass}
+              placeholder="Seiki CRM"
+            />
+            <span className="text-[10px] text-ink-faint">Nom affiché avant l'adresse dans le champ "De" (ex: "{gmailFromName || 'Seiki CRM'} &lt;{'{votre adresse}'}&gt;").</span>
           </Field>
         </div>
         <Button type="submit" variant="primary">Enregistrer les paramètres</Button>

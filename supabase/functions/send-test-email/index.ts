@@ -13,7 +13,7 @@ import { corsHeaders } from "../_shared/cors.ts";
 import { requireUser } from "../_shared/requireUser.ts";
 import { buildEmailHtml, buildRawEmail } from "../_shared/gmailMime.ts";
 import { sendRawMessage } from "../_shared/gmailApi.ts";
-import { getValidAccessToken, type GmailAccount } from "../_shared/sendViaGmail.ts";
+import { getValidAccessToken, getFromName, type GmailAccount } from "../_shared/sendViaGmail.ts";
 
 interface SendTestRequest {
   toEmail: string;
@@ -66,9 +66,10 @@ serve(async (req: Request) => {
     const trackingPixelUrl = `${supabaseUrl}/functions/v1/track-email?id=${logId}&t=open`;
     const htmlBody = buildEmailHtml(body, trackingPixelUrl);
 
+    const fromName = await getFromName(supabase);
     const rawMessage = buildRawEmail({
       fromEmail: account.email,
-      fromName: "Seiki CRM",
+      fromName,
       toEmail,
       subject,
       textBody: body,
