@@ -39,6 +39,15 @@ html, body {
   color: var(--color-charcoal-fg, #f2ede4);
 }
 
+.page-title-heading {
+  font-family: 'Playfair Display', Georgia, serif !important;
+  font-weight: 900 !important;
+  font-size: 2.25rem !important;
+  color: var(--color-charcoal-fg, #f2ede4) !important;
+  letter-spacing: -0.02em !important;
+  line-height: 1.1 !important;
+}
+
 ::selection {
   background-color: rgba(212, 196, 168, 0.25) !important;
   color: #f2ede4 !important;
