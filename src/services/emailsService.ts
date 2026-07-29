@@ -107,7 +107,7 @@ export const emailsService = {
     const { error } = await supabase
       .from('generated_emails')
       .update({
-        statut_envoi: 'approved',
+        statut_envoi: 'scheduled',
         scheduled_at: now,
         approved_at: new Date().toISOString(),
       })
