@@ -23,10 +23,16 @@ serve((req: Request) => {
   const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
   const state = btoa(JSON.stringify({ origin }));
 
+  // users:read pour GET /users/me (résolution du compte connecté),
+  // scheduled_events:read pour GET /scheduled_events et .../invitees
+  // (synchronisation des réservations par poll-calendly-bookings).
+  const scope = "users:read scheduled_events:read";
+
   const authorizeUrl = new URL("https://auth.calendly.com/oauth/authorize");
   authorizeUrl.searchParams.set("response_type", "code");
   authorizeUrl.searchParams.set("client_id", clientId);
   authorizeUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizeUrl.searchParams.set("scope", scope);
   authorizeUrl.searchParams.set("state", state);
 
   return new Response(null, { status: 302, headers: { Location: authorizeUrl.toString() } });
