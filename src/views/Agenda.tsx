@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAgendaEvents } from '../hooks/useAgendaEvents';
 import { useCalendlyBookings } from '../hooks/useCalendlyBookings';
 import { calendlyService, type CalendlyAccount, type CalendlyBooking } from '../services/calendlyService';
@@ -50,6 +50,23 @@ export const Agenda: React.FC = () => {
       window.history.replaceState({}, '', window.location.pathname);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Les rendez-vous Calendly sont synchronisés côté serveur toutes les 5 min
+  // (poll-calendly-bookings) indépendamment de cette page — sans ce polling,
+  // un nouveau rendez-vous ou une annulation n'apparaîtrait qu'après un
+  // rechargement manuel de l'onglet Agenda.
+  // reloadBookings est une nouvelle référence à chaque rendu (useCachedResource
+  // ne la mémoïse pas) : passer par une ref évite de relancer l'intervalle à
+  // chaque re-rendu de la page, ce qui l'empêcherait quasiment de se déclencher.
+  const reloadBookingsRef = useRef(reloadBookings);
+  reloadBookingsRef.current = reloadBookings;
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      reloadBookingsRef.current();
+    }, 60_000);
+    return () => clearInterval(intervalId);
   }, []);
 
   const handleCopyFeedUrl = async () => {
