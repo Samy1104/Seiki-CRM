@@ -477,8 +477,9 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                 </div>
               )}
             </div>
-          ))}
-        </div>
+          );
+        })}
+      </div>
       )}
     </div>
   );
