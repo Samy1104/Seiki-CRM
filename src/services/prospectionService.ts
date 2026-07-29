@@ -228,6 +228,16 @@ export const prospectionService = {
   },
 
   /**
+   * Supprime un ou plusieurs logs d'email de la table email_logs.
+   */
+  async deleteEmailLog(ids: string | string[]): Promise<void> {
+    const idList = Array.isArray(ids) ? ids : [ids];
+    if (idList.length === 0) return;
+    const { error } = await supabase.from('email_logs').delete().in('id', idList);
+    if (error) throw error;
+  },
+
+  /**
    * Met à jour le statut de séquence d'un lead.
    */
   async updateLeadSequenceStatus(

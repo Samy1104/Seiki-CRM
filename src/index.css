@@ -851,11 +851,13 @@ div[class*="rkk-drag-preview"] {
   font-weight: 600;
 }
 
-input, select, textarea {
-  background: rgba(15, 15, 27, 0.6);
+input, select, textarea,
+input[type="text"], input[type="email"], input[type="number"], input[type="password"] {
+  background: #0d0d0d !important;
+  background-color: #0d0d0d !important;
+  color: #fff;
   border: 1px solid var(--border-subtle);
   border-radius: 6px;
-  color: #fff;
   padding: 8px 12px;
   font-family: var(--font-body);
   font-size: 12.5px;
@@ -867,6 +869,20 @@ input:focus, select:focus, textarea:focus {
   outline: none !important;
   border-color: var(--color-beige, #D4C4A8);
   box-shadow: none !important;
+  background-color: #0d0d0d !important;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #0d0d0d inset !important;
+  -webkit-text-fill-color: #f2ede4 !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
 /* Custom Date Input Styling (Dark Calendar & White Icon) */

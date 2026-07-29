@@ -35,38 +35,50 @@ serve(async (req: Request) => {
   // Traitement asynchrone (fire-and-forget)
   if (trackedId) {
     try {
-      const supabase = createClient(
-        Deno.env.get("SUPABASE_URL")!,
-        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-      );
+      const userAgent = (req.headers.get("user-agent") || "").toLowerCase();
+      const isScanner =
+        req.method === "HEAD" ||
+        userAgent.includes("bot") ||
+        userAgent.includes("spider") ||
+        userAgent.includes("crawler") ||
+        userAgent.includes("facebookexternalhit") ||
+        userAgent.includes("preview") ||
+        userAgent.includes("safe-links") ||
+        userAgent.includes("scanner");
 
-      const now = new Date().toISOString();
+      if (!isScanner && eventType === "open") {
+        const supabase = createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+        );
 
-      if (eventType === "open") {
-        // Mise à jour du log email → status opened (idempotent : un seul UPDATE,
-        // pas d'INSERT à chaque hit — les proxies image (Gmail...) déclenchent le
-        // pixel plusieurs fois par ouverture réelle, ce qui gonflait artificiellement
-        // le taux d'ouverture quand chaque hit créait sa propre ligne).
-        //
-        // Deux tentatives distinctes (paramétrées, donc sûres même si `id`
-        // est arbitraire côté requête) plutôt qu'un seul filtre `.or()` :
-        // le pipeline normal (generated_emails) connaît le pixel via
-        // generated_email_id, tandis qu'un envoi de test ad-hoc (sans ligne
-        // generated_emails/lead, voir send-test-email) utilise l'id de la
-        // ligne email_logs elle-même. Au plus une des deux trouve une ligne.
-        await supabase
+        // Fetch sent_at time to verify this is a genuine open (>10s after send) and not an instant delivery pre-fetch
+        const { data: log } = await supabase
           .from("email_logs")
-          .update({ status: "opened", opened_at: now })
-          .eq("generated_email_id", trackedId)
+          .select("id, sent_at, created_at, status")
+          .or(`generated_email_id.eq.${trackedId},id.eq.${trackedId}`)
           .eq("direction", "outbound")
-          .neq("status", "replied"); // Ne pas écraser un statut 'replied'
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        await supabase
-          .from("email_logs")
-          .update({ status: "opened", opened_at: now })
-          .eq("id", trackedId)
-          .eq("direction", "outbound")
-          .neq("status", "replied");
+        if (log) {
+          const sendTimeStr = log.sent_at || log.created_at;
+          const elapsedMs = sendTimeStr ? Date.now() - new Date(sendTimeStr).getTime() : 15000;
+
+          // Ignore pre-fetch hits occurring within 10 seconds of sending
+          if (elapsedMs >= 10000) {
+            const now = new Date().toISOString();
+
+            await supabase
+              .from("email_logs")
+              .update({ status: "opened", opened_at: now })
+              .eq("id", log.id)
+              .neq("status", "replied");
+          } else {
+            console.log(`[track-email] Ignored instant pre-fetch hit (${elapsedMs}ms after send) for log ${log.id}`);
+          }
+        }
       }
     } catch (err) {
       console.error("[track-email] Erreur (non bloquante) :", err);

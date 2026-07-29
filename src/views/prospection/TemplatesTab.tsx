@@ -6,7 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
 
-const SEGMENTS: EmailTemplate['segment'][] = ['All', 'Media', 'Retail', 'Instit'];
+const SEGMENTS: EmailTemplate['segment'][] = ['Media', 'Instit', 'Retail'];
 const STEPS: { key: EmailTemplate['step']; label: string }[] = [
   { key: 'initial', label: '1er email' },
   { key: 'relance_1', label: 'Relance 1' },
@@ -26,7 +26,7 @@ interface TemplatesTabProps {
 export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [segment, setSegment] = useState<EmailTemplate['segment']>('All');
+  const [segment, setSegment] = useState<EmailTemplate['segment']>('Media');
   const [step, setStep] = useState<EmailTemplate['step']>('initial');
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');

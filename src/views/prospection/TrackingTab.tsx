@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare, Search, X } from 'lucide-react';
+import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare, Search, X, Trash2 } from 'lucide-react';
 import { prospectionService, type EmailLog } from '../../services/prospectionService';
 import { parseEmailBody } from '../../utils/emailParser';
+import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
 
 type StatusFilter = 'all' | 'positive' | 'negative' | 'opened' | 'bounced';
 
@@ -23,7 +24,7 @@ const STATUS_CLASSES: Record<EmailLog['status'], string> = {
   pending: 'bg-surface text-ink-soft border-line-strong',
   sent: 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus',
   delivered: 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus',
-  opened: 'bg-success/10 text-success border-success/20',
+  opened: 'bg-amber-400/15 text-amber-400 border-amber-400/30',
   replied: 'bg-success/10 text-success border-success/20',
   bounced: 'bg-danger/10 text-danger border-danger/20',
   failed: 'bg-danger/10 text-danger border-danger/20',
@@ -82,6 +83,18 @@ function groupByConversation(logs: EmailLog[]): DisplayEntry[] {
   return entries;
 }
 
+export function getEntryEffectiveStatus(log: EmailLog, replies: EmailLog[]): EmailLog['status'] {
+  const hasReplies = replies.length > 0 || (log.status === 'replied' && log.direction === 'inbound');
+  const isBounced = log.status === 'bounced' || log.status === 'failed' || replies.some((r) => r.status === 'bounced' || r.status === 'failed');
+  const isOpened = !hasReplies && !isBounced && (!!log.opened_at || log.status === 'opened');
+
+  if (hasReplies) return 'replied';
+  if (isBounced) return log.status === 'failed' ? 'failed' : 'bounced';
+  if (isOpened) return 'opened';
+  if (log.status === 'replied') return log.opened_at ? 'opened' : 'sent';
+  return log.status;
+}
+
 interface EmailCardProps {
   avatarBadge: React.ReactNode;
   senderName: string;
@@ -138,6 +151,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [deleteTarget, setDeleteTarget] = useState<{ logId: string; replyIds: string[] } | null>(null);
 
   const loadLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -150,6 +164,20 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
       if (!silent) setLoading(false);
     }
   }, [showToast]);
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const idsToDelete = [deleteTarget.logId, ...deleteTarget.replyIds];
+      await prospectionService.deleteEmailLog(idsToDelete);
+      showToast('Email supprimé de l\'historique', 'success');
+      loadLogs(true);
+    } catch {
+      showToast('Erreur lors de la suppression', 'error');
+    } finally {
+      setDeleteTarget(null);
+    }
+  };
 
   useEffect(() => {
     loadLogs();
@@ -251,23 +279,25 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
       {/* Search & Filter Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
         {/* Search input */}
-        <div className="relative flex-1 max-w-sm">
-          <Search size={14} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" />
+        <div className="relative flex-1 max-w-sm flex items-center">
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Rechercher nom, entreprise, email, sujet..."
-            className="w-full pl-8 pr-8 py-1.5 text-xs bg-surface border border-line-strong rounded-control text-ink placeholder:text-ink-faint focus:outline-none focus:border-line-focus transition-all"
+            className="w-full pl-3 pr-14 py-1.5 text-xs bg-surface border border-line-strong rounded-control text-ink placeholder:text-ink-faint focus:outline-none focus:border-line-focus transition-all"
           />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery('')}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition-colors cursor-pointer"
-            >
-              <X size={13} strokeWidth={2} />
-            </button>
-          )}
+          <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-ink-faint hover:text-ink transition-colors cursor-pointer"
+              >
+                <X size={13} strokeWidth={2} />
+              </button>
+            )}
+            <Search size={14} strokeWidth={2} className="text-ink-faint pointer-events-none shrink-0" />
+          </div>
         </div>
 
         {/* Filter Pills */}
@@ -292,7 +322,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
           </button>
           <button
             onClick={() => setStatusFilter('opened')}
-            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'opened' ? 'bg-[#D4C4A8]/20 text-[#D4C4A8] border-[#D4C4A8]/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'opened' ? 'bg-amber-400/20 text-amber-400 border-amber-400/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
           >
             Non répondus <span className="opacity-60 text-[10px] ml-1">({counts.opened})</span>
           </button>
@@ -333,7 +363,8 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
         <div className="space-y-2 font-ui">
           {filteredEntries.map(({ log, replies }) => {
             const hasNegSentiment = replies.some((r) => r.reply_sentiment === 'negative') || log.reply_sentiment === 'negative';
-            const isReplied = log.status === 'replied' || replies.length > 0;
+            const effectiveStatus = getEntryEffectiveStatus(log, replies);
+            const isReplied = effectiveStatus === 'replied';
 
             return (
               <div
@@ -353,7 +384,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <strong className="text-ink font-semibold text-sm">
-                          {log.lead?.contact_name || (log.lead_id ? '—' : 'Test (sans lead)')}
+                          {log.lead?.contact_name || (log.lead_id ? '—' : 'Envoi manuel')}
                         </strong>
                         {log.lead?.company_name && (
                           <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
@@ -372,13 +403,24 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                     </span>
                     <span
                       className={`text-xs font-semibold px-2.5 py-1 rounded-control border whitespace-nowrap ${
-                        isReplied && hasNegSentiment
+                        effectiveStatus === 'replied' && hasNegSentiment
                           ? 'bg-danger/10 text-danger border-danger/20'
-                          : STATUS_CLASSES[log.status]
+                          : STATUS_CLASSES[effectiveStatus]
                       }`}
                     >
-                      {STATUS_LABELS[log.status]}
+                      {STATUS_LABELS[effectiveStatus]}
                     </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteTarget({ logId: log.id, replyIds: replies.map((r) => r.id) });
+                      }}
+                      title="Supprimer cet email"
+                      className="p-1 text-ink-faint hover:text-danger hover:bg-danger/10 rounded transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={13} strokeWidth={2} />
+                    </button>
                     <div className="text-ink-faint">
                       {expandedId === log.id ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
                     </div>
@@ -399,8 +441,8 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                         </div>
                       </div>
 
-                      <div className={`flex items-center gap-2 p-2 rounded-control border ${log.opened_at ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
-                        <div className={`p-1.5 rounded-full ${log.opened_at ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
+                      <div className={`flex items-center gap-2 p-2 rounded-control border ${log.opened_at ? 'border-amber-400/30 bg-amber-400/5 text-amber-400' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                        <div className={`p-1.5 rounded-full ${log.opened_at ? 'bg-amber-400/20 text-amber-400' : 'bg-base text-ink-faint'}`}>
                           <Eye size={13} strokeWidth={2} />
                         </div>
                         <div className="min-w-0">
@@ -483,6 +525,14 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
         })}
       </div>
       )}
+
+      <ConfirmDeleteModal
+        isOpen={!!deleteTarget}
+        title="Supprimer l'email"
+        message="Êtes-vous sûr de vouloir supprimer cet email de l'historique de suivi ? Cette action est irréversible."
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 };

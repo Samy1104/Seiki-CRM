@@ -25,6 +25,14 @@ describe('buildEmailHtml', () => {
     expect(html).toContain('Jean Dupont — CEO');
     expect(html).not.toContain('border-left:3px solid');
   });
+
+  it('renders default signature for Jaafar EL ALAMY with logo header and top/bottom dark lines', () => {
+    const html = buildEmailHtml('Bonjour', 'https://x.test/track');
+    expect(html).toContain('Jaafar EL ALAMY');
+    expect(html).toContain('Co-founder &amp; CEO of Seiki');
+    expect(html).toContain('alt="SEIKI"');
+    expect(html).toContain('border-top:1.5px solid #111827');
+  });
 });
 
 describe('buildRawEmail', () => {
