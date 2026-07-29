@@ -1,0 +1,33 @@
+// ============================================================
+// Edge Function : calendly-oauth-start
+// Runtime : Deno (Supabase)
+// Rôle : Construit l'URL d'autorisation Calendly et redirige vers
+//        l'écran de consentement (flux OAuth 2.0). Appelé directement
+//        en navigation (pas de CORS/fetch JS).
+// ============================================================
+
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { buildRedirectUri } from "../_shared/calendlyApi.ts";
+import { getAllowedOrigins } from "../_shared/cors.ts";
+
+serve((req: Request) => {
+  const clientId = Deno.env.get("CALENDLY_CLIENT_ID")!;
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const redirectUri = buildRedirectUri(supabaseUrl);
+
+  // Même convention que gmail-oauth-start : l'origine appelante transite par
+  // `state` pour que le callback sache où rediriger, quel que soit
+  // l'environnement (localhost, staging, prod).
+  const requestedOrigin = new URL(req.url).searchParams.get("origin") ?? "";
+  const allowedOrigins = getAllowedOrigins();
+  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+  const state = btoa(JSON.stringify({ origin }));
+
+  const authorizeUrl = new URL("https://auth.calendly.com/oauth/authorize");
+  authorizeUrl.searchParams.set("response_type", "code");
+  authorizeUrl.searchParams.set("client_id", clientId);
+  authorizeUrl.searchParams.set("redirect_uri", redirectUri);
+  authorizeUrl.searchParams.set("state", state);
+
+  return new Response(null, { status: 302, headers: { Location: authorizeUrl.toString() } });
+});
