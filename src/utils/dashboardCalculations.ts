@@ -49,8 +49,8 @@ export function computeLeadsProgression(
 export interface TaskItem {
   id: string;
   status: string;
-  assigned_to?: string;
-  completed_at?: string;
+  assigned_to?: string | null;
+  completed_at?: string | null;
   [key: string]: any;
 }
 

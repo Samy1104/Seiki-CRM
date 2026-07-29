@@ -27,7 +27,7 @@ describe('Sidebar', () => {
     expect(screen.getByText('Pipeline')).toBeInTheDocument();
     expect(screen.getByText('Leads')).toBeInTheDocument();
     expect(screen.getByText('Tâches')).toBeInTheDocument();
-    expect(screen.getByText('Dashboard CODIR')).toBeInTheDocument();
+    expect(screen.getByText('Dashboard')).toBeInTheDocument();
   });
 
   it('renders contenu nav items in correct order (Prospection before Posts)', () => {

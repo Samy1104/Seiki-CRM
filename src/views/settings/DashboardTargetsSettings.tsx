@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { settingsService, DashboardTargets } from '../../services/settingsService';
+import { settingsService } from '../../services/settingsService';
+import type { DashboardTargets } from '../../services/settingsService';
 import { useToast } from '../../context/ToastContext';
 import { Target, Calendar, Plus, Save } from 'lucide-react';
 

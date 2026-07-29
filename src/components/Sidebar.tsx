@@ -6,7 +6,6 @@ import {
   Users,
   CheckSquare,
   Calendar,
-  BarChart2,
   LayoutDashboard,
   FileText,
   Target,
@@ -32,8 +31,7 @@ const crmNav: NavItem[] = [
   { id: "leads", label: "Leads", icon: <Users size={16} strokeWidth={1.5} /> },
   { id: "tasks", label: "Tâches", icon: <CheckSquare size={16} strokeWidth={1.5} /> },
   { id: "agenda", label: "Agenda", icon: <Calendar size={16} strokeWidth={1.5} /> },
-  { id: "stats", label: "Statistiques", icon: <BarChart2 size={16} strokeWidth={1.5} /> },
-  { id: "codir", label: "Dashboard CODIR", icon: <LayoutDashboard size={16} strokeWidth={1.5} /> },
+  { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={16} strokeWidth={1.5} /> },
 ];
 
 const contenuNav: NavItem[] = [
@@ -90,8 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       if (path.includes("/crm/leads")) return "leads";
       if (path.includes("/crm/tasks")) return "tasks";
       if (path.includes("/crm/agenda")) return "agenda";
-      if (path.includes("/crm/stats")) return "stats";
-      if (path.includes("/crm/codir")) return "codir";
+      if (path.includes("/crm/dashboard") || path.includes("/crm/stats") || path.includes("/crm/codir")) return "dashboard";
       if (path.includes("/crm/settings")) return "settings";
       if (path.includes("/crm/pipeline")) return "pipeline";
       return currentView || "pipeline";

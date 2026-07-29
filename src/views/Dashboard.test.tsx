@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { Stats } from './Stats';
+import { Dashboard } from './Dashboard';
 
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({
@@ -51,9 +51,12 @@ vi.mock('../services/supabaseClient', () => ({
   },
 }));
 
-describe('Stats View (Forwarded to Dashboard)', () => {
-  it('renders dashboard through stats wrapper', async () => {
-    render(<Stats />);
+describe('Dashboard View', () => {
+  it('renders dashboard tabs after loading', async () => {
+    render(<Dashboard />);
     expect(await screen.findByText('Objectifs & CODIR')).toBeInTheDocument();
+    expect(screen.getByText('Pipeline & Conversions')).toBeInTheDocument();
+    expect(screen.getByText('Prospection & Emails')).toBeInTheDocument();
+    expect(screen.getByText('Tâches par Membre')).toBeInTheDocument();
   });
 });

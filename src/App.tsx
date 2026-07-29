@@ -12,8 +12,7 @@ import { Leads } from './views/Leads';
 import { AddLead } from './views/AddLead';
 import { Tasks } from './views/Tasks';
 import { Agenda } from './views/Agenda';
-import { Stats } from './views/Stats';
-import { Codir } from './views/Codir';
+import { Dashboard } from './views/Dashboard';
 import { Settings } from './views/Settings';
 import { Contenu } from './views/Contenu';
 import { Prospection } from './views/Prospection';
@@ -45,8 +44,9 @@ const AppRoutes: React.FC = () => {
           <Route path="add" element={<AddLead setView={goToCrmView} />} />
           <Route path="tasks" element={<Tasks />} />
           <Route path="agenda" element={<Agenda />} />
-          <Route path="stats" element={<Stats />} />
-          <Route path="codir" element={<Codir />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="stats" element={<Dashboard />} />
+          <Route path="codir" element={<Dashboard />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 

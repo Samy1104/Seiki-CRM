@@ -1,8 +1,8 @@
 import React from 'react';
-import { CheckCircle2, Clock, AlertCircle, Calendar, UserCheck, Shield } from 'lucide-react';
+import { CheckCircle2, Clock, Calendar, UserCheck } from 'lucide-react';
 import type { Task } from '../../services/tasksService';
 import type { TeamMember } from '../../services/settingsService';
-import { groupTasksByMember, GroupedTaskResult } from '../../utils/dashboardCalculations';
+import { groupTasksByMember, type GroupedTaskResult } from '../../utils/dashboardCalculations';
 
 export interface DashboardTasksTabProps {
   tasks: Task[];

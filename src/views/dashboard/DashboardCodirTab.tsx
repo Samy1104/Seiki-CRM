@@ -1,8 +1,8 @@
 import React from 'react';
-import { Target, TrendingUp, AlertTriangle, Flame, ArrowUpRight, ArrowDownRight, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Flame, ArrowUpRight, ArrowDownRight, CheckCircle, ShieldAlert } from 'lucide-react';
 import type { Lead, LeadHistoryItem } from '../../services/leadsService';
 import type { DashboardTargets, SlaLimits } from '../../services/settingsService';
-import { computeDelta, DeltaResult } from '../../utils/dashboardCalculations';
+import { computeDelta, type DeltaResult } from '../../utils/dashboardCalculations';
 
 export interface DashboardCodirTabProps {
   leadsA: Lead[];
@@ -12,35 +12,6 @@ export interface DashboardCodirTabProps {
   historyB: LeadHistoryItem[];
   slaLimits?: SlaLimits;
 }
-
-const DeltaBadge: React.FC<{ delta: DeltaResult; suffix?: string }> = ({ delta, suffix = '%' }) => {
-  const isPositive = delta.percent > 0;
-  const isNegative = delta.percent < 0;
-
-  if (isNegative) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <ArrowDownRight className="w-3 h-3" />
-        {delta.percent}{suffix}
-      </span>
-    );
-  }
-
-  if (isPositive) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-        <ArrowUpRight className="w-3 h-3" />
-        +{delta.percent}{suffix}
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold bg-zinc-800 text-zinc-400 border border-zinc-700">
-      0{suffix}
-    </span>
-  );
-};
 
 // Inverse logic for SLA/negative metrics if needed, but standard DeltaBadge works great for growth
 const MetricDeltaBadge: React.FC<{ delta: DeltaResult; higherIsBetter?: boolean }> = ({ delta, higherIsBetter = true }) => {
@@ -129,7 +100,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
   // 6. SLA Alert Breaches
   const slaBreaches = leadsA.filter((l) => {
     if (l.is_archived || isWon(l) || isLost(l)) return false;
-    const limit = (slaLimits as Record<string, number>)[l.segment] || 14;
+    const limit = (slaLimits as unknown as Record<string, number>)?.[l.segment] || 14;
     return (l.days_in_stage || 0) > limit;
   });
 
@@ -341,7 +312,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
           ) : (
             <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
               {slaBreaches.map((lead) => {
-                const limit = (slaLimits as Record<string, number>)[lead.segment] || 14;
+                const limit = (slaLimits as unknown as Record<string, number>)?.[lead.segment] || 14;
                 const breachDays = (lead.days_in_stage || 0) - limit;
 
                 return (

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Mail, Eye, MessageSquare, Sparkles, Smile, Frown, Meh, ArrowUpRight, ArrowDownRight, ListOrdered } from 'lucide-react';
 import type { EmailLog } from '../../services/prospectionService';
-import { computeDelta, DeltaResult } from '../../utils/dashboardCalculations';
+import { computeDelta, type DeltaResult } from '../../utils/dashboardCalculations';
 
 export interface SequenceSummaryItem {
   id: string;

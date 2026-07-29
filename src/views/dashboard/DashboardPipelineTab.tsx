@@ -2,7 +2,7 @@ import React from 'react';
 import { GitCommit, Layers, PieChart, Share2, Clock, ArrowUpRight, ArrowDownRight, DollarSign } from 'lucide-react';
 import type { Lead, LeadHistoryItem } from '../../services/leadsService';
 import type { PipelineStage } from '../../services/settingsService';
-import { computeLeadsProgression, computeDelta, DeltaResult } from '../../utils/dashboardCalculations';
+import { computeLeadsProgression, computeDelta, type DeltaResult } from '../../utils/dashboardCalculations';
 
 export interface DashboardPipelineTabProps {
   leadsA: Lead[];
@@ -43,7 +43,7 @@ const DeltaBadge: React.FC<{ delta: DeltaResult }> = ({ delta }) => {
 
 export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
   leadsA,
-  leadsB,
+  leadsB: _leadsB,
   stages,
   historyA,
   historyB,
