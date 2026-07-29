@@ -13,8 +13,8 @@ import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import type { EventItem } from '../services/eventsService';
 
 type AgendaItem =
-  | { kind: 'event'; sortKey: string; event: EventItem }
-  | { kind: 'booking'; sortKey: string; booking: CalendlyBooking };
+  | { kind: 'event'; sortKey: number; event: EventItem }
+  | { kind: 'booking'; sortKey: number; booking: CalendlyBooking };
 
 export const Agenda: React.FC = () => {
   const {
@@ -66,24 +66,25 @@ export const Agenda: React.FC = () => {
   const allItems = useMemo<AgendaItem[]>(() => {
     const eventItems: AgendaItem[] = events.map((event) => ({
       kind: 'event',
-      sortKey: `${event.event_date}T00:00:00`,
+      sortKey: new Date(`${event.event_date}T00:00:00`).getTime(),
       event,
     }));
     const bookingItems: AgendaItem[] = bookings.map((booking) => ({
       kind: 'booking',
-      sortKey: booking.start_time,
+      sortKey: new Date(booking.start_time).getTime(),
       booking,
     }));
-    return [...eventItems, ...bookingItems].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+    return [...eventItems, ...bookingItems].sort((a, b) => a.sortKey - b.sortKey);
   }, [events, bookings]);
 
-  const nowIso = new Date().toISOString();
-  const todayStr = nowIso.slice(0, 10);
+  const nowMs = Date.now();
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStartMs = new Date(`${todayStr}T00:00:00`).getTime();
   const isUpcoming = (item: AgendaItem) =>
-    item.kind === 'booking' ? item.sortKey >= nowIso : item.sortKey >= `${todayStr}T00:00:00`;
+    item.sortKey >= (item.kind === 'booking' ? nowMs : todayStartMs);
 
-  const upcomingItems = useMemo(() => allItems.filter(isUpcoming), [allItems, nowIso, todayStr]);
-  const pastItems = useMemo(() => allItems.filter((item) => !isUpcoming(item)), [allItems, nowIso, todayStr]);
+  const upcomingItems = useMemo(() => allItems.filter(isUpcoming), [allItems, nowMs, todayStartMs]);
+  const pastItems = useMemo(() => allItems.filter((item) => !isUpcoming(item)), [allItems, nowMs, todayStartMs]);
 
   const formatDateFr = (dateStr: string) => {
     try {
