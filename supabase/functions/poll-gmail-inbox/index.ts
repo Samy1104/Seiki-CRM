@@ -5,7 +5,7 @@
 //        on interroge périodiquement l'historique de la boîte de
 //        réception pour détecter réponses (par expéditeur connu)
 //        et bounces (par thread + heuristique expéditeur/sujet).
-//        Appelée par le cron Supabase toutes les 5 min.
+//        Appelée par le cron Supabase toutes les minutes.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
@@ -156,7 +156,31 @@ async function processInboundMessage(
   // compte connecté. Cette copie apparaît dans l'historique INBOX comme un
   // nouveau message "de" soi-même, et serait sinon classée à tort comme une
   // réponse du prospect alors qu'il ne s'agit que de l'écho du propre envoi.
-  if (senderEmail === accountEmail.toLowerCase()) return "ignored";
+  //
+  // Mais si le lead de test partage justement cette même adresse (cas de
+  // test courant), une VRAIE réponse tapée à la main vient elle aussi "de
+  // soi-même" — un simple test d'égalité d'adresse ne peut donc plus
+  // distinguer les deux cas et jetait à tort toute réponse de ce type.
+  // Distinction fiable : l'écho automatique EST le même message RFC822
+  // (SMTP ne réécrit pas Message-Id), alors qu'une réponse — même à
+  // soi-même — est un nouveau message Gmail avec un nouveau Message-Id et
+  // des en-têtes In-Reply-To/References. On compare donc contre le
+  // Message-Id qu'on a nous-mêmes stocké lors de l'envoi (email_logs.message_id)
+  // plutôt que de se fier à l'adresse seule.
+  if (senderEmail === accountEmail.toLowerCase()) {
+    const inboundMessageId = getHeader(msg, "Message-Id");
+    if (!inboundMessageId) return "ignored"; // rien à comparer, on ne peut pas distinguer en sécurité
+
+    const { data: echoOfOwnSend } = await supabase
+      .from("email_logs")
+      .select("id")
+      .eq("message_id", inboundMessageId)
+      .eq("direction", "outbound")
+      .limit(1)
+      .maybeSingle();
+
+    if (echoOfOwnSend) return "ignored"; // confirmé : c'est notre propre envoi qui revient, pas une réponse
+  }
 
   const classification = classifyInboundMessage(senderEmail, subject);
   const now = new Date().toISOString();
@@ -205,36 +229,83 @@ async function processInboundMessage(
   }
 
   // classification === 'reply'
-  const { data: lead } = await supabase
-    .from("leads")
-    .select("id, contact_name, company_name")
-    .eq("email", senderEmail)
-    .eq("is_archived", false)
-    .limit(1)
-    .maybeSingle();
-
-  if (!lead) return await processReplyWithoutLead(supabase, msg, senderEmail, subject, now);
-
-  // On ne traite le message comme une réponse de prospection que si on a
-  // effectivement envoyé quelque chose à ce lead auparavant. Ce poller lit
-  // la boîte Gmail personnelle ENTIÈRE (pas une adresse dédiée comme du
-  // temps de Resend) : sans cette garde, un simple mail personnel ou
-  // professionnel venant de quelqu'un qui est aussi un lead du CRM
-  // basculerait sa séquence en 'replied' et son contenu serait recopié dans
-  // history/email_logs — bug de données autant que problème de vie privée.
-  const { data: outboundLog } = await supabase
+  // On retrouve D'ABORD l'envoi sortant auquel cette réponse correspond par
+  // fil Gmail (gmail_thread_id) — même logique que la détection de bounce
+  // ci-dessus — plutôt que de partir de l'adresse email du lead. Un lead
+  // peut partager son adresse avec un envoi totalement indépendant (ex. un
+  // envoi de test ad-hoc sans lead_id) : matcher par adresse seule
+  // rattachait alors la réponse au dernier envoi de CE lead au lieu du
+  // message auquel on a réellement répondu.
+  const { data: threadOutboundLog } = await supabase
     .from("email_logs")
-    .select("id, generated_email_id")
-    .eq("lead_id", lead.id)
+    .select("id, generated_email_id, lead_id")
+    .eq("gmail_thread_id", msg.threadId)
     .eq("direction", "outbound")
-    // Les lignes d'échec d'envoi ont sent_at NULL et remontent en tête d'un
-    // tri DESC : sans ce filtre, la garde passerait pour un lead qu'on n'a
-    // jamais réussi à contacter, et on marquerait 'replied' une ligne
-    // d'échec au lieu d'un envoi réel.
     .not("sent_at", "is", null)
     .order("sent_at", { ascending: false })
     .limit(1)
     .maybeSingle();
+
+  let lead: { id: string; contact_name: string; company_name: string } | null = null;
+  let outboundLog: { id: string; generated_email_id: string | null } | null = threadOutboundLog;
+
+  if (threadOutboundLog?.lead_id) {
+    const { data: leadRow } = await supabase
+      .from("leads")
+      .select("id, contact_name, company_name")
+      .eq("id", threadOutboundLog.lead_id)
+      .eq("is_archived", false)
+      .maybeSingle();
+    lead = leadRow ?? null;
+  }
+
+  // Pas de fil correspondant (gmail_thread_id absent/désynchronisé — ancien
+  // envoi pré-Gmail, thread cassé...) : dernier recours, l'ancienne
+  // heuristique par adresse email du lead.
+  if (!threadOutboundLog) {
+    const { data: leadByEmail } = await supabase
+      .from("leads")
+      .select("id, contact_name, company_name")
+      .eq("email", senderEmail)
+      .eq("is_archived", false)
+      .limit(1)
+      .maybeSingle();
+
+    if (!leadByEmail) return await processReplyWithoutLead(supabase, msg, senderEmail, subject, now);
+
+    // On ne traite le message comme une réponse de prospection que si on a
+    // effectivement envoyé quelque chose à ce lead auparavant. Ce poller lit
+    // la boîte Gmail personnelle ENTIÈRE (pas une adresse dédiée comme du
+    // temps de Resend) : sans cette garde, un simple mail personnel ou
+    // professionnel venant de quelqu'un qui est aussi un lead du CRM
+    // basculerait sa séquence en 'replied' et son contenu serait recopié dans
+    // history/email_logs — bug de données autant que problème de vie privée.
+    const { data: lastOutboundForLead } = await supabase
+      .from("email_logs")
+      .select("id, generated_email_id")
+      .eq("lead_id", leadByEmail.id)
+      .eq("direction", "outbound")
+      // Les lignes d'échec d'envoi ont sent_at NULL et remontent en tête d'un
+      // tri DESC : sans ce filtre, la garde passerait pour un lead qu'on n'a
+      // jamais réussi à contacter, et on marquerait 'replied' une ligne
+      // d'échec au lieu d'un envoi réel.
+      .not("sent_at", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!lastOutboundForLead) return "ignored";
+
+    lead = leadByEmail;
+    outboundLog = lastOutboundForLead;
+  }
+
+  // Fil retrouvé mais rattaché à aucun lead (envoi de test ad-hoc) : rien à
+  // mettre à jour côté séquence — on journalise via le chemin sans lead en
+  // lui passant directement l'envoi déjà résolu par fil, plutôt que de le
+  // re-chercher par to_email (qui pourrait matcher un autre envoi que celui
+  // auquel il a été répondu).
+  if (!lead) return await processReplyWithoutLead(supabase, msg, senderEmail, subject, now, outboundLog ?? undefined);
 
   if (!outboundLog) return "ignored";
 
@@ -305,16 +376,22 @@ async function processReplyWithoutLead(
   senderEmail: string,
   subject: string,
   now: string,
+  resolvedOutboundLog?: { id: string },
 ): Promise<"reply" | "ignored"> {
-  const { data: outboundLog } = await supabase
-    .from("email_logs")
-    .select("id")
-    .eq("to_email", senderEmail)
-    .eq("direction", "outbound")
-    .not("sent_at", "is", null)
-    .order("sent_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  let outboundLog: { id: string } | null = resolvedOutboundLog ?? null;
+
+  if (!outboundLog) {
+    const { data } = await supabase
+      .from("email_logs")
+      .select("id")
+      .eq("to_email", senderEmail)
+      .eq("direction", "outbound")
+      .not("sent_at", "is", null)
+      .order("sent_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    outboundLog = data;
+  }
 
   if (!outboundLog) return "ignored";
 

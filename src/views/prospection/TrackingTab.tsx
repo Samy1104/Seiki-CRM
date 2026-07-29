@@ -98,7 +98,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
     loadLogs();
     // Auto-refresh pendant que l'onglet est ouvert — les statuts changent en
     // arrière-plan (pixel d'ouverture quasi instantané, réponses/bounces via
-    // le cron poll-gmail-inbox toutes les 5 min) sans qu'aucune action de
+    // le cron poll-gmail-inbox toutes les minutes) sans qu'aucune action de
     // l'utilisateur ne les déclenche ici.
     const interval = setInterval(() => loadLogs(true), 30_000);
     return () => clearInterval(interval);
