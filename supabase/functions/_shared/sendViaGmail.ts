@@ -10,6 +10,7 @@ import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildEmailHtml, buildRawEmail } from "./gmailMime.ts";
 import { getMessage, refreshAccessToken, sendRawMessage } from "./gmailApi.ts";
 import { getHeader } from "./gmailMessageParser.ts";
+import { shouldSkipSendForLeadStatus, type SequenceStatus } from "./sendGuard.ts";
 
 interface GeneratedEmail {
   id: string;
@@ -23,6 +24,7 @@ interface GeneratedEmail {
 interface LeadEmail {
   email: string;
   contact_name: string;
+  sequence_status: string;
 }
 
 export interface GmailAccount {
@@ -35,7 +37,7 @@ export interface GmailAccount {
 
 export type SendOutcome =
   | { success: true; gmailMessageId: string; gmailThreadId: string; sentAt: string; to: string }
-  | { success: false; error: string; alreadySent?: boolean };
+  | { success: false; error: string; alreadySent?: boolean; skippedReplied?: boolean };
 
 export async function getFromName(supabase: SupabaseClient): Promise<string> {
   const { data } = await supabase
@@ -91,12 +93,21 @@ export async function sendGeneratedEmailViaGmail(supabase: SupabaseClient, gener
 
   const { data: lead, error: leadErr } = await supabase
     .from("leads")
-    .select("email, contact_name")
+    .select("email, contact_name, sequence_status")
     .eq("id", ge.lead_id)
     .single();
 
   if (leadErr || !lead?.email) {
     return { success: false, error: `Lead sans email valide : ${leadErr?.message}` };
+  }
+
+  if (shouldSkipSendForLeadStatus(lead.sequence_status as SequenceStatus)) {
+    await supabase.from("generated_emails").update({ statut_envoi: "skipped_replied" }).eq("id", generatedEmailId);
+    return {
+      success: false,
+      error: "Envoi annulé : le lead a déjà répondu ou la séquence est terminée",
+      skippedReplied: true,
+    };
   }
 
   const leadData = lead as LeadEmail;
