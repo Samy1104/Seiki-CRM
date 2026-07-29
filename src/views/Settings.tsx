@@ -51,6 +51,9 @@ export const Settings: React.FC = () => {
   const [followup1Days, setFollowup1Days] = useState(5);
   const [followup2Days, setFollowup2Days] = useState(10);
   const [archiveAfter, setArchiveAfter] = useState(2);
+  const [replyAiClassificationEnabled, setReplyAiClassificationEnabled] = useState(true);
+  const [replyPositiveStageId, setReplyPositiveStageId] = useState<string | null>(null);
+  const [replyNegativeStageId, setReplyNegativeStageId] = useState<string | null>(null);
 
   const onError = (err: unknown) => {
     console.error('Error loading settings data:', err);
@@ -88,6 +91,9 @@ export const Settings: React.FC = () => {
       if (s.key === 'followup_1_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup1Days(s.value.days);
       if (s.key === 'followup_2_days' && s.value.days !== undefined && typeof s.value.days === 'number') setFollowup2Days(s.value.days);
       if (s.key === 'archive_after_followups' && s.value.count !== undefined) setArchiveAfter(s.value.count);
+      if (s.key === 'reply_ai_classification_enabled' && s.value.enabled !== undefined) setReplyAiClassificationEnabled(s.value.enabled);
+      if (s.key === 'reply_positive_stage_id') setReplyPositiveStageId(s.value.stage_id ?? null);
+      if (s.key === 'reply_negative_stage_id') setReplyNegativeStageId(s.value.stage_id ?? null);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settingsRes.data]);
@@ -288,6 +294,9 @@ export const Settings: React.FC = () => {
         gmail_warmup_start_date: gmailWarmupStartDate,
         gmail_send_window: { days: [1, 2, 3, 4, 5], start: gmailWindowStart, end: gmailWindowEnd },
         gmail_from_name: gmailFromName,
+        reply_ai_classification_enabled: replyAiClassificationEnabled,
+        reply_positive_stage_id: replyPositiveStageId,
+        reply_negative_stage_id: replyNegativeStageId,
       });
       showToast('Paramètres de prospection sauvegardés ✓');
       loadSettingsData();
@@ -394,6 +403,10 @@ export const Settings: React.FC = () => {
           gmailWindowStart={gmailWindowStart}
           gmailWindowEnd={gmailWindowEnd}
           gmailFromName={gmailFromName}
+          pipelineStages={stages}
+          replyAiClassificationEnabled={replyAiClassificationEnabled}
+          replyPositiveStageId={replyPositiveStageId}
+          replyNegativeStageId={replyNegativeStageId}
           onFollowup1DaysChange={setFollowup1Days}
           onFollowup2DaysChange={setFollowup2Days}
           onArchiveAfterChange={setArchiveAfter}
@@ -402,6 +415,9 @@ export const Settings: React.FC = () => {
           onGmailWindowStartChange={setGmailWindowStart}
           onGmailWindowEndChange={setGmailWindowEnd}
           onGmailFromNameChange={setGmailFromName}
+          onReplyAiClassificationEnabledChange={setReplyAiClassificationEnabled}
+          onReplyPositiveStageIdChange={setReplyPositiveStageId}
+          onReplyNegativeStageIdChange={setReplyNegativeStageId}
           onSubmit={handleSaveProspectionSettings}
         />
       )}
