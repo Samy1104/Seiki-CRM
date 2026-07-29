@@ -15,6 +15,8 @@ import { requireServiceRole } from "../_shared/requireUser.ts";
 import { getMessage, listHistory, getCurrentHistoryId, refreshAccessToken } from "../_shared/gmailApi.ts";
 import { getHeader, extractPlainTextBody, type GmailMessage } from "../_shared/gmailMessageParser.ts";
 import { classifyInboundMessage } from "../_shared/gmailReplyClassifier.ts";
+import { classifyReplySentiment, type SentimentResult } from "../_shared/replySentimentClassifier.ts";
+import { resolveStageIdForSentiment } from "../_shared/replyStageResolver.ts";
 
 interface GmailAccount {
   id: string;
@@ -23,6 +25,28 @@ interface GmailAccount {
   refresh_token: string;
   expires_at: string;
   last_history_id: string | null;
+}
+
+interface ReplyClassificationSettings {
+  enabled: boolean;
+  positiveStageId: string | null;
+  negativeStageId: string | null;
+  geminiKey: string | null;
+}
+
+async function loadReplyClassificationSettings(
+  supabase: ReturnType<typeof createClient>,
+): Promise<ReplyClassificationSettings> {
+  const { data: enabledSetting } = await supabase.from("app_settings").select("value").eq("key", "reply_ai_classification_enabled").maybeSingle();
+  const { data: positiveSetting } = await supabase.from("app_settings").select("value").eq("key", "reply_positive_stage_id").maybeSingle();
+  const { data: negativeSetting } = await supabase.from("app_settings").select("value").eq("key", "reply_negative_stage_id").maybeSingle();
+
+  return {
+    enabled: (enabledSetting?.value as { enabled?: boolean } | null)?.enabled ?? false,
+    positiveStageId: (positiveSetting?.value as { stage_id?: string | null } | null)?.stage_id ?? null,
+    negativeStageId: (negativeSetting?.value as { stage_id?: string | null } | null)?.stage_id ?? null,
+    geminiKey: Deno.env.get("GEMINI_API_KEY") ?? null,
+  };
 }
 
 serve(async (req: Request) => {
@@ -51,6 +75,7 @@ serve(async (req: Request) => {
     }
 
     const acc = account as GmailAccount;
+    const replySettings = await loadReplyClassificationSettings(supabase);
 
     let accessToken = acc.access_token;
     const expiresInMs = new Date(acc.expires_at).getTime() - Date.now();
@@ -114,7 +139,7 @@ serve(async (req: Request) => {
     for (const messageId of historyResult.addedMessageIds) {
       try {
         const msg = await getMessage(accessToken, messageId);
-        const outcome = await processInboundMessage(supabase, msg, acc.email);
+        const outcome = await processInboundMessage(supabase, msg, acc.email, replySettings);
         if (outcome === "reply") replies++;
         else if (outcome === "bounce") bounces++;
         else ignored++;
@@ -144,6 +169,7 @@ async function processInboundMessage(
   supabase: ReturnType<typeof createClient>,
   msg: GmailMessage,
   accountEmail: string,
+  replySettings: ReplyClassificationSettings,
 ): Promise<"reply" | "bounce" | "ignored"> {
   const fromHeader = getHeader(msg, "From") ?? "";
   const subject = getHeader(msg, "Subject") ?? "(sans sujet)";
@@ -315,6 +341,33 @@ async function processInboundMessage(
   const textBody = extractPlainTextBody(msg);
   const textBodyPreview = textBody.length > 500 ? textBody.substring(0, 500) + "..." : textBody;
 
+  // Classification IA du sentiment — best-effort : un échec Gemini (timeout,
+  // JSON invalide, clé manquante) ne doit jamais empêcher le traitement de la
+  // réponse elle-même (sequence_status, history, email_logs ci-dessous).
+  let sentimentResult: SentimentResult | null = null;
+  if (replySettings.enabled && replySettings.geminiKey) {
+    try {
+      sentimentResult = await classifyReplySentiment(replySettings.geminiKey, textBody, subject);
+    } catch (err) {
+      console.error("[poll-gmail-inbox] Reply sentiment classification failed (non-blocking):", err instanceof Error ? err.message : err);
+    }
+  }
+
+  if (sentimentResult) {
+    const targetStageId = resolveStageIdForSentiment(sentimentResult.sentiment, {
+      positiveStageId: replySettings.positiveStageId,
+      negativeStageId: replySettings.negativeStageId,
+    });
+    if (targetStageId) {
+      const { error: stageUpdateErr } = await supabase.from("leads").update({ stage_id: targetStageId, updated_at: now }).eq("id", lead.id);
+      if (stageUpdateErr) console.error("[poll-gmail-inbox] Failed to update lead stage from reply sentiment:", stageUpdateErr.message);
+    }
+  }
+
+  const sentimentNote = sentimentResult
+    ? `\n\n[IA] Sentiment détecté : ${sentimentResult.sentiment} — ${sentimentResult.reason}`
+    : "";
+
   // history n'a pas de contrainte d'unicité sur le message Gmail : si le lot
   // de polling est rejoué (échec partiel, retry), le même message créerait
   // une seconde entrée de timeline. On vérifie donc la présence avant
@@ -332,8 +385,13 @@ async function processInboundMessage(
     const { error: historyInsertErr } = await supabase.from("history").insert([{
       lead_id: lead.id,
       action_type: "email_received",
-      content: `Email reçu de ${lead.contact_name || senderEmail} : ${subject}\n\n${textBodyPreview}`,
-      metadata: { subject, from: fromHeader, gmail_message_id: msg.id },
+      content: `Email reçu de ${lead.contact_name || senderEmail} : ${subject}\n\n${textBodyPreview}${sentimentNote}`,
+      metadata: {
+        subject,
+        from: fromHeader,
+        gmail_message_id: msg.id,
+        ...(sentimentResult ? { sentiment: sentimentResult.sentiment, sentiment_reason: sentimentResult.reason } : {}),
+      },
       is_auto: true,
     }]);
     if (historyInsertErr) console.error("[poll-gmail-inbox] Failed to insert history entry:", historyInsertErr.message);
@@ -359,6 +417,8 @@ async function processInboundMessage(
     status: "replied",
     received_at: now,
     generated_email_id: outboundLog.generated_email_id,
+    reply_sentiment: sentimentResult?.sentiment ?? null,
+    reply_sentiment_reason: sentimentResult?.reason ?? null,
   }]);
   if (inboundInsertErr) console.error("[poll-gmail-inbox] Failed to insert inbound email_logs entry:", inboundInsertErr.message);
 
