@@ -103,13 +103,13 @@ export const emailsService = {
 
   /** Approuve et envoie immédiatement un email (bypass la planification) */
   async sendNow(generatedEmailId: string): Promise<void> {
-    const now = new Date().toISOString();
+    const now = new Date(Date.now() - 60000).toISOString(); // 1 minute dans le passé pour garantir scheduled_at <= NOW()
     const { error } = await supabase
       .from('generated_emails')
       .update({
         statut_envoi: 'approved',
         scheduled_at: now,
-        approved_at: now,
+        approved_at: new Date().toISOString(),
       })
       .eq('id', generatedEmailId);
 
