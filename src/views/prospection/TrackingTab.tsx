@@ -196,7 +196,9 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
         const hasNeg = entry.replies.some((r) => r.reply_sentiment === 'negative') || entry.log.reply_sentiment === 'negative';
         if (!hasNeg) return false;
       } else if (statusFilter === 'opened') {
-        const isOpened = !!entry.log.opened_at && entry.replies.length === 0;
+        const hasPos = entry.replies.some((r) => r.reply_sentiment === 'positive') || entry.log.reply_sentiment === 'positive';
+        const hasNeg = entry.replies.some((r) => r.reply_sentiment === 'negative') || entry.log.reply_sentiment === 'negative';
+        const isOpened = !!entry.log.opened_at && entry.replies.length === 0 && !hasPos && !hasNeg;
         if (!isOpened) return false;
       } else if (statusFilter === 'bounced') {
         const isBounced = entry.log.status === 'bounced' || entry.log.status === 'failed' || entry.replies.some((r) => r.status === 'bounced' || r.status === 'failed');

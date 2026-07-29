@@ -135,9 +135,11 @@ export const settingsService = {
         .eq('key', key);
 
       if (updateErr) {
-        await supabase
+        const { error: insertErr } = await supabase
           .from('app_settings')
           .insert([{ key, value, label, category }]);
+
+        if (insertErr) throw insertErr;
       }
     }
   },
@@ -232,7 +234,7 @@ export const settingsService = {
       .single();
 
     if (error) {
-      if ('is_closed_lost' in stage && (error.message?.includes('is_closed_lost') || error.code === 'PGRST204' || String(error.message).includes('column'))) {
+      if ('is_closed_lost' in stage && (error.message?.includes('is_closed_lost') || error.code === 'PGRST204')) {
         const { is_closed_lost: _, ...fallbackStage } = stage;
         const { data: fbData, error: fbError } = await supabase
           .from('pipeline_stages')

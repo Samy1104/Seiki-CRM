@@ -3,22 +3,16 @@ import { ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-interface PortalProps {
-  setActiveApp?: (app: 'portal' | 'crm' | 'contenu') => void;
-}
-
-export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
+export const Portal: React.FC = () => {
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [hovered, setHovered] = useState<'crm' | 'contenu' | null>(null);
 
   const handleCrmClick = () => {
-    if (setActiveApp) setActiveApp('crm');
     navigate('/crm/pipeline');
   };
 
   const handleContenuClick = () => {
-    if (setActiveApp) setActiveApp('contenu');
     navigate('/contenu/prospection');
   };
 
