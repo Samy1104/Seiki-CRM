@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp } from 'lucide-react';
+import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare } from 'lucide-react';
 import { prospectionService, type EmailLog } from '../../services/prospectionService';
+import { parseEmailBody } from '../../utils/emailParser';
 
 interface TrackingTabProps {
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
@@ -48,14 +49,6 @@ interface DisplayEntry {
   replies: EmailLog[];
 }
 
-/**
- * Une réponse reçue (poll-gmail-inbox) est insérée comme sa propre ligne
- * email_logs (direction inbound) — elle n'a jamais eu de sent_at/opened_at,
- * ce n'est pas une perte de données mais une ligne à part entière. Les
- * lister séparément était confus (on tombait dessus en pensant voir l'envoi
- * d'origine) : on les rattache ici à leur envoi via gmail_thread_id, pour
- * n'afficher qu'une seule entrée par conversation avec la réponse nichée dedans.
- */
 function groupByConversation(logs: EmailLog[]): DisplayEntry[] {
   const outbound = logs.filter((l) => l.direction === 'outbound');
   const outboundThreadIds = new Set(outbound.map((l) => l.gmail_thread_id).filter(Boolean));
@@ -87,13 +80,80 @@ function groupByConversation(logs: EmailLog[]): DisplayEntry[] {
   return entries;
 }
 
+interface EmailCardProps {
+  avatarBadge: React.ReactNode;
+  senderName: string;
+  subHeader: string;
+  timestamp: string | null;
+  sentiment?: EmailLog['reply_sentiment'];
+  body: string | null;
+  isReply?: boolean;
+}
+
+const EmailCard: React.FC<EmailCardProps> = ({
+  avatarBadge,
+  senderName,
+  subHeader,
+  timestamp,
+  sentiment,
+  body,
+  isReply = false,
+}) => {
+  const [showQuoted, setShowQuoted] = useState(false);
+  const parsed = useMemo(() => parseEmailBody(body || ''), [body]);
+
+  return (
+    <div className={`space-y-2 ${isReply ? 'pl-3 border-l-2 border-success/40 mt-3' : ''}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5">
+          {avatarBadge}
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-semibold text-ink text-xs">{senderName}</span>
+              {sentiment && (
+                <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-control border ${SENTIMENT_CLASSES[sentiment]}`}>
+                  {SENTIMENT_LABELS[sentiment]}
+                </span>
+              )}
+            </div>
+            <div className="text-[11px] text-ink-faint">{subHeader}</div>
+          </div>
+        </div>
+        <span className="text-[11px] text-ink-faint whitespace-nowrap">{formatDate(timestamp)}</span>
+      </div>
+
+      <div className="bg-charcoal/30 border border-line-strong rounded-lg p-3 text-sm text-ink-soft space-y-2">
+        <div className="whitespace-pre-wrap leading-relaxed font-ui">
+          {parsed.cleanBody || '(Aucun contenu)'}
+        </div>
+
+        {parsed.quotedBody && (
+          <div className="pt-2 border-t border-line-strong/40">
+            <button
+              type="button"
+              onClick={() => setShowQuoted((prev) => !prev)}
+              className="flex items-center gap-1.5 text-xs text-[#D4C4A8] hover:text-ink transition-colors font-medium cursor-pointer"
+            >
+              {showQuoted ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
+              <span>{showQuoted ? 'Masquer le message cité' : '[+ Afficher le message cité]'}</span>
+            </button>
+            {showQuoted && (
+              <div className="mt-2 pl-3 border-l-2 border-line-strong/60 text-xs text-ink-faint whitespace-pre-wrap leading-relaxed bg-surface/40 p-2.5 rounded-md font-mono">
+                {parsed.quotedBody}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  // `silent` évite de remplacer la liste par un spinner plein écran à chaque
-  // tick d'auto-refresh (30s) — seul le premier chargement doit bloquer l'UI.
   const loadLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
@@ -108,10 +168,6 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
 
   useEffect(() => {
     loadLogs();
-    // Auto-refresh pendant que l'onglet est ouvert — les statuts changent en
-    // arrière-plan (pixel d'ouverture quasi instantané, réponses/bounces via
-    // le cron poll-gmail-inbox toutes les minutes) sans qu'aucune action de
-    // l'utilisateur ne les déclenche ici.
     const interval = setInterval(() => loadLogs(true), 30_000);
     return () => clearInterval(interval);
   }, [loadLogs]);
@@ -192,41 +248,83 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
               </div>
 
               {expandedId === log.id && (
-                <div className="p-3 border-t border-line-strong bg-base space-y-3 text-xs">
-                  <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-ink-soft">
-                    <span>Envoyé : {formatDate(log.sent_at)}</span>
-                    <span>Ouvert : {formatDate(log.opened_at)}</span>
-                    <span>Répondu : {formatDate(log.replied_at)}</span>
-                    <span>Reçu : {formatDate(log.received_at)}</span>
+                <div className="p-3 border-t border-line-strong bg-base space-y-4 text-xs">
+                  {/* Step Progress Timeline Bar */}
+                  <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg border border-line-strong bg-surface/50 text-xs">
+                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.sent_at || log.received_at ? 'border-line-focus bg-surface text-ink' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                      <div className={`p-1.5 rounded-full ${log.sent_at || log.received_at ? 'bg-[#D4C4A8]/20 text-[#D4C4A8]' : 'bg-base text-ink-faint'}`}>
+                        <Send size={13} strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">{log.direction === 'inbound' ? 'Reçu' : 'Envoyé'}</div>
+                        <div className="text-[11px] text-ink-soft truncate">{formatDate(log.sent_at || log.received_at)}</div>
+                      </div>
+                    </div>
+
+                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.opened_at ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                      <div className={`p-1.5 rounded-full ${log.opened_at ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
+                        <Eye size={13} strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">Ouvert</div>
+                        <div className="text-[11px] text-ink-soft truncate">{log.opened_at ? formatDate(log.opened_at) : 'Non ouvert'}</div>
+                      </div>
+                    </div>
+
+                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.replied_at || replies.length > 0 ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                      <div className={`p-1.5 rounded-full ${log.replied_at || replies.length > 0 ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
+                        <MessageSquare size={13} strokeWidth={2} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-semibold truncate">Répondu</div>
+                        <div className="text-[11px] text-ink-soft truncate">
+                          {log.replied_at || replies[0]?.received_at ? formatDate(log.replied_at || replies[0]?.received_at) : 'Pas de réponse'}
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
                   {log.error_message && (
-                    <p className="text-danger">{log.error_message}</p>
-                  )}
-                  {log.body_preview && (
-                    <p className="text-ink-soft whitespace-pre-line bg-surface p-2 rounded-control border border-line-strong">
-                      {log.body_preview}
-                    </p>
+                    <p className="text-danger p-2 rounded bg-danger/10 border border-danger/20">{log.error_message}</p>
                   )}
 
+                  {/* Outbound/Primary Email Card */}
+                  {log.body_preview && (
+                    <EmailCard
+                      avatarBadge={
+                        log.direction === 'outbound' ? (
+                          <div className="w-7 h-7 rounded-full bg-[#D4C4A8]/20 text-[#D4C4A8] border border-[#D4C4A8]/30 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                            SK
+                          </div>
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-success/20 text-success border border-success/30 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                            {(log.lead?.contact_name || log.from_email || 'L').charAt(0).toUpperCase()}
+                          </div>
+                        )
+                      }
+                      senderName={log.direction === 'outbound' ? 'Seiki CRM' : (log.lead?.contact_name || log.from_email || 'Contact')}
+                      subHeader={log.direction === 'outbound' ? `à ${log.to_email}` : `de ${log.from_email}`}
+                      timestamp={log.sent_at || log.received_at || log.created_at}
+                      body={log.body_preview}
+                    />
+                  )}
+
+                  {/* Inbound Reply Cards */}
                   {replies.map((reply) => (
-                    <div key={reply.id} className="pl-3 border-l-2 border-success/30 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <div className="flex items-center gap-2 text-success font-semibold">
-                          <ArrowDownLeft size={12} strokeWidth={2} />
-                          Réponse reçue le {formatDate(reply.received_at)}
+                    <EmailCard
+                      key={reply.id}
+                      isReply
+                      avatarBadge={
+                        <div className="w-7 h-7 rounded-full bg-success/20 text-success border border-success/30 flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">
+                          {(log.lead?.contact_name || reply.from_email || 'L').charAt(0).toUpperCase()}
                         </div>
-                        {reply.reply_sentiment && (
-                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-control border ${SENTIMENT_CLASSES[reply.reply_sentiment]}`}>
-                            {SENTIMENT_LABELS[reply.reply_sentiment]}
-                          </span>
-                        )}
-                      </div>
-                      {reply.body_preview && (
-                        <p className="text-ink-soft whitespace-pre-line bg-surface p-2 rounded-control border border-line-strong">
-                          {reply.body_preview}
-                        </p>
-                      )}
-                    </div>
+                      }
+                      senderName={log.lead?.contact_name || reply.from_email || 'Contact'}
+                      subHeader={`de ${reply.from_email || 'inconnu'}`}
+                      timestamp={reply.received_at}
+                      sentiment={reply.reply_sentiment}
+                      body={reply.body_preview}
+                    />
                   ))}
                 </div>
               )}
@@ -237,3 +335,4 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
     </div>
   );
 };
+
