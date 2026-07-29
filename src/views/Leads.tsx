@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
@@ -74,6 +74,20 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
       showToast('Erreur de chargement du lead', 'error');
     }
   };
+
+  // Deep-link depuis d'autres pages (ex: bouton "Voir le lead" sur un
+  // rendez-vous Calendly dans l'Agenda) — ouvre directement la fiche lead
+  // visée par ?leadId=, même convention one-shot que les query params
+  // ?calendly=/?gmail= (lu au montage, puis nettoyé de l'URL).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const leadId = params.get('leadId');
+    if (leadId) {
+      handleOpenLead(leadId);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEditLead = (e: React.MouseEvent, leadId: string) => {
     e.stopPropagation();

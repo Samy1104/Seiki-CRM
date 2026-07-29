@@ -20,18 +20,26 @@ export const AgendaHeader: React.FC<AgendaHeaderProps> = ({
     <div className="flex items-end justify-between mb-10">
       <PageTitle>Agenda</PageTitle>
       <div className="flex items-center gap-5">
-        <a
-          href={calendlyConnectUrl}
-          className="flex items-center gap-1.5 transition-colors duration-150 text-[11px] tracking-[0.15em] uppercase cursor-pointer"
-          style={{ color: calendlyAccount ? 'var(--color-success, #4caf7d)' : '#555' }}
-        >
-          {calendlyAccount ? (
+        {calendlyAccount ? (
+          <span
+            className="flex items-center gap-1.5 text-[11px] tracking-[0.15em] uppercase"
+            style={{ color: 'var(--color-success, #4caf7d)' }}
+          >
             <CheckCircle2 size={12} strokeWidth={2} />
-          ) : (
+            Calendly connecté
+          </span>
+        ) : (
+          <a
+            href={calendlyConnectUrl}
+            className="flex items-center gap-1.5 transition-colors duration-150 text-[11px] tracking-[0.15em] uppercase cursor-pointer"
+            style={{ color: "#555" }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "var(--color-charcoal-fg-soft, #b0afa8)")}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+          >
             <Link2 size={12} strokeWidth={2} />
-          )}
-          {calendlyAccount ? 'Calendly connecté' : 'Connecter Calendly'}
-        </a>
+            Connecter Calendly
+          </a>
+        )}
         <button
           type="button"
           className="flex items-center gap-1.5 transition-colors duration-150 text-[11px] tracking-[0.15em] uppercase cursor-pointer"

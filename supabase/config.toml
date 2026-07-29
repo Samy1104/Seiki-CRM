@@ -465,3 +465,19 @@ verify_jwt = false
 
 [functions.poll-gmail-inbox]
 verify_jwt = false
+
+# calendly-oauth-start et calendly-oauth-callback sont atteintes par
+# navigation directe du navigateur (redirect vers/depuis Calendly) — aucun
+# header Authorization possible (même raison que linkedin/gmail-oauth-*
+# ci-dessus). poll-calendly-bookings est appelée par le cron pg_net avec
+# `Authorization: Bearer <seiki_cron_secret>`, pas un JWT Supabase (même
+# raison que poll-gmail-inbox ci-dessus) — l'authentification réelle reste
+# faite dans le code (requireServiceRole).
+[functions.calendly-oauth-start]
+verify_jwt = false
+
+[functions.calendly-oauth-callback]
+verify_jwt = false
+
+[functions.poll-calendly-bookings]
+verify_jwt = false

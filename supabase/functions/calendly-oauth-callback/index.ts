@@ -11,6 +11,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildRedirectUri, exchangeCodeForToken, fetchCurrentUserUri } from "../_shared/calendlyApi.ts";
 import { getAllowedOrigins } from "../_shared/cors.ts";
+import { fetchWithTimeout } from "../_shared/fetchWithTimeout.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -67,18 +68,25 @@ serve(async (req: Request) => {
     if (upsertErr) throw upsertErr;
 
     // Backfill immédiat : ne pas attendre jusqu'à 5 min le prochain tick cron
-    // pour voir apparaître les réservations déjà existantes. Non bloquant —
-    // un échec ici est rattrapé par le prochain tick.
+    // pour voir apparaître les réservations déjà existantes. Budget court
+    // (8s) plutôt qu'un fetch non borné : poll-calendly-bookings peut
+    // parcourir jusqu'à 120 jours d'événements, et sans limite de temps le
+    // callback OAuth bloquerait la redirection de l'utilisateur en attendant
+    // un poll complet. Un échec ou un dépassement ici n'empêche pas la
+    // connexion (déjà enregistrée ci-dessus) — rattrapé par le prochain tick.
     try {
-      await fetch(`${supabaseUrl}/functions/v1/poll-calendly-bookings`, {
+      const pollRes = await fetchWithTimeout(`${supabaseUrl}/functions/v1/poll-calendly-bookings`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${Deno.env.get("CRON_SECRET")}`,
           "Content-Type": "application/json",
         },
-      });
+      }, 8000);
+      if (!pollRes.ok) {
+        console.error("[calendly-oauth-callback] Backfill poll returned non-OK:", pollRes.status, await pollRes.text());
+      }
     } catch (pollErr) {
-      console.error("[calendly-oauth-callback] Backfill poll failed:", pollErr);
+      console.error("[calendly-oauth-callback] Backfill poll failed:", pollErr instanceof Error ? pollErr.message : pollErr);
     }
 
     return new Response(null, {

@@ -121,11 +121,17 @@ async function syncOneEvent(
 
   const status: "active" | "canceled" = event.status === "canceled" || invitee.status === "canceled" ? "canceled" : "active";
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingErr } = await supabase
     .from("calendly_bookings")
     .select("id, status, lead_id")
     .eq("calendly_event_uri", event.uri)
     .maybeSingle();
+
+  // Un échec ici ne doit jamais être traité comme "jamais vu" : ça ferait
+  // rejouer isNewBooking sur une réservation déjà connue et dupliquer sa
+  // ligne d'historique. On laisse le catch de l'appelant compter l'erreur
+  // et réessayer au prochain passage du cron.
+  if (existingErr) throw new Error(existingErr.message);
 
   const isNewBooking = !existing;
   const isNewCancellation = !!existing && existing.status === "active" && status === "canceled";
@@ -179,7 +185,8 @@ async function linkLeadAndLogHistory(
       .maybeSingle();
     leadId = lead?.id ?? null;
     if (leadId) {
-      await supabase.from("calendly_bookings").update({ lead_id: leadId }).eq("id", bookingId);
+      const { error: linkErr } = await supabase.from("calendly_bookings").update({ lead_id: leadId }).eq("id", bookingId);
+      if (linkErr) console.error("[poll-calendly-bookings] Failed to link lead_id on booking:", linkErr.message);
     }
   }
 

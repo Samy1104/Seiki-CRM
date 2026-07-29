@@ -34,13 +34,14 @@ export const Agenda: React.FC = () => {
   const [calendlyAccount, setCalendlyAccount] = useState<CalendlyAccount | null>(null);
 
   useEffect(() => {
-    calendlyService.getAccount().then(setCalendlyAccount).catch(() => {});
-
     const params = new URLSearchParams(window.location.search);
     const calendlyStatus = params.get('calendly');
+    // Après un retour de connexion réussie, l'appel ci-dessous récupère déjà
+    // le compte à jour — pas besoin d'un second getAccount() avant.
+    calendlyService.getAccount().then(setCalendlyAccount).catch(() => {});
+
     if (calendlyStatus === 'connected') {
       showToast('Compte Calendly connecté.', 'success');
-      calendlyService.getAccount().then(setCalendlyAccount).catch(() => {});
       reloadBookings();
     } else if (calendlyStatus === 'error') {
       showToast(params.get('message') || 'Connexion Calendly échouée.', 'error');
@@ -80,6 +81,10 @@ export const Agenda: React.FC = () => {
   const nowMs = Date.now();
   const todayStr = new Date().toISOString().slice(0, 10);
   const todayStartMs = new Date(`${todayStr}T00:00:00`).getTime();
+  // Frontière volontairement asymétrique : les bookings (horodatage précis)
+  // basculent en Historique dès que passés, alors que les events (jour
+  // seul) restent en À venir toute leur journée — cohérent avec le sens de
+  // chaque type de donnée.
   const isUpcoming = (item: AgendaItem) =>
     item.sortKey >= (item.kind === 'booking' ? nowMs : todayStartMs);
 
@@ -210,7 +215,7 @@ export const Agenda: React.FC = () => {
                       onDelete={() => confirmDelete(item.event.id)}
                     />
                   ) : (
-                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} formatDateFr={formatDateFr} />
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} />
                   ),
                 )}
               </div>
@@ -237,7 +242,7 @@ export const Agenda: React.FC = () => {
                       onDelete={() => confirmDelete(item.event.id)}
                     />
                   ) : (
-                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} formatDateFr={formatDateFr} />
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} />
                   ),
                 )}
               </div>

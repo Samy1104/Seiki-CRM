@@ -1,15 +1,24 @@
 import React from 'react';
-import { Clock, Mail, Video, Link as LinkIcon } from 'lucide-react';
+import { Clock, Mail, Video, MapPin, UserRound } from 'lucide-react';
 import type { CalendlyBooking } from '../../services/calendlyService';
 
 interface BookingCardProps {
   booking: CalendlyBooking;
-  formatDateFr: (d: string) => string;
 }
 
-export const BookingCard: React.FC<BookingCardProps> = ({ booking, formatDateFr }) => {
+export const BookingCard: React.FC<BookingCardProps> = ({ booking }) => {
   const canceled = booking.status === 'canceled';
-  const timeLabel = new Date(booking.start_time).toLocaleTimeString('fr-FR', {
+  // Date et heure dérivées du même instant Europe/Paris — start_time est un
+  // horodatage UTC, donc slice(0, 10) donnerait la date UTC (fausse d'une
+  // journée pour les RDV entre 00h et 2h heure de Paris).
+  const startDate = new Date(booking.start_time);
+  const dateLabel = startDate.toLocaleDateString('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'Europe/Paris',
+  });
+  const timeLabel = startDate.toLocaleTimeString('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: 'Europe/Paris',
@@ -54,7 +63,7 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, formatDateFr 
         <div className="flex items-center gap-1.5">
           <Clock size={11} strokeWidth={1.5} style={{ color: '#555' }} />
           <span className="text-[12px]" style={{ color: '#666' }}>
-            {formatDateFr(booking.start_time.slice(0, 10))} à {timeLabel}
+            {dateLabel} à {timeLabel}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -62,21 +71,31 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking, formatDateFr 
           <span className="text-[12px]" style={{ color: '#666' }}>{booking.invitee_email}</span>
         </div>
         {booking.location && (
-          <a
-            href={isLink ? booking.location : undefined}
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5"
-          >
-            {isLink ? (
+          isLink ? (
+            <a href={booking.location} target="_blank" rel="noreferrer" className="flex items-center gap-1.5">
               <Video size={11} strokeWidth={1.5} style={{ color: '#555' }} />
-            ) : (
-              <LinkIcon size={11} strokeWidth={1.5} style={{ color: '#555' }} />
-            )}
-            <span className="text-[12px]" style={{ color: '#666' }}>{booking.location}</span>
+              <span className="text-[12px]" style={{ color: '#666' }}>{booking.location}</span>
+            </a>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <MapPin size={11} strokeWidth={1.5} style={{ color: '#555' }} />
+              <span className="text-[12px]" style={{ color: '#666' }}>{booking.location}</span>
+            </div>
+          )
+        )}
+        {booking.lead_id && (
+          <a href={`/crm/leads?leadId=${booking.lead_id}`} className="flex items-center gap-1.5">
+            <UserRound size={11} strokeWidth={1.5} style={{ color: '#555' }} />
+            <span className="text-[12px]" style={{ color: '#666' }}>Voir le lead</span>
           </a>
         )}
       </div>
+
+      {booking.title && (
+        <div className="text-[12px] mt-0.5" style={{ color: 'var(--color-charcoal-fg-soft, #b0afa8)' }}>
+          {booking.title}
+        </div>
+      )}
     </div>
   );
 };
