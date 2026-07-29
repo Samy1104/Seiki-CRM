@@ -104,6 +104,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         };
       }
 
+      const targetStage = stages.find((s) => s.id === editForm.stage_id);
+      const shouldArchive = targetStage?.is_closed_lost ?? false;
+
       await leadsService.updateLead(
         lead.id,
         {
@@ -114,6 +117,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           linkedin_url: editForm.linkedin_url || null,
           deal_value: editForm.deal_value,
           stage_id: editForm.stage_id,
+          ...(shouldArchive ? { is_archived: true } : {}),
           owner_id: editForm.owner_id || null,
           note: editForm.note || null,
         },

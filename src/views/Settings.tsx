@@ -34,6 +34,7 @@ export const Settings: React.FC = () => {
   const [newStageName, setNewStageName] = useState('');
   const [newStageColor, setNewStageColor] = useState('#6B5FE6');
   const [newStageIsWon, setNewStageIsWon] = useState(false);
+  const [newStageIsLost, setNewStageIsLost] = useState(false);
   const [editingStageId, setEditingStageId] = useState<string | null>(null);
 
   // Form states - SLA & General
@@ -186,6 +187,7 @@ export const Settings: React.FC = () => {
           name: newStageName.trim(),
           color: newStageColor,
           is_closed_won: newStageIsWon,
+          is_closed_lost: newStageIsLost,
         });
         showToast('Étape modifiée avec succès');
         setEditingStageId(null);
@@ -196,6 +198,7 @@ export const Settings: React.FC = () => {
           position: maxPosition + 1,
           color: newStageColor,
           is_closed_won: newStageIsWon,
+          is_closed_lost: newStageIsLost,
           is_active: true
         });
         showToast('Étape ajoutée au pipeline');
@@ -204,6 +207,7 @@ export const Settings: React.FC = () => {
       setNewStageName('');
       setNewStageColor('#6B5FE6');
       setNewStageIsWon(false);
+      setNewStageIsLost(false);
 
       loadSettingsData();
     } catch (err) {
@@ -217,6 +221,7 @@ export const Settings: React.FC = () => {
     setNewStageName(stage.name);
     setNewStageColor(stage.color || '#6B5FE6');
     setNewStageIsWon(!!stage.is_closed_won);
+    setNewStageIsLost(!!stage.is_closed_lost);
   };
 
   const handleCancelEditStage = () => {
@@ -224,6 +229,7 @@ export const Settings: React.FC = () => {
     setNewStageName('');
     setNewStageColor('#6B5FE6');
     setNewStageIsWon(false);
+    setNewStageIsLost(false);
   };
 
   const handleDeleteStage = async (id: string) => {
@@ -368,9 +374,11 @@ export const Settings: React.FC = () => {
           newStageName={newStageName}
           newStageColor={newStageColor}
           newStageIsWon={newStageIsWon}
+          newStageIsLost={newStageIsLost}
           onNameChange={setNewStageName}
           onColorChange={setNewStageColor}
           onIsWonChange={setNewStageIsWon}
+          onIsLostChange={setNewStageIsLost}
           onSubmit={handleAddStage}
           onStartEdit={handleStartEditStage}
           onCancelEdit={handleCancelEditStage}

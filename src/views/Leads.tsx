@@ -5,7 +5,7 @@ import { settingsService } from '../services/settingsService';
 import type { SlaLimits } from '../services/settingsService';
 import { tasksService } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
-import { Search, Filter, Layers, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Search, Filter, Layers, Plus, Pencil, Trash2, Archive, ArchiveRestore } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../components/ui/Select';
 import { PageTitle } from '../components/ui/PageTitle';
 import { Button } from '../components/ui/Button';
@@ -108,6 +108,22 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
     }
   };
 
+  const handleToggleArchiveLead = async (e: React.MouseEvent, leadId: string, isCurrentlyArchived: boolean) => {
+    e.stopPropagation();
+    try {
+      await leadsService.updateLead(
+        leadId,
+        { is_archived: !isCurrentlyArchived },
+        { type: 'note', content: !isCurrentlyArchived ? 'Lead archivé' : 'Lead désarchivé' }
+      );
+      showToast(!isCurrentlyArchived ? 'Lead archivé avec succès' : 'Lead désarchivé avec succès');
+      loadLeadsData();
+    } catch (err) {
+      console.error('Error toggling archive status:', err);
+      showToast('Erreur lors de la modification', 'error');
+    }
+  };
+
   const handleMergeApprove = async (proposalId: string) => {
     if (confirmAction('Êtes-vous sûr de vouloir fusionner ces deux leads ? L\'historique et les tâches seront fusionnés.')) {
       try {
@@ -130,27 +146,101 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
     }
   };
 
-  // Filter Logic
-  const filteredLeads = useMemo(() => leads.filter(l => {
-    // Search
-    const q = searchQuery.toLowerCase();
-    const matchesSearch = !q || (
-      l.company_name.toLowerCase().includes(q) ||
-      (l.contact_name && l.contact_name.toLowerCase().includes(q)) ||
-      (l.note && l.note.toLowerCase().includes(q))
+  type SortColumn = 'company_name' | 'contact_name' | 'segment' | 'stage' | 'score' | 'deal_value' | 'created_at';
+  type SortDirection = 'asc' | 'desc';
+
+  const [sortColumn, setSortColumn] = useState<SortColumn>('company_name');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortColumn(column);
+      setSortDirection(['score', 'deal_value', 'created_at'].includes(column) ? 'desc' : 'asc');
+    }
+  };
+
+  // Filter & Sort Logic
+  const filteredLeads = useMemo(() => {
+    const list = leads.filter(l => {
+      // Search
+      const q = searchQuery.toLowerCase();
+      const matchesSearch = !q || (
+        l.company_name.toLowerCase().includes(q) ||
+        (l.contact_name && l.contact_name.toLowerCase().includes(q)) ||
+        (l.note && l.note.toLowerCase().includes(q))
+      );
+
+      // Segment
+      const matchesSegment = !segmentFilter || l.segment === segmentFilter;
+
+      // Score
+      let matchesScore = true;
+      if (scoreFilter === 'hot') matchesScore = l.score >= 80;
+      else if (scoreFilter === 'qualified') matchesScore = l.score >= 60 && l.score < 80;
+      else if (scoreFilter === 'nurturing') matchesScore = l.score < 60;
+
+      return matchesSearch && matchesSegment && matchesScore;
+    });
+
+    return list.sort((a, b) => {
+      let valA: string | number = '';
+      let valB: string | number = '';
+
+      if (sortColumn === 'company_name') {
+        valA = a.company_name || '';
+        valB = b.company_name || '';
+      } else if (sortColumn === 'contact_name') {
+        valA = a.contact_name || '';
+        valB = b.contact_name || '';
+      } else if (sortColumn === 'segment') {
+        valA = a.segment || '';
+        valB = b.segment || '';
+      } else if (sortColumn === 'stage') {
+        valA = a.stage?.position ?? 0;
+        valB = b.stage?.position ?? 0;
+      } else if (sortColumn === 'score') {
+        valA = a.score ?? 0;
+        valB = b.score ?? 0;
+      } else if (sortColumn === 'deal_value') {
+        valA = a.deal_value ?? 0;
+        valB = b.deal_value ?? 0;
+      } else if (sortColumn === 'created_at') {
+        valA = new Date(a.created_at).getTime();
+        valB = new Date(b.created_at).getTime();
+      }
+
+      let cmp = 0;
+      if (typeof valA === 'string') {
+        cmp = valA.localeCompare(valB as string, 'fr', { sensitivity: 'base' });
+      } else {
+        cmp = valA > (valB as number) ? 1 : valA < (valB as number) ? -1 : 0;
+      }
+
+      return sortDirection === 'asc' ? cmp : -cmp;
+    });
+  }, [leads, searchQuery, segmentFilter, scoreFilter, sortColumn, sortDirection]);
+
+  const renderSortHeader = (label: string, column: SortColumn) => {
+    const isSorted = sortColumn === column;
+    return (
+      <th
+        onClick={() => handleSort(column)}
+        className="px-4 py-3 cursor-pointer select-none group transition-colors hover:bg-hover/60 hover:text-ink"
+        title={`Trier par ${label}`}
+      >
+        <div className="flex items-center gap-1">
+          <span>{label}</span>
+          {isSorted && (
+            <span className="text-[10px] text-[#D4C4A8] font-bold shrink-0">
+              {sortDirection === 'asc' ? '▲' : '▼'}
+            </span>
+          )}
+        </div>
+      </th>
     );
-
-    // Segment
-    const matchesSegment = !segmentFilter || l.segment === segmentFilter;
-
-    // Score
-    let matchesScore = true;
-    if (scoreFilter === 'hot') matchesScore = l.score >= 80;
-    else if (scoreFilter === 'qualified') matchesScore = l.score >= 60 && l.score < 80;
-    else if (scoreFilter === 'nurturing') matchesScore = l.score < 60;
-
-    return matchesSearch && matchesSegment && matchesScore;
-  }), [leads, searchQuery, segmentFilter, scoreFilter]);
+  };
 
   if (loading) {
     return (
@@ -253,13 +343,13 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
         <table className="w-full border-collapse text-left text-[12.5px]">
           <thead>
             <tr className="border-b border-line bg-elevated text-[10.5px] font-semibold uppercase tracking-wide text-ink-soft">
-              <th className="px-4 py-3">Société</th>
-              <th className="px-4 py-3">Contact</th>
-              <th className="px-4 py-3">Segment</th>
-              <th className="px-4 py-3">Étape</th>
-              <th className="px-4 py-3">Score ICP</th>
-              <th className="px-4 py-3">Valeur</th>
-              <th className="px-4 py-3">Créé le</th>
+              {renderSortHeader('Société', 'company_name')}
+              {renderSortHeader('Contact', 'contact_name')}
+              {renderSortHeader('Segment', 'segment')}
+              {renderSortHeader('Étape', 'stage')}
+              {renderSortHeader('Score ICP', 'score')}
+              {renderSortHeader('Valeur', 'deal_value')}
+              {renderSortHeader('Créé le', 'created_at')}
               <th className="px-4 py-3 text-right">Actions</th>
             </tr>
           </thead>
@@ -282,6 +372,14 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
                   </td>
                   <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        title={l.is_archived ? 'Désarchiver le lead' : 'Archiver le lead'}
+                        onClick={(e) => handleToggleArchiveLead(e, l.id, l.is_archived)}
+                        className="rounded-control p-1.5 text-ink-soft hover:bg-elevated hover:text-[#D4C4A8] transition-colors cursor-pointer"
+                      >
+                        {l.is_archived ? <ArchiveRestore size={14} /> : <Archive size={14} />}
+                      </button>
                       <button
                         type="button"
                         title="Modifier le lead"

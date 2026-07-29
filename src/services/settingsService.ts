@@ -54,6 +54,7 @@ export interface PipelineStage {
   position: number;
   color: string;
   is_closed_won: boolean;
+  is_closed_lost?: boolean;
   is_active: boolean;
 }
 
@@ -122,6 +123,53 @@ export const settingsService = {
     if (error) throw error;
   },
 
+  async saveSetting(key: string, value: Record<string, any>, label = key, category = 'pipeline'): Promise<void> {
+    const { error } = await supabase
+      .from('app_settings')
+      .upsert({ key, value, label, category, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+
+    if (error) {
+      const { error: updateErr } = await supabase
+        .from('app_settings')
+        .update({ value, updated_at: new Date().toISOString() })
+        .eq('key', key);
+
+      if (updateErr) {
+        await supabase
+          .from('app_settings')
+          .insert([{ key, value, label, category }]);
+      }
+    }
+  },
+
+  async getLostStageIds(): Promise<string[]> {
+    try {
+      const { data } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'pipeline_lost_stage_ids')
+        .maybeSingle();
+
+      if (data?.value && Array.isArray(data.value.stage_ids)) {
+        return data.value.stage_ids as string[];
+      }
+    } catch {
+      // Ignore setting load failure
+    }
+    return [];
+  },
+
+  async setLostStageId(stageId: string, isLost: boolean): Promise<void> {
+    const current = await this.getLostStageIds();
+    let updated: string[];
+    if (isLost) {
+      updated = Array.from(new Set([...current, stageId]));
+    } else {
+      updated = current.filter(id => id !== stageId);
+    }
+    await this.saveSetting('pipeline_lost_stage_ids', { stage_ids: updated }, 'Étapes de perte', 'pipeline');
+  },
+
   async getTeamMembers(): Promise<TeamMember[]> {
     const { data, error } = await supabase
       .from('team_members')
@@ -163,28 +211,72 @@ export const settingsService = {
       .select('*')
       .order('position');
     if (error) throw error;
-    return data || [];
+
+    const lostIds = await this.getLostStageIds();
+    return (data || []).map(st => ({
+      ...st,
+      is_closed_lost: Boolean(st.is_closed_lost || lostIds.includes(st.id))
+    }));
   },
 
   async addPipelineStage(stage: Omit<PipelineStage, 'id'>): Promise<PipelineStage> {
+    let createdStage: PipelineStage;
     const { data, error } = await supabase
       .from('pipeline_stages')
       .insert([stage])
       .select()
       .single();
-    if (error) throw error;
-    return data;
+
+    if (error) {
+      if ('is_closed_lost' in stage && (error.message?.includes('is_closed_lost') || error.code === 'PGRST204' || String(error.message).includes('column'))) {
+        const { is_closed_lost: _, ...fallbackStage } = stage;
+        const { data: fbData, error: fbError } = await supabase
+          .from('pipeline_stages')
+          .insert([fallbackStage])
+          .select()
+          .single();
+        if (fbError) throw fbError;
+        createdStage = { ...fbData, is_closed_lost: stage.is_closed_lost };
+      } else {
+        throw error;
+      }
+    } else {
+      createdStage = data;
+    }
+
+    if (stage.is_closed_lost !== undefined) {
+      await this.setLostStageId(createdStage.id, !!stage.is_closed_lost);
+    }
+
+    return createdStage;
   },
 
   async updatePipelineStage(id: string, updates: Partial<PipelineStage>): Promise<void> {
+    if (updates.is_closed_lost !== undefined) {
+      await this.setLostStageId(id, updates.is_closed_lost);
+    }
+
     const { error } = await supabase
       .from('pipeline_stages')
       .update(updates)
       .eq('id', id);
-    if (error) throw error;
+
+    if (error) {
+      if ('is_closed_lost' in updates && (error.message?.includes('is_closed_lost') || error.code === 'PGRST204' || String(error.message).includes('column'))) {
+        const { is_closed_lost: _, ...fallbackUpdates } = updates;
+        const { error: fbError } = await supabase
+          .from('pipeline_stages')
+          .update(fallbackUpdates)
+          .eq('id', id);
+        if (fbError) throw fbError;
+        return;
+      }
+      throw error;
+    }
   },
 
   async deletePipelineStage(id: string): Promise<void> {
+    await this.setLostStageId(id, false);
     const { error } = await supabase
       .from('pipeline_stages')
       .delete()

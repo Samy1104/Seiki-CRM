@@ -44,5 +44,27 @@ describe('Settings View', () => {
     const editBtn = screen.getByTitle("Modifier l'étape");
     expect(editBtn).toBeDefined();
   });
+
+  it('displays lost stage checkbox and badge in pipeline tab', async () => {
+    const mockStages = [
+      { id: 'stg_lost', name: 'Perdu / Abandonné', position: 1, color: '#EF4444', is_closed_won: false, is_closed_lost: true, is_active: true }
+    ];
+
+    const { settingsService } = await import('../services/settingsService');
+    vi.mocked(settingsService.getPipelineStages).mockResolvedValueOnce(mockStages);
+
+    render(
+      <ToastProvider>
+        <Settings />
+      </ToastProvider>
+    );
+
+    const pipelineTab = screen.getByText('Étapes du Pipeline');
+    pipelineTab.click();
+
+    expect(await screen.findByText('Perdu / Abandonné')).toBeDefined();
+    expect(screen.getByText('Perdu')).toBeDefined();
+    expect(screen.getByText('Marquer comme étape de perte (Lead perdu & archivé)')).toBeDefined();
+  });
 });
 

@@ -169,10 +169,22 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
             </button>
           )}
           onCardMove={async (leadId, _fromCol, toCol) => {
-            await leadsService.updateLead(leadId, { stage_id: toCol });
+            const targetStage = stages.find((s) => s.id === toCol);
+            const shouldArchive = targetStage?.is_closed_lost ?? false;
+            await leadsService.updateLead(leadId, {
+              stage_id: toCol,
+              ...(shouldArchive ? { is_archived: true } : {}),
+            });
             leadsRes.setData((prev) =>
-              prev.map((l) => (l.id === leadId ? { ...l, stage_id: toCol } : l))
+              prev.map((l) =>
+                l.id === leadId
+                  ? { ...l, stage_id: toCol, ...(shouldArchive ? { is_archived: true } : {}) }
+                  : l
+              )
             );
+            if (shouldArchive) {
+              showToast('Lead déplacé vers un statut perdu et archivé', 'info');
+            }
           }}
           onCardClick={(lead) => handleOpenLead(lead.id)}
         />

@@ -100,6 +100,7 @@ CREATE TABLE public.pipeline_stages (
   position      INTEGER NOT NULL,
   color         TEXT DEFAULT '#6B5FE6',
   is_closed_won BOOLEAN NOT NULL DEFAULT false,
+  is_closed_lost BOOLEAN NOT NULL DEFAULT false,
   is_active     BOOLEAN NOT NULL DEFAULT true,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
 );

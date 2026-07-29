@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import type { PipelineStage } from '../../services/settingsService';
-import { Plus, Trash2, Edit2, CheckCircle2, Save, X, Palette, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Trash2, Edit2, CheckCircle2, XCircle, Save, X, Palette, ChevronUp, ChevronDown } from 'lucide-react';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Badge } from '../../components/ui/Badge';
 import { Field, inputClass } from '../../components/ui/Field';
@@ -12,9 +12,11 @@ interface PipelineStagesTabProps {
   newStageName: string;
   newStageColor: string;
   newStageIsWon: boolean;
+  newStageIsLost: boolean;
   onNameChange: (v: string) => void;
   onColorChange: (v: string) => void;
   onIsWonChange: (v: boolean) => void;
+  onIsLostChange: (v: boolean) => void;
   onSubmit: (e: React.FormEvent) => void;
   onStartEdit: (stage: PipelineStage) => void;
   onCancelEdit: () => void;
@@ -28,9 +30,11 @@ export const PipelineStagesTab: React.FC<PipelineStagesTabProps> = ({
   newStageName,
   newStageColor,
   newStageIsWon,
+  newStageIsLost,
   onNameChange,
   onColorChange,
   onIsWonChange,
+  onIsLostChange,
   onSubmit,
   onStartEdit,
   onCancelEdit,
@@ -97,6 +101,10 @@ export const PipelineStagesTab: React.FC<PipelineStagesTabProps> = ({
                 {st.is_closed_won ? (
                   <Badge tone="success">
                     <CheckCircle2 size={12} className="mr-1 inline" /> Gagné
+                  </Badge>
+                ) : st.is_closed_lost ? (
+                  <Badge tone="danger">
+                    <XCircle size={12} className="mr-1 inline" /> Perdu
                   </Badge>
                 ) : (
                   <Badge tone="neutral">Actif</Badge>
@@ -178,10 +186,26 @@ export const PipelineStagesTab: React.FC<PipelineStagesTabProps> = ({
               <input
                 type="checkbox"
                 checked={newStageIsWon}
-                onChange={e => onIsWonChange(e.target.checked)}
+                onChange={e => {
+                  onIsWonChange(e.target.checked);
+                  if (e.target.checked) onIsLostChange(false);
+                }}
                 className="mt-0.5 h-4 w-4 cursor-pointer accent-[#D4C4A8]"
               />
               <span>Marquer comme étape finale de succès (Lead gagné)</span>
+            </label>
+
+            <label className="flex items-start gap-2.5 pt-1 text-xs text-ink cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={newStageIsLost}
+                onChange={e => {
+                  onIsLostChange(e.target.checked);
+                  if (e.target.checked) onIsWonChange(false);
+                }}
+                className="mt-0.5 h-4 w-4 cursor-pointer accent-[#D4C4A8]"
+              />
+              <span>Marquer comme étape de perte (Lead perdu & archivé)</span>
             </label>
 
             <div className="mt-2 flex gap-2">
