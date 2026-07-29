@@ -99,7 +99,6 @@ const EmailCard: React.FC<EmailCardProps> = ({
   body,
   isReply = false,
 }) => {
-  const [showQuoted, setShowQuoted] = useState(false);
   const parsed = useMemo(() => parseEmailBody(body || ''), [body]);
 
   return (
@@ -122,28 +121,10 @@ const EmailCard: React.FC<EmailCardProps> = ({
         <span className="text-[11px] text-ink-faint whitespace-nowrap">{formatDate(timestamp)}</span>
       </div>
 
-      <div className="bg-charcoal/30 border border-line-strong rounded-lg p-3 text-sm text-ink-soft space-y-2">
+      <div className="bg-charcoal/30 border border-line-strong rounded-lg p-3 text-sm text-ink-soft">
         <div className="whitespace-pre-wrap leading-relaxed font-ui">
           {parsed.cleanBody || '(Aucun contenu)'}
         </div>
-
-        {parsed.quotedBody && (
-          <div className="pt-2 border-t border-line-strong/40">
-            <button
-              type="button"
-              onClick={() => setShowQuoted((prev) => !prev)}
-              className="flex items-center gap-1.5 text-xs text-[#D4C4A8] hover:text-ink transition-colors font-medium cursor-pointer"
-            >
-              {showQuoted ? <ChevronUp size={13} strokeWidth={2} /> : <ChevronDown size={13} strokeWidth={2} />}
-              <span>{showQuoted ? 'Masquer le message cité' : '[+ Afficher le message cité]'}</span>
-            </button>
-            {showQuoted && (
-              <div className="mt-2 pl-3 border-l-2 border-line-strong/60 text-xs text-ink-faint whitespace-pre-wrap leading-relaxed bg-surface/40 p-2.5 rounded-md font-mono">
-                {parsed.quotedBody}
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );
