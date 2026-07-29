@@ -117,6 +117,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
 
 :root {
   /* Unified Design Tokens Bridge */
+  --color-muted-beige: #c8b89a;
   --bg-deep: var(--color-charcoal, #0d0d0d);
   --bg-main: var(--color-charcoal, #0d0d0d);
   --bg-panel: var(--color-charcoal, #0d0d0d);

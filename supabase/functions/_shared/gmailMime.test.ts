@@ -18,6 +18,13 @@ describe('buildEmailHtml', () => {
     const html = buildEmailHtml('Ligne 1\n\nLigne 2', 'https://x.test/track');
     expect(html).toContain('<br/>');
   });
+
+  it('renders custom signature HTML when provided and omits purple left border', () => {
+    const customSig = '<p>Jean Dupont — CEO</p><p>jean@company.com</p>';
+    const html = buildEmailHtml('Bonjour', 'https://x.test/track', customSig);
+    expect(html).toContain('Jean Dupont — CEO');
+    expect(html).not.toContain('border-left:3px solid');
+  });
 });
 
 describe('buildRawEmail', () => {

@@ -32,6 +32,8 @@ export const Modal: React.FC<ModalProps> = ({ open, onClose, header, children })
           transition={{ duration: 0.15 }}
         >
           <motion.div
+            role="dialog"
+            aria-modal="true"
             className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-overlay border border-line-strong bg-surface font-ui shadow-modal"
             onClick={(e) => e.stopPropagation()}
             initial={{ opacity: 0, y: 12, scale: 0.98 }}

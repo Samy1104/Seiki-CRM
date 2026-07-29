@@ -72,14 +72,14 @@ export const Portal: React.FC = () => {
             className="absolute top-0 left-0 h-0.5 transition-all duration-700 ease-out"
             style={{
               width: hovered === 'crm' ? '100%' : '0%',
-              background: '#c8b89a',
+              background: 'var(--color-muted-beige, #c8b89a)',
             }}
           />
 
           <div className="relative z-10 flex flex-col items-center gap-6 px-12 text-center">
             <span
               className="block text-xs tracking-[0.3em] uppercase mb-2"
-              style={{ fontFamily: "'Inter', sans-serif", color: '#c8b89a', opacity: hovered === 'crm' ? 1 : 0.5, transition: 'opacity 0.4s' }}
+              style={{ fontFamily: "'Inter', sans-serif", color: 'var(--color-muted-beige, #c8b89a)', opacity: hovered === 'crm' ? 1 : 0.5, transition: 'opacity 0.4s' }}
             >
               01
             </span>
@@ -101,7 +101,7 @@ export const Portal: React.FC = () => {
               className="text-xs tracking-[0.25em] uppercase"
               style={{
                 fontFamily: "'Inter', sans-serif",
-                color: '#c8b89a',
+                color: 'var(--color-muted-beige, #c8b89a)',
                 opacity: hovered === 'crm' ? 1 : 0,
                 transform: hovered === 'crm' ? 'translateY(0)' : 'translateY(8px)',
                 transition: 'opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s',
@@ -116,7 +116,7 @@ export const Portal: React.FC = () => {
             className="absolute bottom-10 right-10 flex items-center gap-2"
             style={{
               fontFamily: "'Inter', sans-serif",
-              color: '#c8b89a',
+              color: 'var(--color-muted-beige, #c8b89a)',
               opacity: hovered === 'crm' ? 1 : 0,
               transform: hovered === 'crm' ? 'translateX(0)' : 'translateX(-12px)',
               transition: 'opacity 0.35s ease 0.15s, transform 0.35s ease 0.15s',

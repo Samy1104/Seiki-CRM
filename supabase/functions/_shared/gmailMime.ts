@@ -16,11 +16,16 @@ export interface RawEmailParams {
   references?: string;
 }
 
-export function buildEmailHtml(corps: string, trackingPixelUrl: string): string {
+export function buildEmailHtml(corps: string, trackingPixelUrl: string, signatureHtml?: string): string {
   const htmlBody = corps
     .split('\n')
     .map((line) => (line.trim() === '' ? '<br/>' : `<p style="margin:0 0 8px 0;line-height:1.6">${line}</p>`))
     .join('');
+
+  const signatureContent = signatureHtml ?? `
+    <p style="margin:0;font-weight:600;color:#111827">L'équipe Seiki</p>
+    <p style="margin:2px 0 0 0;color:#6b7280;font-size:12px">contact@seiki.co</p>
+  `.trim();
 
   return `<!DOCTYPE html>
 <html lang="fr">
@@ -29,13 +34,13 @@ export function buildEmailHtml(corps: string, trackingPixelUrl: string): string 
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
 </head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1a1a2e;background:#fff;padding:24px;max-width:600px;margin:0 auto">
-  <div style="border-left:3px solid #6B5FE6;padding-left:16px;margin-bottom:24px">
+  <div style="margin-bottom:24px">
     ${htmlBody}
   </div>
   <hr style="border:none;border-top:1px solid #eee;margin:24px 0"/>
-  <p style="font-size:11px;color:#888;margin:0">
-    Envoyé par Seiki — <a href="mailto:contact@seiki.fr" style="color:#6B5FE6">contact@seiki.fr</a>
-  </p>
+  <div style="font-size:13px;color:#4b5563;line-height:1.5">
+    ${signatureContent}
+  </div>
   <!-- Tracking pixel (ouverture) -->
   <img src="${trackingPixelUrl}" width="1" height="1" style="display:none" alt=""/>
 </body>

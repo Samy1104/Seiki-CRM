@@ -33,15 +33,7 @@ export function ColorModal({ value, onChange, onClose, anchorRef }: ColorModalPr
     setCustomHex(value || "#6B5FE6");
   }, [value]);
 
-  const getInitialPos = () => {
-    if (anchorRef.current) {
-      const rect = anchorRef.current.getBoundingClientRect();
-      return { top: rect.bottom + 8, left: rect.left, width: Math.max(rect.width, 260) };
-    }
-    return { top: 0, left: 0, width: 0 };
-  };
-
-  const [pos, setPos] = useState(getInitialPos);
+  const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
   const ref = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
@@ -55,8 +47,15 @@ export function ColorModal({ value, onChange, onClose, anchorRef }: ColorModalPr
     function onDown(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
     document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [onClose]);
 
   function handleSelectColor(hex: string) {
@@ -70,6 +69,8 @@ export function ColorModal({ value, onChange, onClose, anchorRef }: ColorModalPr
     <div
       ref={ref}
       className="fixed"
+      role="dialog"
+      aria-modal="true"
       style={{
         top: pos.top,
         left: pos.left,
@@ -103,11 +104,10 @@ export function ColorModal({ value, onChange, onClose, anchorRef }: ColorModalPr
         </span>
 
         <button
+          type="button"
           onClick={onClose}
-          className="transition-colors duration-150 cursor-pointer"
-          style={{ color: "#555", lineHeight: 0 }}
-          onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = "#f2ede4")}
-          onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = "#555")}
+          className="text-[#555] hover:text-[#f2ede4] transition-colors duration-150 cursor-pointer border-none bg-transparent p-0 leading-none outline-none focus:outline-none"
+          aria-label="Fermer"
         >
           <X size={15} strokeWidth={1.5} />
         </button>
@@ -164,7 +164,7 @@ export function ColorModal({ value, onChange, onClose, anchorRef }: ColorModalPr
                   onChange(val);
                 }
               }}
-              className="flex-1 bg-[#1a1a1a] border border-white/10 rounded px-2.5 py-1.5 text-xs text-[#f2ede4] font-mono focus:border-[#D4C4A8] outline-none"
+              className="flex-1 bg-[#1a1a1a] border border-white/10 rounded px-2.5 py-1.5 text-xs text-[#f2ede4] font-mono focus:border-[var(--color-beige,#D4C4A8)] outline-none"
               placeholder="#6B5FE6"
             />
           </div>
