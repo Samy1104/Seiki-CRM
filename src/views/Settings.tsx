@@ -9,6 +9,7 @@ import { MembersTab } from './settings/MembersTab';
 import { PipelineStagesTab } from './settings/PipelineStagesTab';
 import { SlaTab } from './settings/SlaTab';
 import { ProspectionSettingsTab } from './settings/ProspectionSettingsTab';
+import { DashboardTargetsSettings } from './settings/DashboardTargetsSettings';
 import { PageTitle } from '../components/ui/PageTitle';
 
 const AVATAR_COLORS = ['#6B5FE6', '#F5B731', '#4ADE80', '#EC4899', '#3B82F6', '#8B5CF6', '#10B981', '#F97316'];
@@ -18,11 +19,12 @@ const TABS = [
   { id: 'pipeline', label: 'Étapes du Pipeline', icon: Target },
   { id: 'sla', label: 'Règles & SLA Globaux', icon: Sliders },
   { id: 'prospection', label: 'Prospection', icon: Sliders },
+  { id: 'dashboard', label: 'Objectifs & CODIR', icon: Target },
 ] as const;
 
 export const Settings: React.FC = () => {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla' | 'prospection'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'pipeline' | 'sla' | 'prospection' | 'dashboard'>('members');
 
   // Form states - Member
   const [newMemberFirstName, setNewMemberFirstName] = useState('');
@@ -428,6 +430,10 @@ export const Settings: React.FC = () => {
           onReplyNegativeStageIdChange={setReplyNegativeStageId}
           onSubmit={handleSaveProspectionSettings}
         />
+      )}
+
+      {activeTab === 'dashboard' && (
+        <DashboardTargetsSettings />
       )}
     </div>
   );
