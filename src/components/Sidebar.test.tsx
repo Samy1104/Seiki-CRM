@@ -30,6 +30,21 @@ describe('Sidebar', () => {
     expect(screen.getByText('Dashboard CODIR')).toBeInTheDocument();
   });
 
+  it('renders contenu nav items in correct order (Prospection before Posts)', () => {
+    renderWithRouter(
+      <Sidebar section="contenu" contenuView="prospection" setContenuView={vi.fn()} setActiveApp={vi.fn()} />,
+      { initialEntries: ['/contenu/prospection'] }
+    );
+
+    const buttons = screen.getAllByRole('button').map((b) => b.textContent?.trim()).filter(Boolean);
+    const prospectionIndex = buttons.findIndex((text) => text?.includes('Prospection'));
+    const postsIndex = buttons.findIndex((text) => text?.includes('Posts'));
+
+    expect(prospectionIndex).toBeGreaterThan(-1);
+    expect(postsIndex).toBeGreaterThan(-1);
+    expect(prospectionIndex).toBeLessThan(postsIndex);
+  });
+
   it('calls setView when a crm nav item is clicked', () => {
     const setView = vi.fn();
     renderWithRouter(<Sidebar section="crm" currentView="pipeline" setView={setView} setActiveApp={vi.fn()} />);

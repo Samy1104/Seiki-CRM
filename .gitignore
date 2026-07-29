@@ -31,3 +31,6 @@ test_supa.js
 .worktrees
 .superpowers
 
+
+# Local Netlify folder
+.netlify

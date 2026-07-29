@@ -37,8 +37,8 @@ const crmNav: NavItem[] = [
 ];
 
 const contenuNav: NavItem[] = [
-  { id: "linkedin", label: "Posts", icon: <FileText size={16} strokeWidth={1.5} /> },
   { id: "prospection", label: "Prospection", icon: <Target size={16} strokeWidth={1.5} /> },
+  { id: "linkedin", label: "Posts", icon: <FileText size={16} strokeWidth={1.5} /> },
 ];
 
 export interface SidebarProps {
@@ -98,7 +98,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     } else {
       if (path.includes("/contenu/prospection")) return "prospection";
       if (path.includes("/contenu/linkedin")) return "linkedin";
-      return contenuView || "linkedin";
+      return contenuView || "prospection";
     }
   };
 

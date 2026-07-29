@@ -19,7 +19,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
 
   const handleContenuClick = () => {
     if (setActiveApp) setActiveApp('contenu');
-    navigate('/contenu/linkedin');
+    navigate('/contenu/prospection');
   };
 
   return (

@@ -543,10 +543,44 @@ body {
    runtime <style> tag whose load order relative to this file isn't
    guaranteed — !important makes the override reliable either way.
    ============================================================ */
+.rkk-seiki-board *,
+[class*="rkk-"] {
+  box-sizing: border-box;
+}
+
 .rkk-column-shadow,
-.rkk-card-shadow {
-  background-color: rgba(13, 13, 13, 0.7) !important;
-  border: 1px solid rgba(200, 184, 154, 0.3) !important;
+.rkk-card-shadow,
+.rkk-drag-shadow,
+.rkk-shadow,
+.rkk-card-placeholder,
+.rkk-column-placeholder,
+[data-rkk-shadow],
+[data-rkk-card-shadow],
+[data-rkk-column-shadow],
+div[class*="rkk-"][class*="shadow"],
+div[class*="rkk-"][class*="placeholder"],
+div[class*="rkk-"][class*="drag"] {
+  background-color: rgba(20, 20, 20, 0.6) !important;
+  background: rgba(20, 20, 20, 0.6) !important;
+  border: 1.5px dashed rgba(200, 184, 154, 0.35) !important;
+  border-radius: 10px !important;
+  box-shadow: none !important;
+  opacity: 0.7 !important;
+}
+
+[data-drop-indicator],
+[data-pragmatic-drag-and-drop-element],
+div[class*="drop-indicator"],
+div[class*="drag-preview"],
+div[class*="rkk-drag-preview"] {
+  background-color: transparent !important;
+  background: transparent !important;
+  border-color: #c8b89a !important;
+}
+
+.rkk-seiki-board [data-is-dragging="true"],
+.rkk-seiki-board [data-dragging="true"] {
+  opacity: 0.4 !important;
 }
 
 /* .rkk-column-outer's own `flex` style (set via columnWrapperStyle in

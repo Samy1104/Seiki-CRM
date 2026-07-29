@@ -7,7 +7,7 @@ import { tasksService } from '../services/tasksService';
 import { useToast } from '../context/ToastContext';
 import { isSlaBreached } from '../utils/leadMetrics';
 import { useCachedResource } from '../hooks/useCachedResource';
-import { AlertTriangle, Plus } from 'lucide-react';
+import { AlertTriangle, Plus, Eye, EyeOff } from 'lucide-react';
 import { LeadDetailModal } from './pipeline/LeadDetailModal';
 import { AccentButton } from '../components/ui/AccentButton';
 import { KpiTile } from '../components/ui/KpiTile';
@@ -22,19 +22,23 @@ interface PipelineProps {
 
 export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   const { showToast } = useToast();
+  const [showArchivedInLost, setShowArchivedInLost] = useState(false);
+
   const onError = (err: unknown) => {
     console.error('Error loading pipeline data:', err);
     showToast('Erreur de chargement des données', 'error');
   };
 
   const stagesRes = useCachedResource('pipelineStages', () => settingsService.getPipelineStages(), [], { onError });
-  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(), [], { onError });
+  const leadsRes = useCachedResource('leads:false', () => leadsService.getLeads(false), [], { onError });
+  const archivedLeadsRes = useCachedResource('leads:true', () => leadsService.getLeads(true), [], { onError });
   const teamMembersRes = useCachedResource('teamMembers', () => settingsService.getTeamMembers(), [], { onError });
   const tasksRes = useCachedResource('tasks', () => tasksService.getTasks(), [], { onError });
   const slaLimitsRes = useCachedResource('slaLimits', () => settingsService.getSlaLimits(), { Media: 5, Retail: 7, Instit: 14 }, { onError });
 
   const stages = stagesRes.data;
   const leads = leadsRes.data;
+  const archivedLeads = archivedLeadsRes.data;
   const teamMembers = teamMembersRes.data;
   const tasks = tasksRes.data;
   const slaLimits = slaLimitsRes.data;
@@ -43,6 +47,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
   const reloadPipelineData = () => Promise.all([
     stagesRes.reload(),
     leadsRes.reload(),
+    archivedLeadsRes.reload(),
     teamMembersRes.reload(),
     tasksRes.reload(),
     slaLimitsRes.reload(),
@@ -83,6 +88,15 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
     [leads]
   );
   const hotCount = useMemo(() => leads.filter(l => l.score >= 80).length, [leads]);
+
+  const displayLeads = useMemo(() => {
+    if (!showArchivedInLost) return leads;
+    const lostStageIds = stages
+      .filter((st) => st.is_closed_lost || (st.name || '').toLowerCase().includes('perdu'))
+      .map((st) => st.id);
+    const archivedLostLeads = archivedLeads.filter((l) => lostStageIds.includes(l.stage_id));
+    return [...leads, ...archivedLostLeads];
+  }, [leads, archivedLeads, showArchivedInLost, stages]);
 
   const slaBreaches = useMemo(
     () => activeLeads.filter(l => isSlaBreached(l, slaLimits)),
@@ -136,7 +150,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
       <div className="flex-1 min-h-0 w-full overflow-hidden">
         <SeikiKanbanBoard<Lead, PipelineStage>
           columns={stages}
-          cards={leads}
+          cards={displayLeads}
           getColumnId={(st) => st.id}
           getColumnTitle={(st) => st.name}
           getColumnColor={(st) => st.color}
@@ -144,12 +158,34 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           getCardColumnId={(l) => l.stage_id}
           fillWidth={false}
           renderColumnHeaderExtra={(st, count) => {
-            const stageLeads = leads.filter((l) => l.stage_id === st.id);
+            const stageLeads = displayLeads.filter((l) => l.stage_id === st.id);
             const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);
+            const isLostStage = Boolean(st.is_closed_lost || (st.name || '').toLowerCase().includes('perdu'));
+
             return (
-              <span className="text-[11px] font-normal text-ink-soft">
-                {count} · {stageVal.toLocaleString()} €
-              </span>
+              <div className="flex items-center gap-1.5">
+                {isLostStage && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowArchivedInLost((prev) => !prev);
+                    }}
+                    className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium border transition-colors cursor-pointer ${
+                      showArchivedInLost
+                        ? 'bg-[#c8b89a]/20 text-[#c8b89a] border-[#c8b89a]/50 font-bold'
+                        : 'bg-surface/50 text-ink-soft border-line hover:text-ink hover:border-line-focus'
+                    }`}
+                    title={showArchivedInLost ? 'Masquer les leads archivés' : 'Afficher les leads archivés'}
+                  >
+                    {showArchivedInLost ? <Eye size={11} /> : <EyeOff size={11} />}
+                    <span>Archivés</span>
+                  </button>
+                )}
+                <span className="text-[11px] font-normal text-ink-soft">
+                  {count} · {stageVal.toLocaleString()} €
+                </span>
+              </div>
             );
           }}
           renderCard={(lead) => (
@@ -170,20 +206,57 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           )}
           onCardMove={async (leadId, _fromCol, toCol) => {
             const targetStage = stages.find((s) => s.id === toCol);
-            const shouldArchive = targetStage?.is_closed_lost ?? false;
-            await leadsService.updateLead(leadId, {
-              stage_id: toCol,
-              ...(shouldArchive ? { is_archived: true } : {}),
-            });
-            leadsRes.setData((prev) =>
-              prev.map((l) =>
-                l.id === leadId
-                  ? { ...l, stage_id: toCol, ...(shouldArchive ? { is_archived: true } : {}) }
-                  : l
-              )
+            const stageName = (targetStage?.name || '').toLowerCase();
+            const shouldArchive = Boolean(
+              targetStage?.is_closed_lost ||
+              stageName.includes('perdu') ||
+              stageName.includes('lost') ||
+              stageName.includes('abandon')
             );
-            if (shouldArchive) {
-              showToast('Lead déplacé vers un statut perdu et archivé', 'info');
+
+            const activeMatch = leadsRes.data.find((l) => l.id === leadId);
+            const archivedMatch = archivedLeadsRes.data.find((l) => l.id === leadId);
+            const currentLead = activeMatch || archivedMatch;
+
+            if (currentLead) {
+              const updatedLead: Lead = {
+                ...currentLead,
+                stage_id: toCol,
+                stage: targetStage || currentLead.stage,
+                is_archived: shouldArchive,
+              };
+
+              if (shouldArchive) {
+                // Move to archived list, remove from active list
+                leadsRes.setData((prev) => prev.filter((l) => l.id !== leadId));
+                archivedLeadsRes.setData((prev) => {
+                  const filtered = prev.filter((l) => l.id !== leadId);
+                  return [...filtered, updatedLead];
+                });
+              } else {
+                // Move to active list, remove from archived list
+                leadsRes.setData((prev) => {
+                  const filtered = prev.filter((l) => l.id !== leadId);
+                  return [...filtered, updatedLead];
+                });
+                archivedLeadsRes.setData((prev) => prev.filter((l) => l.id !== leadId));
+              }
+            }
+
+            // 2. Perform async network update in background
+            try {
+              await leadsService.updateLead(leadId, {
+                stage_id: toCol,
+                is_archived: shouldArchive,
+              });
+              if (shouldArchive) {
+                showToast('Lead déplacé vers un statut perdu et archivé', 'info');
+              }
+            } catch (err) {
+              console.error('Error updating lead stage:', err);
+              showToast('Erreur lors du déplacement du lead', 'error');
+              leadsRes.reload();
+              archivedLeadsRes.reload();
             }
           }}
           onCardClick={(lead) => handleOpenLead(lead.id)}

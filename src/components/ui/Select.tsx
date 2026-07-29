@@ -153,13 +153,10 @@ export const Select: React.FC<SelectProps> = ({
       handleOpenChange(false);
     };
 
-    const timer = setTimeout(() => {
-      document.addEventListener('mousedown', handleOutsideClick);
-      document.addEventListener('touchstart', handleOutsideClick);
-    }, 0);
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
 
     return () => {
-      clearTimeout(timer);
       document.removeEventListener('mousedown', handleOutsideClick);
       document.removeEventListener('touchstart', handleOutsideClick);
     };
@@ -207,7 +204,9 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
       contentId,
       disabled,
       onValueChange,
-      optionValuesRef
+      optionValuesRef,
+      staticRegistry,
+      value
     } = useSelectContext();
 
     // Expose ref to both context and internal forwardRef
@@ -216,7 +215,9 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
     const handleKeyDown = useCallback((e: KeyboardEvent | React.KeyboardEvent) => {
       if (disabled) return;
 
-      const keys = optionValuesRef.current;
+      const keys = optionValuesRef.current.length > 0
+        ? optionValuesRef.current
+        : Object.keys(staticRegistry);
 
       if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ' || e.key === 'Escape') {
         e.preventDefault();
@@ -225,6 +226,12 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
       if (!open) {
         if (e.key === 'ArrowDown' || e.key === 'ArrowUp' || e.key === 'Enter' || e.key === ' ') {
           setOpen(true);
+          if (keys.length > 0) {
+            const initialFocused = (value !== undefined && keys.includes(value))
+              ? value
+              : (e.key === 'ArrowUp' ? keys[keys.length - 1] : keys[0]);
+            setFocusedValue(initialFocused);
+          }
         }
         return;
       }
@@ -261,7 +268,7 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
           break;
         }
       }
-    }, [disabled, open, focusedValue, setOpen, onValueChange, setFocusedValue, optionValuesRef]);
+    }, [disabled, open, focusedValue, setOpen, onValueChange, setFocusedValue, optionValuesRef, staticRegistry, value]);
 
     // Single global keyboard listener when open
     useEffect(() => {

@@ -52,7 +52,7 @@ const AppRoutes: React.FC = () => {
 
         {/* Contenu Section with ContenuLayout */}
         <Route path="/contenu" element={<ContenuLayout />}>
-          <Route index element={<Navigate to="/contenu/linkedin" replace />} />
+          <Route index element={<Navigate to="/contenu/prospection" replace />} />
           <Route path="linkedin" element={<Contenu />} />
           <Route path="prospection" element={<Prospection />} />
         </Route>

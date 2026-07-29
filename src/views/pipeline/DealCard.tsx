@@ -42,7 +42,14 @@ export const DealCard: React.FC<DealCardProps> = ({ lead, slaBreached, isTaskOve
 
       {/* Line 2: Segment & Metrics */}
       <div className="mt-1.5 flex items-center justify-between gap-1.5 text-[10.5px]">
-        <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
+        <div className="flex items-center gap-1">
+          <Badge tone="neutral" className="px-1.5 py-0 text-[9.5px] font-semibold">{lead.segment}</Badge>
+          {lead.is_archived && (
+            <span className="px-1.5 py-0 rounded text-[9px] font-medium bg-danger/15 text-danger border border-danger/30">
+              Archivé
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 flex-shrink-0 whitespace-nowrap">
           <span className={`text-[10px] ${slaBreached ? 'font-semibold text-danger' : 'text-ink-faint'}`}>
             J+{lead.days_in_stage}

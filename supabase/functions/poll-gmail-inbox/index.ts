@@ -359,7 +359,35 @@ async function processInboundMessage(
       negativeStageId: replySettings.negativeStageId,
     });
     if (targetStageId) {
-      const { error: stageUpdateErr } = await supabase.from("leads").update({ stage_id: targetStageId, updated_at: now }).eq("id", lead.id);
+      // Vérifier si l'étape cible est une étape de perte (Closed Lost)
+      const { data: targetStage } = await supabase
+        .from("pipeline_stages")
+        .select("name, is_closed_lost")
+        .eq("id", targetStageId)
+        .maybeSingle();
+
+      const { data: lostSetting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "pipeline_lost_stage_ids")
+        .maybeSingle();
+
+      const lostStageIds = Array.isArray((lostSetting?.value as any)?.stage_ids) ? (lostSetting!.value as any).stage_ids : [];
+      const stageName = (targetStage?.name || "").toLowerCase();
+      const isLost = Boolean(
+        targetStage?.is_closed_lost ||
+        lostStageIds.includes(targetStageId) ||
+        stageName.includes("perdu") ||
+        stageName.includes("lost") ||
+        stageName.includes("abandon")
+      );
+
+      const leadUpdates: Record<string, any> = { stage_id: targetStageId, updated_at: now };
+      if (isLost) {
+        leadUpdates.is_archived = true;
+      }
+
+      const { error: stageUpdateErr } = await supabase.from("leads").update(leadUpdates).eq("id", lead.id);
       if (stageUpdateErr) console.error("[poll-gmail-inbox] Failed to update lead stage from reply sentiment:", stageUpdateErr.message);
     }
   }

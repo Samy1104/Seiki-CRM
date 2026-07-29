@@ -159,7 +159,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
       }
 
       const targetStage = stages.find((s) => s.id === editForm.stage_id);
-      const shouldArchive = targetStage?.is_closed_lost ?? false;
+      const stageName = (targetStage?.name || '').toLowerCase();
+      const shouldArchive = Boolean(
+        targetStage?.is_closed_lost ||
+        stageName.includes('perdu') ||
+        stageName.includes('lost') ||
+        stageName.includes('abandon')
+      );
 
       await leadsService.updateLead(
         lead.id,
@@ -377,9 +383,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         </div>
       }
     >
-      <div className="p-6 space-y-6">
+      <div className="p-5 space-y-4">
         {/* Navigation Pill Tabs */}
-        <div className="flex items-center gap-2 border-b border-line pb-4 font-ui">
+        <div className="flex items-center gap-2 border-b border-line pb-3.5 font-ui">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = modalTab === tab.id;
@@ -402,8 +408,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
         {/* 1. INFO TAB */}
         {modalTab === 'info' && (
-          <div className="space-y-6">
-            <div className="rounded-surface border border-line bg-elevated p-5 space-y-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+            {/* General Info Card */}
+            <div className="rounded-surface border border-line bg-elevated p-4 space-y-2.5">
               {lead.phone && (
                 <div className="flex items-center justify-between text-xs py-1 border-b border-line/50">
                   <span className="text-ink-soft flex items-center gap-1.5"><Phone size={13} /> Téléphone</span>
@@ -433,32 +440,32 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               {lead.note && (
                 <div className="pt-2 border-t border-line">
                   <div className="text-xs font-semibold text-ink mb-1">Note</div>
-                  <div className="text-xs text-ink-soft bg-surface p-3 rounded-control border border-line">{lead.note}</div>
+                  <div className="text-xs text-ink-soft bg-surface p-2.5 rounded-control border border-line">{lead.note}</div>
                 </div>
               )}
             </div>
 
-            {/* ICP Scoring breakdown */}
-            <div className="rounded-surface border border-line bg-elevated p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles size={16} className="text-[#D4C4A8]" />
-                <h3 className="font-display text-sm font-bold text-ink">Scoring ICP détaillé</h3>
+            {/* ICP Scoring breakdown Card */}
+            <div className="rounded-surface border border-line bg-elevated p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles size={15} className="text-[#D4C4A8]" />
+                <h3 className="font-display text-xs font-bold text-ink">Scoring ICP détaillé</h3>
               </div>
               {lead.scores && lead.scores.length > 0 ? (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {lead.scores.map((s) => {
                     const pct = Math.round((s.value / s.max_value) * 100);
                     const color =
                       s.value >= s.max_value * 0.8 ? '#4ADE80' : s.value >= s.max_value * 0.5 ? '#F59E0B' : '#F87171';
                     return (
-                      <div key={s.criterion} className="space-y-1">
-                        <div className="flex justify-between text-xs">
+                      <div key={s.criterion} className="space-y-0.5">
+                        <div className="flex justify-between text-[11px]">
                           <span className="capitalize text-ink-soft">
                             {s.criterion === 'decideur' ? 'Accès décideur' : s.criterion === 'fit' ? 'Fit offre Seiki' : s.criterion}
                           </span>
-                          <span className="font-mono text-ink font-semibold">{s.value}/{s.max_value}</span>
+                          <span className="font-mono text-ink font-semibold text-[10.5px]">{s.value}/{s.max_value}</span>
                         </div>
-                        <div className="h-2 w-full rounded-full bg-hover overflow-hidden">
+                        <div className="h-1.5 w-full rounded-full bg-hover overflow-hidden">
                           <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, background: color }} />
                         </div>
                       </div>
@@ -592,63 +599,84 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               </AccentButton>
             </form>
 
-            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
               {lead.history && lead.history.length > 0 ? (
                 lead.history.map((item) => (
-                  <div key={item.id} className="flex items-start gap-3 p-3.5 rounded-control border border-line bg-surface/50">
-                    <div className="h-2 w-2 rounded-full bg-[#D4C4A8] mt-1.5 shrink-0" />
-                    <div className="flex-1 space-y-1">
-                      {editingNoteId === item.id ? (
-                        <div className="space-y-2">
-                          <input
-                            type="text"
-                            className={inputClass}
-                            value={editedNoteContent}
-                            onChange={(e) => setEditedNoteContent(e.target.value)}
-                            autoFocus
-                          />
-                          <div className="flex gap-2">
-                            <AccentButton type="button" variant="primary" icon={<CheckCircle2 size={13} />} onClick={() => handleSaveEditNote(item.id)}>
-                              Enregistrer
-                            </AccentButton>
-                            <AccentButton type="button" variant="secondary" onClick={() => setEditingNoteId(null)}>
-                              Annuler
-                            </AccentButton>
-                          </div>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-xs font-medium text-ink">{item.content}</div>
-                          <div className="text-[10.5px] text-ink-faint">
-                            {new Date(item.created_at).toLocaleString('fr-FR', {
-                              day: '2-digit',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                            {item.user ? ` · par ${item.user.full_name}` : ''}
-                          </div>
-                          {item.action_type === 'note' && !item.is_auto && (
-                            <div className="flex items-center gap-2 pt-1">
+                  <div
+                    key={item.id}
+                    className="flex items-start justify-between gap-2.5 px-3 py-2 rounded-control border border-line bg-surface/40 hover:bg-surface/70 transition-colors"
+                  >
+                    <div className="flex items-start gap-2.5 min-w-0 flex-1">
+                      <div className="h-1.5 w-1.5 rounded-full bg-[#c8b89a] shrink-0 mt-1.5" />
+                      <div className="min-w-0 flex-1">
+                        {editingNoteId === item.id ? (
+                          <div className="flex items-start gap-2 my-0.5 w-full">
+                            <textarea
+                              className={`${inputClass} py-1 px-2 text-xs flex-1 resize-y min-h-[36px]`}
+                              rows={2}
+                              value={editedNoteContent}
+                              onChange={(e) => setEditedNoteContent(e.target.value)}
+                              autoFocus
+                            />
+                            <div className="flex flex-col gap-1 shrink-0">
                               <button
                                 type="button"
-                                className="text-[11px] font-medium text-[#D4C4A8] hover:underline cursor-pointer"
-                                onClick={() => handleStartEditNote(item.id, item.content)}
+                                className="p-1 rounded text-success hover:bg-success/15 transition-colors cursor-pointer"
+                                title="Enregistrer"
+                                onClick={() => handleSaveEditNote(item.id)}
                               >
-                                Modifier
+                                <CheckCircle2 size={14} />
                               </button>
                               <button
                                 type="button"
-                                className="text-[11px] font-medium text-danger hover:underline cursor-pointer"
-                                onClick={() => handleDeleteNote(item.id)}
+                                className="p-1 rounded text-ink-soft hover:bg-hover hover:text-ink transition-colors cursor-pointer"
+                                title="Annuler"
+                                onClick={() => setEditingNoteId(null)}
                               >
-                                Supprimer
+                                <X size={14} />
                               </button>
                             </div>
-                          )}
-                        </>
-                      )}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-medium text-ink whitespace-pre-wrap break-words leading-relaxed">
+                              {item.content}
+                            </span>
+                            <span className="text-[10px] text-ink-faint">
+                              {new Date(item.created_at).toLocaleString('fr-FR', {
+                                day: '2-digit',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                              {item.user ? ` · ${item.user.full_name}` : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Side action icons for ALL history cards */}
+                    {editingNoteId !== item.id && (
+                      <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                        <button
+                          type="button"
+                          className="p-1 rounded text-ink-soft hover:text-[#c8b89a] hover:bg-hover transition-colors cursor-pointer"
+                          title="Modifier"
+                          onClick={() => handleStartEditNote(item.id, item.content)}
+                        >
+                          <Edit3 size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          className="p-1 rounded text-ink-soft hover:text-danger hover:bg-danger/10 transition-colors cursor-pointer"
+                          title="Supprimer"
+                          onClick={() => handleDeleteNote(item.id)}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (

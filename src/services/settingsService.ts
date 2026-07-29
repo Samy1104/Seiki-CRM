@@ -213,10 +213,14 @@ export const settingsService = {
     if (error) throw error;
 
     const lostIds = await this.getLostStageIds();
-    return (data || []).map(st => ({
-      ...st,
-      is_closed_lost: Boolean(st.is_closed_lost || lostIds.includes(st.id))
-    }));
+    return (data || []).map(st => {
+      const name = (st.name || '').toLowerCase();
+      const isLostByName = name.includes('perdu') || name.includes('lost') || name.includes('abandon');
+      return {
+        ...st,
+        is_closed_lost: Boolean(st.is_closed_lost || lostIds.includes(st.id) || isLostByName)
+      };
+    });
   },
 
   async addPipelineStage(stage: Omit<PipelineStage, 'id'>): Promise<PipelineStage> {

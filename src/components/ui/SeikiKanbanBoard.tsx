@@ -165,8 +165,10 @@ export function SeikiKanbanBoard<TCard, TColumn>({
               borderRadius: '8px',
               border: '1.5px solid #c8b89a',
               boxShadow: '0 12px 28px rgba(0, 0, 0, 0.8)',
-              transform: 'rotate(4deg)',
-              padding: '8px',
+              transform: 'rotate(2deg)',
+              padding: '4px',
+              width: '270px',
+              maxWidth: '280px',
               pointerEvents: 'none',
             }}
           >
