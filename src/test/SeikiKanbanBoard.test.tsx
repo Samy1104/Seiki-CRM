@@ -91,7 +91,7 @@ describe('SeikiKanbanBoard', () => {
 
     const columnOuter = container.querySelector('.rkk-column-outer');
     expect(columnOuter).not.toBeNull();
-    expect(columnOuter).toHaveStyle({ minWidth: '260px', maxWidth: '264px' });
+    expect(columnOuter).toHaveStyle({ minWidth: '300px' });
   });
 
   // The actual flex item that must grow to fill the board's width is an

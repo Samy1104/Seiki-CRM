@@ -145,7 +145,7 @@ export const leadsService = {
       .insert([{
         lead_id: newLead.id,
         action_type: 'note',
-        content: `Lead créé — Score ICP calculé.`,
+        content: `Lead créé`,
         metadata: { score: newLead.score }
       }]);
 

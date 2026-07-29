@@ -578,6 +578,12 @@ body {
   max-height: 100% !important;
 }
 
+.rkk-seiki-board:not(.rkk-fill-width) > div:not(.rkk-column-adder) {
+  width: 300px !important;
+  min-width: 300px !important;
+  flex-shrink: 0 !important;
+}
+
 .rkk-seiki-board .rkk-column-outer {
   display: flex !important;
   flex-direction: column !important;

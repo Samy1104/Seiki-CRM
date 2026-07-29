@@ -219,8 +219,8 @@ export function SeikiKanbanBoard<TCard, TColumn>({
         maxHeight: '100%',
         boxSizing: 'border-box',
         ...(fillWidth
-          ? { flex: '1 1 0%', minWidth: '0', maxWidth: '100%' }
-          : { minWidth: '260px' }),
+          ? { flex: '1 1 0%', minWidth: '220px', maxWidth: 'none' }
+          : { minWidth: '300px', width: '300px', flexShrink: 0 }),
       })}
       columnStyle={() => ({
         backgroundColor: 'transparent',

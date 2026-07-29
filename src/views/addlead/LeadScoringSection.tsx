@@ -31,35 +31,52 @@ export const LeadScoringSection: React.FC<LeadScoringSectionProps> = ({
       </div>
 
       <div className="flex flex-col gap-2.5">
-        {CRITERIA.map((c) => (
-          <div key={c.id} className="flex items-center gap-2.5">
-            <span className="w-32 flex-shrink-0 text-xs font-medium text-ink-soft">{c.label}</span>
-            <span className="w-8 flex-shrink-0 text-[10px] text-ink-faint">/{c.max}</span>
-            <Select
-              value={String(scores[c.id].value)}
-              onValueChange={(valStr) => {
-                const val = parseInt(valStr) || 0;
-                const opt = c.opts.find((o) => o.v === val);
-                onScoreChange(c.id, val, opt ? opt.l : '');
-              }}
-            >
-              <SelectTrigger className="h-8 flex-1 text-xs">
-                <SelectValue placeholder="— Sélectionner" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">— Sélectionner</SelectItem>
-                {c.opts.map((o) => (
-                  <SelectItem key={o.v} value={String(o.v)}>
-                    {o.l} ({o.v}pts)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <span className={`w-12 flex-shrink-0 text-right text-xs font-semibold tabular-nums ${scoreClass(scores[c.id].value, c.max)}`}>
-              {scores[c.id].value > 0 ? `${scores[c.id].value}pts` : '—'}
-            </span>
-          </div>
-        ))}
+        {CRITERIA.map((c) => {
+          const hasZeroOpt = c.opts.some((o) => o.v === 0);
+          const currentVal = scores[c.id]?.value ?? 0;
+          const currentLabel = scores[c.id]?.label ?? '';
+          const isSelected = currentVal > 0 || (hasZeroOpt && currentLabel !== '');
+          const currentValueStr = isSelected ? String(currentVal) : 'none';
+
+          return (
+            <div key={c.id} className="flex items-center gap-2.5">
+              <span className="w-32 flex-shrink-0 text-xs font-medium text-ink-soft">{c.label}</span>
+              <span className="w-8 flex-shrink-0 text-[10px] text-ink-faint">/{c.max}</span>
+              <Select
+                value={currentValueStr}
+                onValueChange={(valStr) => {
+                  if (valStr === 'none') {
+                    onScoreChange(c.id, 0, '');
+                    return;
+                  }
+                  const val = parseInt(valStr) || 0;
+                  const opt = c.opts.find((o) => o.v === val);
+                  onScoreChange(c.id, val, opt ? opt.l : '');
+                }}
+              >
+                <SelectTrigger className="h-8 flex-1 text-xs">
+                  <SelectValue placeholder="— Sélectionner" />
+                </SelectTrigger>
+                <SelectContent>
+                  {!hasZeroOpt && <SelectItem value="none">— Sélectionner</SelectItem>}
+                  {c.opts.map((o) => (
+                    <SelectItem key={o.v} value={String(o.v)}>
+                      {o.l} ({o.v}pts)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span
+                className={`w-12 flex-shrink-0 text-right text-xs font-semibold tabular-nums ${scoreClass(
+                  currentVal,
+                  c.max
+                )}`}
+              >
+                {isSelected ? `${currentVal}pts` : '—'}
+              </span>
+            </div>
+          );
+        })}
       </div>
 
       <div className="mt-6 border-t border-line pt-5">

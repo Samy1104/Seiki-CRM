@@ -142,7 +142,7 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           getColumnColor={(st) => st.color}
           getCardId={(l) => l.id}
           getCardColumnId={(l) => l.stage_id}
-          fillWidth={true}
+          fillWidth={false}
           renderColumnHeaderExtra={(st, count) => {
             const stageLeads = leads.filter((l) => l.stage_id === st.id);
             const stageVal = stageLeads.reduce((acc, l) => acc + l.deal_value, 0);

@@ -95,7 +95,7 @@ export function useAddLeadForm(setView: (view: string) => void) {
     taille: { value: 0, label: '' },
     budget: { value: 0, label: '' },
     urgence: { value: 0, label: '' },
-    decideur: { value: 0, label: '' },
+    decideur: { value: 0, label: 'Inconnu' },
     fit: { value: 0, label: '' },
     concurrence: { value: 0, label: '' },
   });
@@ -145,7 +145,7 @@ export function useAddLeadForm(setView: (view: string) => void) {
       taille: { value: 0, label: '' },
       budget: { value: 0, label: '' },
       urgence: { value: 0, label: '' },
-      decideur: { value: 0, label: '' },
+      decideur: { value: 0, label: 'Inconnu' },
       fit: { value: 0, label: '' },
       concurrence: { value: 0, label: '' },
     });

@@ -32,6 +32,8 @@ import { Badge } from '../../components/ui/Badge';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
 import CalendarModal from '../../components/CalendarModal';
+import { CRITERIA } from '../../hooks/useAddLeadForm';
+import { LeadScoringSection } from '../addlead/LeadScoringSection';
 
 interface LeadDetailModalProps {
   lead: Lead;
@@ -66,6 +68,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     email: initialLead.email || '',
     linkedin_url: initialLead.linkedin_url || '',
     deal_value: initialLead.deal_value,
+    score: initialLead.score ?? 0,
     stage_id: initialLead.stage_id,
     owner_id: initialLead.owner_id || '',
     note: initialLead.note || '',
@@ -81,6 +84,46 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [newTaskAssignee, setNewTaskAssignee] = useState('');
   const [showTaskCalendar, setShowTaskCalendar] = useState(false);
   const taskDateInputRef = useRef<HTMLButtonElement>(null);
+
+  const initialScoresState = React.useMemo(() => {
+    const defaultState: Record<string, { value: number; label: string }> = {
+      taille: { value: 0, label: '' },
+      budget: { value: 0, label: '' },
+      urgence: { value: 0, label: '' },
+      decideur: { value: 0, label: '' },
+      fit: { value: 0, label: '' },
+      concurrence: { value: 0, label: '' },
+    };
+
+    (initialLead.scores || []).forEach((s) => {
+      if (defaultState[s.criterion]) {
+        defaultState[s.criterion] = { value: s.value, label: s.label_selected || '' };
+      }
+    });
+
+    return defaultState;
+  }, [initialLead.scores]);
+
+  const [scores, setScores] = useState(initialScoresState);
+
+  const handleScoreChange = (criterionId: string, value: number, label: string) => {
+    setScores((prev) => ({
+      ...prev,
+      [criterionId]: { value, label },
+    }));
+  };
+
+  const totalScore = React.useMemo(() => {
+    return Object.values(scores).reduce((acc, curr) => acc + curr.value, 0);
+  }, [scores]);
+
+  const recommendation = React.useMemo(() => {
+    if (totalScore >= 80) return { text: '→ Priorité haute — entrer en pipeline immédiatement', className: 'text-success' };
+    if (totalScore >= 60) return { text: '→ Qualifié — intégrer au pipeline sous 48h', className: 'text-amber' };
+    if (totalScore >= 40) return { text: '→ Potentiel — nurturing à 30 jours', className: 'text-chart-neutral' };
+    if (totalScore > 0) return { text: '→ Hors cible — archiver', className: 'text-danger' };
+    return { text: 'Remplissez les critères de scoring', className: 'text-ink-faint' };
+  }, [totalScore]);
 
   const refreshLead = async () => {
     const leadDetails = await leadsService.getLeadById(lead.id);
@@ -104,6 +147,17 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
         };
       }
 
+      const oldScore = lead.score;
+      const newScore = totalScore;
+      let scoreChangeLog = undefined;
+
+      if (oldScore !== newScore) {
+        scoreChangeLog = {
+          type: 'score_update',
+          content: `Score ICP modifié : ${oldScore} → ${newScore}`,
+        };
+      }
+
       const targetStage = stages.find((s) => s.id === editForm.stage_id);
       const shouldArchive = targetStage?.is_closed_lost ?? false;
 
@@ -116,13 +170,23 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
           email: editForm.email || null,
           linkedin_url: editForm.linkedin_url || null,
           deal_value: editForm.deal_value,
+          score: totalScore,
           stage_id: editForm.stage_id,
           ...(shouldArchive ? { is_archived: true } : {}),
           owner_id: editForm.owner_id || null,
           note: editForm.note || null,
         },
-        stageChangeLog || { type: 'note', content: 'Informations mises à jour' }
+        scoreChangeLog || stageChangeLog || { type: 'note', content: 'Informations mises à jour' }
       );
+
+      const scoresToSave = CRITERIA.map((c) => ({
+        criterion: c.id as 'taille' | 'budget' | 'urgence' | 'decideur' | 'fit' | 'concurrence',
+        value: scores[c.id]?.value || 0,
+        max_value: c.max,
+        label_selected: scores[c.id]?.label || '',
+      }));
+
+      await leadsService.updateLeadScores(lead.id, scoresToSave);
 
       showToast('Lead mis à jour avec succès');
       onChanged();
@@ -299,8 +363,9 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               {lead.stage?.name || 'Inconnue'}
             </span>
             <span
-              className={`text-xs font-bold font-mono px-2 py-0.5 rounded bg-surface border border-line ${lead.score >= 80 ? 'text-success' : lead.score >= 60 ? 'text-amber' : 'text-danger'
-                }`}
+              className={`text-xs font-bold font-mono px-2 py-0.5 rounded bg-surface border border-line ${
+                lead.score >= 80 ? 'text-success' : lead.score >= 60 ? 'text-amber' : 'text-danger'
+              }`}
             >
               Score : {lead.score}/100
             </span>
@@ -409,85 +474,99 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
         {/* 2. EDIT TAB */}
         {modalTab === 'edit' && (
-          <form onSubmit={handleSaveLead} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Field label="Société *">
-                <input
-                  type="text"
-                  value={editForm.company_name}
-                  onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
-                  required
-                  className={inputClass}
-                />
-              </Field>
+          <form onSubmit={handleSaveLead} className="space-y-5">
+            {/* Form Info */}
+            <div className="rounded-surface border border-line bg-elevated p-5">
+              <div className="mb-4 text-xs font-bold uppercase tracking-wider text-ink-soft">
+                Informations générales
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="Société *">
+                  <input
+                    type="text"
+                    value={editForm.company_name}
+                    onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+                    required
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="Contact">
-                <input
-                  type="text"
-                  value={editForm.contact_name}
-                  onChange={(e) => setEditForm({ ...editForm, contact_name: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="Contact">
+                  <input
+                    type="text"
+                    value={editForm.contact_name}
+                    onChange={(e) => setEditForm({ ...editForm, contact_name: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="Téléphone">
-                <input
-                  type="text"
-                  value={editForm.phone}
-                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="Téléphone">
+                  <input
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="Email">
-                <input
-                  type="email"
-                  value={editForm.email}
-                  onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="Email">
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="LinkedIn URL">
-                <input
-                  type="url"
-                  value={editForm.linkedin_url}
-                  onChange={(e) => setEditForm({ ...editForm, linkedin_url: e.target.value })}
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="LinkedIn URL">
+                  <input
+                    type="url"
+                    value={editForm.linkedin_url}
+                    onChange={(e) => setEditForm({ ...editForm, linkedin_url: e.target.value })}
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="Valeur (€)">
-                <input
-                  type="number"
-                  value={editForm.deal_value}
-                  onChange={(e) => setEditForm({ ...editForm, deal_value: parseInt(e.target.value) || 0 })}
-                  className={inputClass}
-                />
-              </Field>
+                <Field label="Valeur (€)">
+                  <input
+                    type="number"
+                    value={editForm.deal_value}
+                    onChange={(e) => setEditForm({ ...editForm, deal_value: parseInt(e.target.value) || 0 })}
+                    className={inputClass}
+                  />
+                </Field>
 
-              <Field label="Étape pipeline">
-                <Select value={editForm.stage_id} onValueChange={(val) => setEditForm({ ...editForm, stage_id: val })}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choisir une étape" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stages.map((st) => (
-                      <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
+                <Field label="Étape pipeline" className="sm:col-span-3">
+                  <Select value={editForm.stage_id} onValueChange={(val) => setEditForm({ ...editForm, stage_id: val })}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choisir une étape" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stages.map((st) => (
+                        <SelectItem key={st.id} value={st.id}>{st.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </Field>
 
-              <Field label="Note" className="sm:col-span-3">
-                <textarea
-                  value={editForm.note}
-                  onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
-                  rows={2}
-                  className={`${inputClass} py-1.5`}
-                />
-              </Field>
+                <Field label="Note" className="sm:col-span-3">
+                  <textarea
+                    value={editForm.note}
+                    onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
+                    rows={2}
+                    className={`${inputClass} py-1.5`}
+                  />
+                </Field>
+              </div>
             </div>
+
+            {/* Scoring ICP Section — Placed under Informations Générales */}
+            <LeadScoringSection
+              scores={scores}
+              onScoreChange={handleScoreChange}
+              totalScore={totalScore}
+              recommendation={recommendation}
+            />
 
             <div className="pt-2 border-t border-line flex justify-end">
               <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>

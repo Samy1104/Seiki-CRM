@@ -468,7 +468,7 @@ export const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(
     // Auto scroll into view when highlighted
     useEffect(() => {
       if (isHighlighted && localRef.current) {
-        localRef.current.scrollIntoView({ block: 'nearest' });
+        localRef.current.scrollIntoView?.({ block: 'nearest' });
       }
     }, [isHighlighted]);
 
