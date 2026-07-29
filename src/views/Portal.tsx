@@ -197,7 +197,7 @@ export const Portal: React.FC<PortalProps> = ({ setActiveApp }) => {
                 transition: 'opacity 0.4s ease 0.1s, transform 0.4s ease 0.1s',
               }}
             >
-              Studio de création &amp; distribution
+              Gestion de prospection &amp; de contenu
             </p>
           </div>
 

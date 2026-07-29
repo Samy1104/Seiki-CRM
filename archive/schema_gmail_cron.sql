@@ -55,7 +55,7 @@ SELECT cron.schedule(
 
 SELECT cron.schedule(
   'poll-gmail-inbox',
-  '*/5 * * * *',
+  '* * * * *',
   $$
   SELECT net.http_post(
     url := 'https://<PROJECT_REF>.supabase.co/functions/v1/poll-gmail-inbox',

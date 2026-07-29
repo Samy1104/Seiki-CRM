@@ -102,7 +102,13 @@ export async function getMessage(accessToken: string, id: string): Promise<Gmail
  * pages suivantes seraient perdus définitivement.
  */
 export async function listHistory(accessToken: string, startHistoryId: string): Promise<{ historyId: string; addedMessageIds: string[] }> {
-  const addedMessageIds: string[] = [];
+  // Set plutôt que tableau : Gmail peut renvoyer plusieurs enregistrements
+  // "messageAdded" distincts pour le MÊME message dans une seule fenêtre de
+  // polling (ex. label INBOX ajouté puis retouché juste après) — sans
+  // déduplication, poll-gmail-inbox le traiterait deux fois et gonflerait le
+  // compteur "replies" du résultat, même si les effets de bord restent
+  // idempotents côté base (contrainte UNIQUE sur message_id).
+  const addedMessageIds = new Set<string>();
   let pageToken: string | undefined;
   let finalHistoryId = startHistoryId;
 
@@ -119,7 +125,7 @@ export async function listHistory(accessToken: string, startHistoryId: string): 
 
     for (const h of data.history ?? []) {
       for (const m of h.messagesAdded ?? []) {
-        addedMessageIds.push(m.message.id);
+        addedMessageIds.add(m.message.id);
       }
     }
 
@@ -127,5 +133,5 @@ export async function listHistory(accessToken: string, startHistoryId: string): 
     pageToken = data.nextPageToken;
   } while (pageToken);
 
-  return { historyId: finalHistoryId, addedMessageIds };
+  return { historyId: finalHistoryId, addedMessageIds: [...addedMessageIds] };
 }
