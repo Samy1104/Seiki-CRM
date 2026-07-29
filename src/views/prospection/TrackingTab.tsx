@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare } from 'lucide-react';
+import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare, Search, X } from 'lucide-react';
 import { prospectionService, type EmailLog } from '../../services/prospectionService';
 import { parseEmailBody } from '../../utils/emailParser';
+
+type StatusFilter = 'all' | 'positive' | 'negative' | 'opened' | 'bounced';
 
 interface TrackingTabProps {
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
@@ -134,6 +136,8 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   const loadLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -155,8 +159,79 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
 
   const entries = useMemo(() => groupByConversation(logs), [logs]);
 
+  const counts = useMemo(() => {
+    let positive = 0;
+    let negative = 0;
+    let opened = 0;
+    let bounced = 0;
+
+    for (const entry of entries) {
+      const hasPos = entry.replies.some((r) => r.reply_sentiment === 'positive') || entry.log.reply_sentiment === 'positive';
+      const hasNeg = entry.replies.some((r) => r.reply_sentiment === 'negative') || entry.log.reply_sentiment === 'negative';
+      const isBounced = entry.log.status === 'bounced' || entry.log.status === 'failed' || entry.replies.some((r) => r.status === 'bounced' || r.status === 'failed');
+      const isOpened = !!entry.log.opened_at && entry.replies.length === 0 && !hasPos && !hasNeg;
+
+      if (hasPos) positive++;
+      if (hasNeg) negative++;
+      if (isBounced) bounced++;
+      if (isOpened) opened++;
+    }
+
+    return {
+      all: entries.length,
+      positive,
+      negative,
+      opened,
+      bounced,
+    };
+  }, [entries]);
+
+  const filteredEntries = useMemo(() => {
+    return entries.filter((entry) => {
+      // 1. Status/Sentiment filter
+      if (statusFilter === 'positive') {
+        const hasPos = entry.replies.some((r) => r.reply_sentiment === 'positive') || entry.log.reply_sentiment === 'positive';
+        if (!hasPos) return false;
+      } else if (statusFilter === 'negative') {
+        const hasNeg = entry.replies.some((r) => r.reply_sentiment === 'negative') || entry.log.reply_sentiment === 'negative';
+        if (!hasNeg) return false;
+      } else if (statusFilter === 'opened') {
+        const isOpened = !!entry.log.opened_at && entry.replies.length === 0;
+        if (!isOpened) return false;
+      } else if (statusFilter === 'bounced') {
+        const isBounced = entry.log.status === 'bounced' || entry.log.status === 'failed' || entry.replies.some((r) => r.status === 'bounced' || r.status === 'failed');
+        if (!isBounced) return false;
+      }
+
+      // 2. Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const contact = (entry.log.lead?.contact_name || '').toLowerCase();
+        const company = (entry.log.lead?.company_name || '').toLowerCase();
+        const to = (entry.log.to_email || '').toLowerCase();
+        const from = (entry.log.from_email || '').toLowerCase();
+        const subject = (entry.log.subject || '').toLowerCase();
+        const body = (entry.log.body_preview || '').toLowerCase();
+        const repliesBody = entry.replies.map((r) => (r.body_preview || '').toLowerCase() + ' ' + (r.from_email || '').toLowerCase()).join(' ');
+
+        const match =
+          contact.includes(q) ||
+          company.includes(q) ||
+          to.includes(q) ||
+          from.includes(q) ||
+          subject.includes(q) ||
+          body.includes(q) ||
+          repliesBody.includes(q);
+
+        if (!match) return false;
+      }
+
+      return true;
+    });
+  }, [entries, statusFilter, searchQuery]);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 font-ui">
       <div className="flex items-center justify-between gap-4 pb-2 border-b border-line-strong">
         <h2 className="text-xs font-display font-semibold tracking-[0.25em] uppercase text-ink">
           Suivi des emails
@@ -171,6 +246,63 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
         </button>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+        {/* Search input */}
+        <div className="relative flex-1 max-w-sm">
+          <Search size={14} strokeWidth={2} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint pointer-events-none" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Rechercher nom, entreprise, email, sujet..."
+            className="w-full pl-8 pr-8 py-1.5 text-xs bg-surface border border-line-strong rounded-control text-ink placeholder:text-ink-faint focus:outline-none focus:border-line-focus transition-all"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+            >
+              <X size={13} strokeWidth={2} />
+            </button>
+          )}
+        </div>
+
+        {/* Filter Pills */}
+        <div className="flex items-center gap-1.5 flex-wrap text-xs">
+          <button
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'all' ? 'bg-surface text-ink border-line-focus shadow-sm' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Tous <span className="opacity-60 text-[10px] ml-1">({counts.all})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('positive')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'positive' ? 'bg-success/15 text-success border-success/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Positif (IA) <span className="opacity-60 text-[10px] ml-1">({counts.positive})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('negative')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'negative' ? 'bg-danger/15 text-danger border-danger/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Négatif (IA) <span className="opacity-60 text-[10px] ml-1">({counts.negative})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('opened')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'opened' ? 'bg-[#D4C4A8]/20 text-[#D4C4A8] border-[#D4C4A8]/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Non répondus <span className="opacity-60 text-[10px] ml-1">({counts.opened})</span>
+          </button>
+          <button
+            onClick={() => setStatusFilter('bounced')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'bounced' ? 'bg-danger/15 text-danger border-danger/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Rebonds <span className="opacity-60 text-[10px] ml-1">({counts.bounced})</span>
+          </button>
+        </div>
+      </div>
+
       {loading ? (
         <div className="py-12 text-center text-sm font-ui text-ink-soft flex items-center justify-center gap-2">
           <Loader2 size={18} strokeWidth={2} className="animate-spin text-[#D4C4A8]" /> Chargement...
@@ -182,9 +314,22 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
             Aucun email envoyé ou reçu pour l'instant.
           </p>
         </div>
+      ) : filteredEntries.length === 0 ? (
+        <div className="p-8 rounded-surface border border-line-strong bg-surface text-center font-ui space-y-3">
+          <Search size={28} strokeWidth={1.5} className="mx-auto text-ink-faint opacity-50" />
+          <p className="text-sm text-ink-soft">
+            Aucun email ne correspond à votre recherche.
+          </p>
+          <button
+            onClick={() => { setSearchQuery(''); setStatusFilter('all'); }}
+            className="px-3 py-1.5 text-xs font-semibold text-[#D4C4A8] border border-[#D4C4A8]/30 hover:bg-[#D4C4A8]/10 rounded-control transition-all cursor-pointer"
+          >
+            Réinitialiser les filtres
+          </button>
+        </div>
       ) : (
         <div className="space-y-2 font-ui">
-          {entries.map(({ log, replies }) => (
+          {filteredEntries.map(({ log, replies }) => (
             <div
               key={log.id}
               className="rounded-surface border border-line-strong bg-surface overflow-hidden"
