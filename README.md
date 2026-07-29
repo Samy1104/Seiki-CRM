@@ -4,7 +4,7 @@ Un client CRM moderne développé en React, TypeScript et Vite, connecté à Sup
 
 ## Prérequis
 
-- [Node.js](https://nodejs.org/) (version 18 ou supérieure recommandée)
+- [Node.js](https://nodejs.org/) (version 24 ou supérieure recommandée)
 - Un projet [Supabase](https://supabase.com/) configuré
 
 ## Démarrage rapide
@@ -34,6 +34,13 @@ VITE_SUPABASE_ANON_KEY=votre_cle_anon_publique
 npm run dev
 ```
 L'application sera accessible par défaut sur `http://localhost:5173`.
+
+## Déploiement Docker
+
+Pour lancer l'application avec Docker, consultez le guide [DOCKER.md](DOCKER.md) ou exécutez :
+```bash
+docker compose up -d
+```
 
 ## Commandes disponibles
 

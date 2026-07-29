@@ -397,7 +397,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   ? 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus shadow-sm'
                   : 'bg-surface text-ink-soft border-line-strong hover:text-ink hover:border-line-focus'
                   }`}
-                onClick={() => setModalTab(tab.id as any)}
+                onClick={() => setModalTab(tab.id)}
               >
                 <Icon size={14} strokeWidth={2} />
                 {tab.label}

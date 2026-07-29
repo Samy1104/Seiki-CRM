@@ -130,7 +130,8 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
         await leadsService.resolveMergeProposal(proposalId, 'approved');
         showToast('Fusion effectuée avec succès !', 'success');
         loadLeadsData();
-      } catch {
+      } catch (err) {
+        console.error('Lead merge error:', err);
         showToast('Erreur lors de la fusion', 'error');
       }
     }
@@ -141,7 +142,8 @@ export const Leads: React.FC<LeadsProps> = ({ setView }) => {
       await leadsService.resolveMergeProposal(proposalId, 'rejected');
       showToast('Proposition ignorée', 'info');
       loadLeadsData();
-    } catch {
+    } catch (err) {
+      console.error('Lead merge error:', err);
       showToast('Erreur', 'error');
     }
   };
