@@ -328,6 +328,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
           </button>
         </div>
       ) : (
+        <div className="space-y-2 font-ui">
           {filteredEntries.map(({ log, replies }) => {
             const hasNegSentiment = replies.some((r) => r.reply_sentiment === 'negative') || log.reply_sentiment === 'negative';
             const isReplied = log.status === 'replied' || replies.length > 0;
