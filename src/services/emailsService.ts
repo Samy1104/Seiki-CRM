@@ -101,6 +101,22 @@ export const emailsService = {
     if (error) throw error;
   },
 
+  /** Approuve et envoie immédiatement un email (bypass la planification) */
+  async sendNow(generatedEmailId: string): Promise<void> {
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from('generated_emails')
+      .update({
+        statut_envoi: 'approved',
+        scheduled_at: now,
+        approved_at: now,
+      })
+      .eq('id', generatedEmailId);
+
+    if (error) throw error;
+    await callEdgeFunction('dispatch-gmail-sends', { triggeredBy: 'manual-button' });
+  },
+
   /** Lance immédiatement un cycle pacing + dispatch (bouton manuel de test) */
   async runPacingCycleNow(): Promise<{ scheduled: number; processed: number; sent: number; failed: number }> {
     const scheduleResult = await callEdgeFunction<{ scheduled?: number; skipped?: string }>(

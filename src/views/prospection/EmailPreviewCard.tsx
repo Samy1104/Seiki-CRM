@@ -15,6 +15,7 @@ interface EmailPreviewCardProps {
 export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showToast, onUpdate }) => {
   const [expanded, setExpanded] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [isSendingNow, setIsSendingNow] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedCorps, setEditedCorps] = useState(email.corps_du_mail);
   const [editedSujet, setEditedSujet] = useState(email.sujet);
@@ -34,6 +35,19 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
       showToast(err instanceof Error ? err.message : 'Erreur approbation', 'error');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  const handleSendNow = async () => {
+    setIsSendingNow(true);
+    try {
+      await emailsService.sendNow(email.id);
+      showToast(`Email envoyé immédiatement à ${email.lead?.contact_name || 'ce prospect'}.`, 'success');
+      onUpdate();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur envoi immédiat', 'error');
+    } finally {
+      setIsSendingNow(false);
     }
   };
 
@@ -148,17 +162,30 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
               <AccentButton
                 variant="primary"
                 onClick={handleApprove}
-                disabled={isSending}
+                disabled={isSending || isSendingNow}
                 icon={
                   isSending ? (
                     <Loader2 size={14} strokeWidth={2} className="animate-spin" />
                   ) : (
-                    <Send size={14} strokeWidth={2} />
+                    <Check size={14} strokeWidth={2} />
                   )
                 }
               >
                 {isSending ? 'Approbation...' : email.statut_envoi === 'failed' ? 'Remettre en file' : 'Approuver'}
               </AccentButton>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSendNow}
+                disabled={isSending || isSendingNow}
+              >
+                {isSendingNow ? (
+                  <Loader2 size={13} strokeWidth={2} className="animate-spin text-[#D4C4A8]" />
+                ) : (
+                  <Send size={13} strokeWidth={2} className="text-[#D4C4A8]" />
+                )}
+                Envoyer maintenant
+              </Button>
               <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
                 <Edit3 size={13} strokeWidth={2} className="text-[#D4C4A8]" /> Modifier
               </Button>
