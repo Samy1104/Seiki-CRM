@@ -12,6 +12,7 @@ export interface AppSetting {
     date?: string;
     start?: string;
     end?: string;
+    stage_id?: string | null;
   };
   label: string;
   category: string;
@@ -26,6 +27,9 @@ export interface ProspectionSettings {
   gmail_warmup_start_date: string | null;
   gmail_send_window: { days: number[]; start: string; end: string };
   gmail_from_name: string;
+  reply_ai_classification_enabled: boolean;
+  reply_positive_stage_id: string | null;
+  reply_negative_stage_id: string | null;
 }
 
 export interface SlaLimits {
@@ -76,6 +80,9 @@ export const settingsService = {
       gmail_send_window: (find('gmail_send_window') as { days: number[]; start: string; end: string } | undefined)
         ?? { days: [1, 2, 3, 4, 5], start: '08:00', end: '18:00' },
       gmail_from_name: (find('gmail_from_name')?.name as string) ?? 'Seiki CRM',
+      reply_ai_classification_enabled: (find('reply_ai_classification_enabled')?.enabled as boolean) ?? true,
+      reply_positive_stage_id: (find('reply_positive_stage_id')?.stage_id as string | null | undefined) ?? null,
+      reply_negative_stage_id: (find('reply_negative_stage_id')?.stage_id as string | null | undefined) ?? null,
     };
   },
 
@@ -101,6 +108,9 @@ export const settingsService = {
     if (updates.gmail_warmup_start_date !== undefined) jobs.push(this.updateSetting('gmail_warmup_start_date', { date: updates.gmail_warmup_start_date }));
     if (updates.gmail_send_window !== undefined) jobs.push(this.updateSetting('gmail_send_window', updates.gmail_send_window));
     if (updates.gmail_from_name !== undefined) jobs.push(this.updateSetting('gmail_from_name', { name: updates.gmail_from_name }));
+    if (updates.reply_ai_classification_enabled !== undefined) jobs.push(this.updateSetting('reply_ai_classification_enabled', { enabled: updates.reply_ai_classification_enabled }));
+    if (updates.reply_positive_stage_id !== undefined) jobs.push(this.updateSetting('reply_positive_stage_id', { stage_id: updates.reply_positive_stage_id }));
+    if (updates.reply_negative_stage_id !== undefined) jobs.push(this.updateSetting('reply_negative_stage_id', { stage_id: updates.reply_negative_stage_id }));
     await Promise.all(jobs);
   },
 
