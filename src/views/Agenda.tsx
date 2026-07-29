@@ -1,13 +1,20 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAgendaEvents } from '../hooks/useAgendaEvents';
+import { useCalendlyBookings } from '../hooks/useCalendlyBookings';
+import { calendlyService, type CalendlyAccount, type CalendlyBooking } from '../services/calendlyService';
 import { downloadIcalFile, ICAL_FEED_URL } from '../utils/icalHelpers';
 import { useToast } from '../context/ToastContext';
 import { AgendaHeader } from './agenda/AgendaHeader';
 import { AgendaForm } from './agenda/AgendaForm';
 import { AgendaTabs } from './agenda/AgendaTabs';
 import { EventCard } from './agenda/EventCard';
+import { BookingCard } from './agenda/BookingCard';
 import { ConfirmDeleteModal } from '../components/ConfirmDeleteModal';
 import type { EventItem } from '../services/eventsService';
+
+type AgendaItem =
+  | { kind: 'event'; sortKey: string; event: EventItem }
+  | { kind: 'booking'; sortKey: string; booking: CalendlyBooking };
 
 export const Agenda: React.FC = () => {
   const {
@@ -17,12 +24,32 @@ export const Agenda: React.FC = () => {
     handleUpdateEvent,
     handleDeleteEvent,
   } = useAgendaEvents();
+  const { bookings, reloadBookings } = useCalendlyBookings();
   const { showToast } = useToast();
 
   const [formOpen, setFormOpen] = useState(true);
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [calendlyAccount, setCalendlyAccount] = useState<CalendlyAccount | null>(null);
+
+  useEffect(() => {
+    calendlyService.getAccount().then(setCalendlyAccount).catch(() => {});
+
+    const params = new URLSearchParams(window.location.search);
+    const calendlyStatus = params.get('calendly');
+    if (calendlyStatus === 'connected') {
+      showToast('Compte Calendly connecté.', 'success');
+      calendlyService.getAccount().then(setCalendlyAccount).catch(() => {});
+      reloadBookings();
+    } else if (calendlyStatus === 'error') {
+      showToast(params.get('message') || 'Connexion Calendly échouée.', 'error');
+    }
+    if (calendlyStatus) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleCopyFeedUrl = async () => {
     try {
@@ -33,16 +60,30 @@ export const Agenda: React.FC = () => {
     }
   };
 
-  // Split events into Upcoming and Past
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const upcomingEvents = useMemo(
-    () => events.filter((e) => e.event_date >= todayStr),
-    [events, todayStr]
-  );
-  const pastEvents = useMemo(
-    () => events.filter((e) => e.event_date < todayStr),
-    [events, todayStr]
-  );
+  // Fusionne événements manuels et rendez-vous Calendly en une seule
+  // timeline triée. Les event_date (jour seul) sont comparés à minuit pour
+  // rester cohérents avec les start_time (horodatage précis) des bookings.
+  const allItems = useMemo<AgendaItem[]>(() => {
+    const eventItems: AgendaItem[] = events.map((event) => ({
+      kind: 'event',
+      sortKey: `${event.event_date}T00:00:00`,
+      event,
+    }));
+    const bookingItems: AgendaItem[] = bookings.map((booking) => ({
+      kind: 'booking',
+      sortKey: booking.start_time,
+      booking,
+    }));
+    return [...eventItems, ...bookingItems].sort((a, b) => a.sortKey.localeCompare(b.sortKey));
+  }, [events, bookings]);
+
+  const nowIso = new Date().toISOString();
+  const todayStr = nowIso.slice(0, 10);
+  const isUpcoming = (item: AgendaItem) =>
+    item.kind === 'booking' ? item.sortKey >= nowIso : item.sortKey >= `${todayStr}T00:00:00`;
+
+  const upcomingItems = useMemo(() => allItems.filter(isUpcoming), [allItems, nowIso, todayStr]);
+  const pastItems = useMemo(() => allItems.filter((item) => !isUpcoming(item)), [allItems, nowIso, todayStr]);
 
   const formatDateFr = (dateStr: string) => {
     try {
@@ -126,6 +167,8 @@ export const Agenda: React.FC = () => {
         <AgendaHeader
           onExportIcal={() => downloadIcalFile(events)}
           onCopyFeedUrl={handleCopyFeedUrl}
+          calendlyAccount={calendlyAccount}
+          calendlyConnectUrl={calendlyService.oauthConnectUrl()}
         />
 
         {/* Collapsible Form (Add / Edit) */}
@@ -141,14 +184,14 @@ export const Agenda: React.FC = () => {
         <AgendaTabs
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          upcomingCount={upcomingEvents.length}
-          pastCount={pastEvents.length}
+          upcomingCount={upcomingItems.length}
+          pastCount={pastItems.length}
         />
 
         {/* Tab Content / Events List */}
         <div key={activeTab} className="mt-6 animate-tab-fade">
           {activeTab === 'upcoming' &&
-            (upcomingEvents.length === 0 ? (
+            (upcomingItems.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-[13px]" style={{ color: '#444' }}>
                   Aucun événement à venir
@@ -156,20 +199,24 @@ export const Agenda: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col">
-                {upcomingEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    formatDateFr={formatDateFr}
-                    onEdit={() => handleStartEdit(event)}
-                    onDelete={() => confirmDelete(event.id)}
-                  />
-                ))}
+                {upcomingItems.map((item) =>
+                  item.kind === 'event' ? (
+                    <EventCard
+                      key={`event-${item.event.id}`}
+                      event={item.event}
+                      formatDateFr={formatDateFr}
+                      onEdit={() => handleStartEdit(item.event)}
+                      onDelete={() => confirmDelete(item.event.id)}
+                    />
+                  ) : (
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} formatDateFr={formatDateFr} />
+                  ),
+                )}
               </div>
             ))}
 
           {activeTab === 'past' &&
-            (pastEvents.length === 0 ? (
+            (pastItems.length === 0 ? (
               <div className="py-16 text-center">
                 <p className="text-[13px]" style={{ color: '#444' }}>
                   Aucun événement dans l'historique
@@ -177,17 +224,21 @@ export const Agenda: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col">
-                {pastEvents.map((event) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    past
-                    daysAgo={getDaysAgo(event.event_date)}
-                    formatDateFr={formatDateFr}
-                    onEdit={() => handleStartEdit(event)}
-                    onDelete={() => confirmDelete(event.id)}
-                  />
-                ))}
+                {pastItems.map((item) =>
+                  item.kind === 'event' ? (
+                    <EventCard
+                      key={`event-${item.event.id}`}
+                      event={item.event}
+                      past
+                      daysAgo={getDaysAgo(item.event.event_date)}
+                      formatDateFr={formatDateFr}
+                      onEdit={() => handleStartEdit(item.event)}
+                      onDelete={() => confirmDelete(item.event.id)}
+                    />
+                  ) : (
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} formatDateFr={formatDateFr} />
+                  ),
+                )}
               </div>
             ))}
         </div>
