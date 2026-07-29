@@ -58,6 +58,17 @@ export interface PipelineStage {
   is_active: boolean;
 }
 
+export interface DashboardTargets {
+  target_ca: number;
+  target_leads_count: number;
+  target_win_rate: number;
+  target_prospection_positive: number;
+}
+
+export interface CodirHistory {
+  dates: string[];
+}
+
 export const settingsService = {
   async getSettings(): Promise<AppSetting[]> {
     const { data, error } = await supabase
@@ -302,5 +313,52 @@ export const settingsService = {
       .update({ position: pos1 })
       .eq('id', stage2Id);
     if (err2) throw err2;
+  },
+
+  async getDashboardTargets(): Promise<DashboardTargets> {
+    const { data } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'dashboard_targets')
+      .maybeSingle();
+
+    return data?.value || {
+      target_ca: 100,
+      target_leads_count: 20,
+      target_win_rate: 20,
+      target_prospection_positive: 10,
+    };
+  },
+
+  async updateDashboardTargets(targets: DashboardTargets): Promise<void> {
+    await supabase.from('app_settings').upsert({
+      key: 'dashboard_targets',
+      value: targets,
+      label: 'Objectifs du Dashboard Commercial',
+      category: 'general',
+    });
+  },
+
+  async getCodirHistory(): Promise<string[]> {
+    const { data } = await supabase
+      .from('app_settings')
+      .select('value')
+      .eq('key', 'codir_history')
+      .maybeSingle();
+
+    return data?.value?.dates || [];
+  },
+
+  async addCodirDate(dateIso: string): Promise<string[]> {
+    const current = await this.getCodirHistory();
+    if (current.includes(dateIso)) return current;
+    const updated = [...current, dateIso].sort();
+    await supabase.from('app_settings').upsert({
+      key: 'codir_history',
+      value: { dates: updated },
+      label: 'Historique des réunions CODIR',
+      category: 'general',
+    });
+    return updated;
   }
 };
