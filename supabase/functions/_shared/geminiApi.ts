@@ -24,7 +24,7 @@ export interface GeminiCallResult {
 
 export async function callGemini(geminiKey: string, options: GeminiCallOptions): Promise<GeminiCallResult> {
   const startMs = Date.now();
-  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${geminiKey}`;
+  const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
   const body: Record<string, unknown> = {
     contents: [{ role: "user", parts: [{ text: options.userPrompt }] }],
@@ -39,7 +39,10 @@ export async function callGemini(geminiKey: string, options: GeminiCallOptions):
 
   const response = await fetchWithTimeout(geminiUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": geminiKey,
+    },
     body: JSON.stringify(body),
   });
 
