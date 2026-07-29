@@ -328,87 +328,108 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
           </button>
         </div>
       ) : (
-        <div className="space-y-2 font-ui">
-          {filteredEntries.map(({ log, replies }) => (
-            <div
-              key={log.id}
-              className="rounded-surface border border-line-strong bg-surface overflow-hidden"
-            >
+          {filteredEntries.map(({ log, replies }) => {
+            const hasNegSentiment = replies.some((r) => r.reply_sentiment === 'negative') || log.reply_sentiment === 'negative';
+            const isReplied = log.status === 'replied' || replies.length > 0;
+
+            return (
               <div
-                className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-hover transition-colors"
-                onClick={() => setExpandedId((prev) => (prev === log.id ? null : log.id))}
+                key={log.id}
+                className="rounded-surface border border-line-strong bg-surface overflow-hidden"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  {log.direction === 'outbound' ? (
-                    <ArrowUpRight size={15} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
-                  ) : (
-                    <ArrowDownLeft size={15} strokeWidth={2} className="text-success shrink-0" />
-                  )}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <strong className="text-ink font-semibold text-sm">
-                        {log.lead?.contact_name || (log.lead_id ? '—' : 'Test (sans lead)')}
-                      </strong>
-                      {log.lead?.company_name && (
-                        <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
-                          {log.lead.company_name}
-                        </span>
-                      )}
+                <div
+                  className="p-3 flex items-center justify-between gap-3 cursor-pointer hover:bg-hover transition-colors"
+                  onClick={() => setExpandedId((prev) => (prev === log.id ? null : log.id))}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    {log.direction === 'outbound' ? (
+                      <ArrowUpRight size={15} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
+                    ) : (
+                      <ArrowDownLeft size={15} strokeWidth={2} className="text-success shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <strong className="text-ink font-semibold text-sm">
+                          {log.lead?.contact_name || (log.lead_id ? '—' : 'Test (sans lead)')}
+                        </strong>
+                        {log.lead?.company_name && (
+                          <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
+                            {log.lead.company_name}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-ink-soft truncate mt-0.5">
+                        {log.subject || '(sans sujet)'} — {log.direction === 'outbound' ? `à ${log.to_email}` : `de ${log.from_email}`}
+                      </div>
                     </div>
-                    <div className="text-xs text-ink-soft truncate mt-0.5">
-                      {log.subject || '(sans sujet)'} — {log.direction === 'outbound' ? `à ${log.to_email}` : `de ${log.from_email}`}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-[10px] text-ink-faint whitespace-nowrap">
+                      {formatDate(log.sent_at || log.received_at || log.created_at)}
+                    </span>
+                    <span
+                      className={`text-xs font-semibold px-2.5 py-1 rounded-control border whitespace-nowrap ${
+                        isReplied && hasNegSentiment
+                          ? 'bg-danger/10 text-danger border-danger/20'
+                          : STATUS_CLASSES[log.status]
+                      }`}
+                    >
+                      {STATUS_LABELS[log.status]}
+                    </span>
+                    <div className="text-ink-faint">
+                      {expandedId === log.id ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
                     </div>
                   </div>
                 </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-[10px] text-ink-faint whitespace-nowrap">
-                    {formatDate(log.sent_at || log.received_at || log.created_at)}
-                  </span>
-                  <span className={`text-xs font-semibold px-2.5 py-1 rounded-control border whitespace-nowrap ${STATUS_CLASSES[log.status]}`}>
-                    {STATUS_LABELS[log.status]}
-                  </span>
-                  <div className="text-ink-faint">
-                    {expandedId === log.id ? <ChevronUp size={14} strokeWidth={2} /> : <ChevronDown size={14} strokeWidth={2} />}
-                  </div>
-                </div>
-              </div>
 
-              {expandedId === log.id && (
-                <div className="p-3 border-t border-line-strong bg-base space-y-4 text-xs">
-                  {/* Step Progress Timeline Bar */}
-                  <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg border border-line-strong bg-surface/50 text-xs">
-                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.sent_at || log.received_at ? 'border-line-focus bg-surface text-ink' : 'border-line-strong text-ink-faint opacity-60'}`}>
-                      <div className={`p-1.5 rounded-full ${log.sent_at || log.received_at ? 'bg-[#D4C4A8]/20 text-[#D4C4A8]' : 'bg-base text-ink-faint'}`}>
-                        <Send size={13} strokeWidth={2} />
+                {expandedId === log.id && (
+                  <div className="p-3 border-t border-line-strong bg-base space-y-4 text-xs">
+                    {/* Step Progress Timeline Bar */}
+                    <div className="grid grid-cols-3 gap-2 p-2.5 rounded-lg border border-line-strong bg-surface/50 text-xs">
+                      <div className={`flex items-center gap-2 p-2 rounded-control border ${log.sent_at || log.received_at ? 'border-line-focus bg-surface text-ink' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                        <div className={`p-1.5 rounded-full ${log.sent_at || log.received_at ? 'bg-[#D4C4A8]/20 text-[#D4C4A8]' : 'bg-base text-ink-faint'}`}>
+                          <Send size={13} strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">{log.direction === 'inbound' ? 'Reçu' : 'Envoyé'}</div>
+                          <div className="text-[11px] text-ink-soft truncate">{formatDate(log.sent_at || log.received_at)}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">{log.direction === 'inbound' ? 'Reçu' : 'Envoyé'}</div>
-                        <div className="text-[11px] text-ink-soft truncate">{formatDate(log.sent_at || log.received_at)}</div>
-                      </div>
-                    </div>
 
-                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.opened_at ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
-                      <div className={`p-1.5 rounded-full ${log.opened_at ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
-                        <Eye size={13} strokeWidth={2} />
+                      <div className={`flex items-center gap-2 p-2 rounded-control border ${log.opened_at ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
+                        <div className={`p-1.5 rounded-full ${log.opened_at ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
+                          <Eye size={13} strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">Ouvert</div>
+                          <div className="text-[11px] text-ink-soft truncate">{log.opened_at ? formatDate(log.opened_at) : 'Non ouvert'}</div>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">Ouvert</div>
-                        <div className="text-[11px] text-ink-soft truncate">{log.opened_at ? formatDate(log.opened_at) : 'Non ouvert'}</div>
-                      </div>
-                    </div>
 
-                    <div className={`flex items-center gap-2 p-2 rounded-control border ${log.replied_at || replies.length > 0 ? 'border-success/30 bg-success/5 text-success' : 'border-line-strong text-ink-faint opacity-60'}`}>
-                      <div className={`p-1.5 rounded-full ${log.replied_at || replies.length > 0 ? 'bg-success/20 text-success' : 'bg-base text-ink-faint'}`}>
-                        <MessageSquare size={13} strokeWidth={2} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-semibold truncate">Répondu</div>
-                        <div className="text-[11px] text-ink-soft truncate">
-                          {log.replied_at || replies[0]?.received_at ? formatDate(log.replied_at || replies[0]?.received_at) : 'Pas de réponse'}
+                      <div className={`flex items-center gap-2 p-2 rounded-control border ${
+                        isReplied
+                          ? hasNegSentiment
+                            ? 'border-danger/30 bg-danger/5 text-danger'
+                            : 'border-success/30 bg-success/5 text-success'
+                          : 'border-line-strong text-ink-faint opacity-60'
+                      }`}>
+                        <div className={`p-1.5 rounded-full ${
+                          isReplied
+                            ? hasNegSentiment
+                              ? 'bg-danger/20 text-danger'
+                              : 'bg-success/20 text-success'
+                            : 'bg-base text-ink-faint'
+                        }`}>
+                          <MessageSquare size={13} strokeWidth={2} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-semibold truncate">Répondu</div>
+                          <div className="text-[11px] text-ink-soft truncate">
+                            {log.replied_at || replies[0]?.received_at ? formatDate(log.replied_at || replies[0]?.received_at) : 'Pas de réponse'}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
 
                   {log.error_message && (
                     <p className="text-danger p-2 rounded bg-danger/10 border border-danger/20">{log.error_message}</p>
