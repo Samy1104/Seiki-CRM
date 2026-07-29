@@ -26,6 +26,18 @@ const STATUS_CLASSES: Record<EmailLog['status'], string> = {
   failed: 'bg-danger/10 text-danger border-danger/20',
 };
 
+const SENTIMENT_LABELS: Record<NonNullable<EmailLog['reply_sentiment']>, string> = {
+  positive: 'Réponse positive (IA)',
+  negative: 'Réponse négative (IA)',
+  neutral: 'Réponse neutre (IA)',
+};
+
+const SENTIMENT_CLASSES: Record<NonNullable<EmailLog['reply_sentiment']>, string> = {
+  positive: 'bg-success/10 text-success border-success/20',
+  negative: 'bg-danger/10 text-danger border-danger/20',
+  neutral: 'bg-surface text-ink-soft border-line-strong',
+};
+
 function formatDate(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
@@ -198,9 +210,16 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
 
                   {replies.map((reply) => (
                     <div key={reply.id} className="pl-3 border-l-2 border-success/30 space-y-1">
-                      <div className="flex items-center gap-2 text-success font-semibold">
-                        <ArrowDownLeft size={12} strokeWidth={2} />
-                        Réponse reçue le {formatDate(reply.received_at)}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 text-success font-semibold">
+                          <ArrowDownLeft size={12} strokeWidth={2} />
+                          Réponse reçue le {formatDate(reply.received_at)}
+                        </div>
+                        {reply.reply_sentiment && (
+                          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-control border ${SENTIMENT_CLASSES[reply.reply_sentiment]}`}>
+                            {SENTIMENT_LABELS[reply.reply_sentiment]}
+                          </span>
+                        )}
                       </div>
                       {reply.body_preview && (
                         <p className="text-ink-soft whitespace-pre-line bg-surface p-2 rounded-control border border-line-strong">

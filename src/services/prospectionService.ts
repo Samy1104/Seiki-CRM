@@ -34,6 +34,8 @@ export interface EmailLog {
   sent_at: string | null;
   received_at: string | null;
   created_at: string;
+  reply_sentiment: 'positive' | 'negative' | 'neutral' | null;
+  reply_sentiment_reason: string | null;
   lead?: { contact_name: string; company_name: string } | null;
 }
 
