@@ -223,15 +223,15 @@ export const Dashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`group relative flex-1 min-w-[210px] flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-t-xl transition-all duration-300 ease-out cursor-pointer whitespace-nowrap active:scale-[0.98] ${
+              className={`group relative flex-1 min-w-[210px] flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-t-xl overflow-hidden transition-all duration-300 ease-out cursor-pointer whitespace-nowrap active:scale-[0.98] ${
                 isActive
                   ? 'bg-[#141414] text-[#D4C4A8] border-x border-t border-line/80 shadow-md'
                   : 'text-ink-soft hover:text-[#f2ede4] hover:bg-[#1a1a1a]/60 border-x border-t border-transparent'
               }`}
             >
-              {/* Active top accent bar animation */}
+              {/* Active top accent bar aligned with rounded corners */}
               <span
-                className={`absolute top-0 left-0 right-0 h-[2px] bg-[#D4C4A8] rounded-t-full transition-all duration-300 ease-out ${
+                className={`absolute top-0 left-3 right-3 h-[2.5px] bg-[#D4C4A8] rounded-full transition-all duration-300 ease-out ${
                   isActive
                     ? 'opacity-100 scale-x-100 shadow-[0_0_8px_rgba(212,196,168,0.5)]'
                     : 'opacity-0 scale-x-50 group-hover:opacity-40 group-hover:scale-x-75'
