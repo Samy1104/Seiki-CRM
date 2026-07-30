@@ -271,7 +271,8 @@ export const leadImportService = {
       .from('leads')
       .select('id, email, contact_name, phone, linkedin_url, website, deal_value, note')
       .not('email', 'is', null)
-      .is('merged_into_id', null);
+      .is('merged_into_id', null)
+      .eq('is_archived', false);
 
     if (error) throw error;
 
