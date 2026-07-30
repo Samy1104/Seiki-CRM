@@ -2,7 +2,8 @@ import React from 'react';
 import { Flame, ArrowUpRight, ArrowDownRight, CheckCircle, ShieldAlert } from 'lucide-react';
 import type { Lead, LeadHistoryItem } from '../../services/leadsService';
 import type { DashboardTargets, SlaLimits } from '../../services/settingsService';
-import { computeDelta, type DeltaResult } from '../../utils/dashboardCalculations';
+import { computeDelta, computeVelocityDays, type DeltaResult } from '../../utils/dashboardCalculations';
+import type { LeadStageHistoryEntry } from '../../services/pipelineHistoryService';
 
 export interface DashboardCodirTabProps {
   leadsA: Lead[];
@@ -11,6 +12,8 @@ export interface DashboardCodirTabProps {
   historyA: LeadHistoryItem[];
   historyB: LeadHistoryItem[];
   slaLimits?: SlaLimits;
+  stageHistory: LeadStageHistoryEntry[];
+  wonStageId?: string;
 }
 
 // Inverse logic for SLA/negative metrics if needed, but standard DeltaBadge works great for growth
@@ -56,6 +59,8 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
   historyA,
   historyB,
   slaLimits = { Media: 7, Retail: 14, Instit: 21 },
+  stageHistory,
+  wonStageId,
 }) => {
   const isWon = (l: Lead) =>
     l.stage?.is_closed_won || l.stage_id === 'won' || l.stage_id === 'closed_won';
@@ -91,6 +96,11 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
   const posDelta = computeDelta(posA, posB);
   const posProgress = Math.min(100, Math.round((posA / (targets.target_prospection_positive || 1)) * 100));
 
+  // 5. Vélocité (jours moyens création → Gagné) sur les leads gagnés de la période
+  const velocityDays = wonStageId
+    ? computeVelocityDays(leadsA, stageHistory, wonStageId)
+    : 0;
+
   // 5. Hot Deals List (Top 5 active leads by deal_value)
   const hotDeals = [...leadsA]
     .filter((l) => !l.is_archived && !isLost(l))
@@ -107,7 +117,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
   return (
     <div className="space-y-6">
       {/* Target vs Actual Progress Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Card 1: CA Signé */}
         <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
@@ -221,6 +231,21 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
                 style={{ width: `${posProgress}%` }}
               />
             </div>
+          </div>
+        </div>
+
+        {/* Card 5: Vélocité */}
+        <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-ink-soft">Vélocité (Création → Gagné)</span>
+          </div>
+          <div>
+            <div className="text-2xl font-extrabold text-[#f2ede4] tracking-tight">
+              {velocityDays} <span className="text-sm font-normal text-ink-soft">jours</span>
+            </div>
+            <p className="text-xs text-ink-soft mt-0.5">
+              Temps moyen entre la création d'un lead et son passage en Gagné, sur la période active.
+            </p>
           </div>
         </div>
       </div>

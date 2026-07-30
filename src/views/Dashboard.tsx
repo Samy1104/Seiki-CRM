@@ -223,6 +223,8 @@ export const Dashboard: React.FC = () => {
             historyA={historyA}
             historyB={historyB}
             slaLimits={slaLimits}
+            stageHistory={stageHistory}
+            wonStageId={stages.find((s) => s.is_closed_won)?.id}
           />
         )}
 
