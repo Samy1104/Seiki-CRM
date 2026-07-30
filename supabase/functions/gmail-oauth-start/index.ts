@@ -38,7 +38,11 @@ serve((req: Request) => {
   authorizeUrl.searchParams.set("redirect_uri", redirectUri);
   authorizeUrl.searchParams.set("scope", scope);
   authorizeUrl.searchParams.set("access_type", "offline");
-  authorizeUrl.searchParams.set("prompt", "consent"); // force la délivrance d'un refresh_token à chaque connexion
+  // select_account force l'écran de choix de compte même si une session Google
+  // est déjà active dans le navigateur (sinon Google réutilise silencieusement
+  // le compte courant — piège rencontré avec Calendly lors du transfert vers
+  // le compte entreprise). consent force la délivrance d'un refresh_token.
+  authorizeUrl.searchParams.set("prompt", "select_account consent");
   authorizeUrl.searchParams.set("state", state);
 
   return new Response(null, { status: 302, headers: { Location: authorizeUrl.toString() } });

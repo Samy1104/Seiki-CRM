@@ -1,12 +1,14 @@
-import React from 'react';
-import { Clock, Mail, Video, MapPin, UserRound } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, Mail, Video, MapPin, UserRound, Trash2 } from 'lucide-react';
 import type { CalendlyBooking } from '../../services/calendlyService';
 
 interface BookingCardProps {
   booking: CalendlyBooking;
+  onDelete: () => void;
 }
 
-export const BookingCard: React.FC<BookingCardProps> = ({ booking }) => {
+export const BookingCard: React.FC<BookingCardProps> = ({ booking, onDelete }) => {
+  const [hovered, setHovered] = useState(false);
   const canceled = booking.status === 'canceled';
   // Date et heure dérivées du même instant Europe/Paris — start_time est un
   // horodatage UTC, donc slice(0, 10) donnerait la date UTC (fausse d'une
@@ -29,6 +31,8 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking }) => {
     <div
       className="py-4 flex flex-col gap-2 relative"
       style={{ borderTop: '1px solid rgba(242,237,228,0.07)', opacity: canceled ? 0.5 : 1 }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5 flex-wrap">
@@ -56,6 +60,22 @@ export const BookingCard: React.FC<BookingCardProps> = ({ booking }) => {
               Annulé
             </span>
           )}
+        </div>
+        <div
+          className="flex items-center shrink-0 transition-opacity duration-150"
+          style={{ opacity: hovered ? 1 : 0 }}
+        >
+          <button
+            type="button"
+            onClick={onDelete}
+            title="Supprimer"
+            className="cursor-pointer"
+            style={{ color: '#555', lineHeight: 0 }}
+            onMouseEnter={(e) => ((e.currentTarget as HTMLElement).style.color = 'var(--color-charcoal-danger, #e05252)')}
+            onMouseLeave={(e) => ((e.currentTarget as HTMLElement).style.color = '#555')}
+          >
+            <Trash2 size={13} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
 

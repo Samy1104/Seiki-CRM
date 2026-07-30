@@ -25,7 +25,7 @@ export function buildEmailHtml(corps: string, trackingPixelUrl: string, signatur
     .join('');
 
   const signatureContent = signatureHtml ?? `
-    <p style="margin:0;font-weight:700;font-size:15px;color:#111827;letter-spacing:0.2px;">Jaafar EL ALAMY</p>
+    <p style="margin:0;font-weight:700;font-size:15px;color:#111827;letter-spacing:0.2px;">Jaafar ELALAMY</p>
     <p style="margin:3px 0 0 0;color:#4b5563;font-size:13px;font-weight:500;">Co-founder &amp; CEO of Seiki</p>
   `.trim();
 

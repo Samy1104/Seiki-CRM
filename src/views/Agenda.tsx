@@ -31,6 +31,7 @@ export const Agenda: React.FC = () => {
   const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
   const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [deleteBookingId, setDeleteBookingId] = useState<string | null>(null);
   const [calendlyAccount, setCalendlyAccount] = useState<CalendlyAccount | null>(null);
 
   useEffect(() => {
@@ -68,6 +69,16 @@ export const Agenda: React.FC = () => {
     }, 60_000);
     return () => clearInterval(intervalId);
   }, []);
+
+  const handleCalendlyDisconnect = async () => {
+    try {
+      if (calendlyAccount) await calendlyService.disconnect(calendlyAccount.id);
+      setCalendlyAccount(null);
+      window.location.href = calendlyService.oauthConnectUrl();
+    } catch {
+      showToast('Erreur lors de la déconnexion Calendly.', 'error');
+    }
+  };
 
   const handleCopyFeedUrl = async () => {
     try {
@@ -149,6 +160,18 @@ export const Agenda: React.FC = () => {
     }
   };
 
+  const handleConfirmDeleteBooking = async () => {
+    if (!deleteBookingId) return;
+    try {
+      await calendlyService.deleteBooking(deleteBookingId);
+      reloadBookings();
+    } catch {
+      showToast('Erreur lors de la suppression du rendez-vous.', 'error');
+    } finally {
+      setDeleteBookingId(null);
+    }
+  };
+
   const handleSaveEvent = async (eventData: {
     name: string;
     event_date: string;
@@ -192,6 +215,7 @@ export const Agenda: React.FC = () => {
           onCopyFeedUrl={handleCopyFeedUrl}
           calendlyAccount={calendlyAccount}
           calendlyConnectUrl={calendlyService.oauthConnectUrl()}
+          onCalendlyDisconnect={handleCalendlyDisconnect}
         />
 
         {/* Collapsible Form (Add / Edit) */}
@@ -232,7 +256,7 @@ export const Agenda: React.FC = () => {
                       onDelete={() => confirmDelete(item.event.id)}
                     />
                   ) : (
-                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} />
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} onDelete={() => setDeleteBookingId(item.booking.id)} />
                   ),
                 )}
               </div>
@@ -259,7 +283,7 @@ export const Agenda: React.FC = () => {
                       onDelete={() => confirmDelete(item.event.id)}
                     />
                   ) : (
-                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} />
+                    <BookingCard key={`booking-${item.booking.id}`} booking={item.booking} onDelete={() => setDeleteBookingId(item.booking.id)} />
                   ),
                 )}
               </div>
@@ -267,11 +291,15 @@ export const Agenda: React.FC = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Modal */}
       <ConfirmDeleteModal
         isOpen={!!deleteTargetId}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDeleteTargetId(null)}
+      />
+      <ConfirmDeleteModal
+        isOpen={!!deleteBookingId}
+        onConfirm={handleConfirmDeleteBooking}
+        onCancel={() => setDeleteBookingId(null)}
       />
     </div>
   );

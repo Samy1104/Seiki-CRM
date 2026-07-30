@@ -35,13 +35,24 @@ export const calendlyService = {
     return data;
   },
 
+  async deleteBooking(id: string): Promise<void> {
+    const { error } = await supabase.from('calendly_bookings').update({ manually_deleted: true }).eq('id', id);
+    if (error) throw error;
+  },
+
   async listBookings(): Promise<CalendlyBooking[]> {
     const { data, error } = await supabase
       .from('calendly_bookings')
       .select('id, title, start_time, end_time, invitee_name, invitee_email, location, status, cancel_reason, lead_id')
+      .eq('manually_deleted', false)
       .order('start_time', { ascending: true });
     if (error) throw error;
     return data ?? [];
+  },
+
+  async disconnect(id: string): Promise<void> {
+    const { error } = await supabase.from('calendly_accounts').delete().eq('id', id);
+    if (error) throw error;
   },
 
   oauthConnectUrl(): string {

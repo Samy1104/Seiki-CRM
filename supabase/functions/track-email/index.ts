@@ -4,7 +4,6 @@
 // Rôle : Pixel de tracking — enregistre les ouvertures.
 //        Appelé par le navigateur du destinataire quand il
 //        ouvre l'email (via l'image 1x1 pixel injectée).
-//        Resend gère aussi les événements via webhooks.
 // ============================================================
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";

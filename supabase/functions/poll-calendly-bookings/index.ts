@@ -96,6 +96,20 @@ serve(async (req: Request) => {
       }
     }
 
+    // Purge des lignes masquées ("Reconnecter") devenues inoffensives : une
+    // fois leur start_time sorti de la fenêtre de sync (minStartTime), Calendly
+    // ne les renverra plus jamais dans listScheduledEvents — elles ne peuvent
+    // donc plus être recréées par syncOneEvent, et le flag manually_deleted
+    // n'a plus besoin d'être conservé. Ça évite une accumulation indéfinie de
+    // lignes masquées en base tout en gardant la garde nécessaire pendant que
+    // l'événement est encore dans la fenêtre.
+    const { error: purgeErr } = await supabase
+      .from("calendly_bookings")
+      .delete()
+      .eq("manually_deleted", true)
+      .lt("start_time", minStartTime);
+    if (purgeErr) console.error("[poll-calendly-bookings] Failed to purge old manually_deleted rows:", purgeErr.message);
+
     return new Response(JSON.stringify({ processed: events.length, created, canceled, unchanged, errors }), {
       status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" },
     });
@@ -123,7 +137,7 @@ async function syncOneEvent(
 
   const { data: existing, error: existingErr } = await supabase
     .from("calendly_bookings")
-    .select("id, status, lead_id")
+    .select("id, status, lead_id, manually_deleted")
     .eq("calendly_event_uri", event.uri)
     .maybeSingle();
 
@@ -132,6 +146,9 @@ async function syncOneEvent(
   // ligne d'historique. On laisse le catch de l'appelant compter l'erreur
   // et réessayer au prochain passage du cron.
   if (existingErr) throw new Error(existingErr.message);
+
+  // Booking manually hidden by the user — never re-surface it.
+  if (existing?.manually_deleted) return "unchanged";
 
   const isNewBooking = !existing;
   const isNewCancellation = !!existing && existing.status === "active" && status === "canceled";
