@@ -2,11 +2,15 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { leadsService } from '../services/leadsService';
 import type { Lead, LeadHistoryItem } from '../services/leadsService';
 import { settingsService } from '../services/settingsService';
-import type { PipelineStage, DashboardTargets, TeamMember, SlaLimits } from '../services/settingsService';
+import type { PipelineStage, DashboardTargets, TeamMember, SlaLimits, CodirMeeting } from '../services/settingsService';
 import { tasksService } from '../services/tasksService';
 import type { Task } from '../services/tasksService';
 import { prospectionService } from '../services/prospectionService';
 import type { EmailLog } from '../services/prospectionService';
+import { pipelineHistoryService } from '../services/pipelineHistoryService';
+import type { LeadStageHistoryEntry } from '../services/pipelineHistoryService';
+import { computePeriodWindows, isWithinWindow } from '../utils/dashboardCalculations';
+import type { PeriodPreset } from '../utils/dashboardCalculations';
 import { supabase } from '../services/supabaseClient';
 import { useToast } from '../context/ToastContext';
 import { generateStatsCsv } from '../utils/statsCalculations';
@@ -20,22 +24,6 @@ import { DashboardTasksTab } from './dashboard/DashboardTasksTab';
 import { LayoutDashboard, GitCommit, Mail, CheckSquare } from 'lucide-react';
 
 export type DashboardTab = 'codir' | 'pipeline' | 'outreach' | 'tasks';
-
-const isDateInRange = (dateStr: string, startDate?: string, endDate?: string) => {
-  if (!dateStr) return false;
-  const time = new Date(dateStr).getTime();
-  if (isNaN(time)) return false;
-
-  if (startDate) {
-    const start = new Date(`${startDate}T00:00:00.000Z`).getTime();
-    if (time < start) return false;
-  }
-  if (endDate) {
-    const end = new Date(`${endDate}T23:59:59.999Z`).getTime();
-    if (time > end) return false;
-  }
-  return true;
-};
 
 export const Dashboard: React.FC = () => {
   const { showToast } = useToast();
@@ -56,24 +44,15 @@ export const Dashboard: React.FC = () => {
     target_win_rate: 20,
     target_prospection_positive: 10,
   });
-  const [codirDates, setCodirDates] = useState<string[]>([]);
+  const [codirMeetings, setCodirMeetings] = useState<CodirMeeting[]>([]);
+  const [stageHistory, setStageHistory] = useState<LeadStageHistoryEntry[]>([]);
   const [slaLimits, setSlaLimits] = useState<SlaLimits | undefined>(undefined);
 
-  // Comparison states
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgoIso = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-  const sixtyDaysAgoIso = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
-
-  const [comparisonMode, setComparisonMode] = useState<'codir' | 'custom'>('codir');
-  const [selectedCodirA, setSelectedCodirA] = useState<string>(todayIso);
-  const [selectedCodirB, setSelectedCodirB] = useState<string>(thirtyDaysAgoIso);
-  const [customDateA, setCustomDateA] = useState<{ start: string; end: string }>({
-    start: thirtyDaysAgoIso,
-    end: todayIso,
-  });
-  const [customDateB, setCustomDateB] = useState<{ start: string; end: string }>({
-    start: sixtyDaysAgoIso,
-    end: thirtyDaysAgoIso,
+  // Period preset & custom range states
+  const [preset, setPreset] = useState<PeriodPreset>('since_last_codir');
+  const [customRange, setCustomRange] = useState<{ start: string; end: string }>({
+    start: new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10),
+    end: new Date().toISOString().slice(0, 10),
   });
 
   useEffect(() => {
@@ -90,9 +69,10 @@ export const Dashboard: React.FC = () => {
         fetchedEmailLogs,
         fetchedMembers,
         fetchedTargets,
-        fetchedCodirHistory,
+        fetchedCodirMeetings,
         fetchedSla,
         historyRes,
+        fetchedStageHistory,
       ] = await Promise.all([
         leadsService.getLeads(false),
         settingsService.getPipelineStages(),
@@ -103,6 +83,7 @@ export const Dashboard: React.FC = () => {
         settingsService.getCodirHistory(),
         settingsService.getSlaLimits().catch(() => undefined),
         supabase.from('history').select('*, user:team_members!user_id(full_name, initials, color)').order('created_at', { ascending: false }),
+        pipelineHistoryService.getStageHistory(),
       ]);
 
       setLeads(fetchedLeads);
@@ -111,18 +92,10 @@ export const Dashboard: React.FC = () => {
       setEmailLogs(fetchedEmailLogs);
       setTeamMembers(fetchedMembers);
       setTargets(fetchedTargets);
-      setCodirDates(fetchedCodirHistory);
+      setCodirMeetings(fetchedCodirMeetings);
       setSlaLimits(fetchedSla);
       setHistory((historyRes.data || []) as LeadHistoryItem[]);
-
-      if (fetchedCodirHistory.length > 0) {
-        setSelectedCodirA(fetchedCodirHistory[fetchedCodirHistory.length - 1]);
-        if (fetchedCodirHistory.length > 1) {
-          setSelectedCodirB(fetchedCodirHistory[fetchedCodirHistory.length - 2]);
-        } else {
-          setSelectedCodirB(fetchedCodirHistory[0]);
-        }
-      }
+      setStageHistory(fetchedStageHistory);
     } catch (err) {
       console.error('Erreur de chargement des données du dashboard:', err);
       showToast('Erreur lors du chargement des données du Dashboard', 'error');
@@ -132,37 +105,27 @@ export const Dashboard: React.FC = () => {
   };
 
   // Filtered dataset for Period A & Period B
-  const { leadsA, leadsB, historyA, historyB, emailLogsA, emailLogsB, startDateA, endDateA } = useMemo(() => {
-    if (comparisonMode === 'codir') {
-      const endA = selectedCodirA || todayIso;
-      const endB = selectedCodirB || thirtyDaysAgoIso;
+  const { leadsA, leadsB, historyA, historyB, emailLogsA, emailLogsB, startDateA, endDateA, endDateB } = useMemo(() => {
+    const { current, comparison } = computePeriodWindows(preset, codirMeetings, new Date(), customRange);
 
-      return {
-        leadsA: leads.filter((l) => isDateInRange(l.created_at, undefined, endA)),
-        leadsB: leads.filter((l) => isDateInRange(l.created_at, undefined, endB)),
-        historyA: history.filter((h) => isDateInRange(h.created_at, undefined, endA)),
-        historyB: history.filter((h) => isDateInRange(h.created_at, undefined, endB)),
-        emailLogsA: emailLogs.filter((e) => isDateInRange(e.sent_at || e.created_at, undefined, endA)),
-        emailLogsB: emailLogs.filter((e) => isDateInRange(e.sent_at || e.created_at, undefined, endB)),
-        startDateA: undefined,
-        endDateA: endA,
-      };
-    } else {
-      const { start: startA, end: endA } = customDateA;
-      const { start: startB, end: endB } = customDateB;
+    return {
+      leadsA: leads.filter((l) => isWithinWindow(l.created_at, current)),
+      leadsB: leads.filter((l) => isWithinWindow(l.created_at, comparison)),
+      historyA: history.filter((h) => isWithinWindow(h.created_at, current)),
+      historyB: history.filter((h) => isWithinWindow(h.created_at, comparison)),
+      emailLogsA: emailLogs.filter((e) => isWithinWindow(e.sent_at || e.created_at, current)),
+      emailLogsB: emailLogs.filter((e) => isWithinWindow(e.sent_at || e.created_at, comparison)),
+      startDateA: current.start,
+      endDateA: current.end,
+      endDateB: comparison.end,
+    };
+  }, [preset, codirMeetings, customRange, leads, history, emailLogs]);
 
-      return {
-        leadsA: leads.filter((l) => isDateInRange(l.created_at, startA, endA)),
-        leadsB: leads.filter((l) => isDateInRange(l.created_at, startB, endB)),
-        historyA: history.filter((h) => isDateInRange(h.created_at, startA, endA)),
-        historyB: history.filter((h) => isDateInRange(h.created_at, startB, endB)),
-        emailLogsA: emailLogs.filter((e) => isDateInRange(e.sent_at || e.created_at, startA, endA)),
-        emailLogsB: emailLogs.filter((e) => isDateInRange(e.sent_at || e.created_at, startB, endB)),
-        startDateA: startA,
-        endDateA: endA,
-      };
-    }
-  }, [comparisonMode, selectedCodirA, selectedCodirB, customDateA, customDateB, leads, history, emailLogs, todayIso, thirtyDaysAgoIso]);
+  const handleValidateCodir = async () => {
+    const updated = await settingsService.addCodirDate();
+    setCodirMeetings(updated);
+    showToast('CODIR du jour enregistré !', 'success');
+  };
 
   const handleExportCsv = () => {
     const csvContent = generateStatsCsv(leadsA);
@@ -170,7 +133,7 @@ export const Dashboard: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `seiki_dashboard_${comparisonMode}_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `seiki_dashboard_${preset}_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     showToast('Export CSV du Dashboard téléchargé !', 'success');
   };
@@ -200,17 +163,12 @@ export const Dashboard: React.FC = () => {
     <div className="w-full space-y-6 font-ui text-[#f2ede4]">
       {/* Comparative Header */}
       <DashboardHeader
-        codirDates={codirDates}
-        comparisonMode={comparisonMode}
-        setComparisonMode={setComparisonMode}
-        selectedCodirA={selectedCodirA}
-        setSelectedCodirA={setSelectedCodirA}
-        selectedCodirB={selectedCodirB}
-        setSelectedCodirB={setSelectedCodirB}
-        customDateA={customDateA}
-        setCustomDateA={setCustomDateA}
-        customDateB={customDateB}
-        setCustomDateB={setCustomDateB}
+        preset={preset}
+        setPreset={setPreset}
+        customRange={customRange}
+        setCustomRange={setCustomRange}
+        codirMeetings={codirMeetings}
+        onValidateCodir={handleValidateCodir}
         onExportCsv={handleExportCsv}
       />
 

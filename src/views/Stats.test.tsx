@@ -41,6 +41,12 @@ vi.mock('../services/prospectionService', () => ({
   },
 }));
 
+vi.mock('../services/pipelineHistoryService', () => ({
+  pipelineHistoryService: {
+    getStageHistory: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 vi.mock('../services/supabaseClient', () => ({
   supabase: {
     from: () => ({
