@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { settingsService } from '../../services/settingsService';
-import type { DashboardTargets } from '../../services/settingsService';
+import type { DashboardTargets, CodirMeeting } from '../../services/settingsService';
 import { useToast } from '../../context/ToastContext';
 import { Target, Calendar, Plus, Save } from 'lucide-react';
 
@@ -12,7 +12,7 @@ export const DashboardTargetsSettings: React.FC = () => {
     target_win_rate: 20,
     target_prospection_positive: 10,
   });
-  const [codirDates, setCodirDates] = useState<string[]>([]);
+  const [codirMeetings, setCodirMeetings] = useState<CodirMeeting[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -27,7 +27,7 @@ export const DashboardTargetsSettings: React.FC = () => {
         settingsService.getCodirHistory(),
       ]);
       setTargets(t);
-      setCodirDates(d);
+      setCodirMeetings(d);
     } catch (err) {
       console.error(err);
     } finally {
@@ -48,11 +48,10 @@ export const DashboardTargetsSettings: React.FC = () => {
   };
 
   const handleAddTodayCodir = async () => {
-    const today = new Date().toISOString().slice(0, 10);
     try {
-      const updated = await settingsService.addCodirDate(today);
-      setCodirDates(updated);
-      showToast(`Date de CODIR (${today}) enregistrée !`, 'success');
+      const updated = await settingsService.addCodirDate();
+      setCodirMeetings(updated);
+      showToast('Date de CODIR enregistrée !', 'success');
     } catch (err) {
       showToast("Erreur lors de l'enregistrement du CODIR", 'error');
     }
@@ -128,7 +127,7 @@ export const DashboardTargetsSettings: React.FC = () => {
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2 text-xs font-bold text-[#f2ede4]">
             <Calendar className="w-4 h-4 text-[#D4C4A8]" />
-            Historique des réunions CODIR ({codirDates.length})
+            Historique des réunions CODIR ({codirMeetings.length})
           </div>
           <button
             onClick={handleAddTodayCodir}
@@ -138,13 +137,13 @@ export const DashboardTargetsSettings: React.FC = () => {
             Enregistrer le CODIR d'aujourd'hui
           </button>
         </div>
-        {codirDates.length === 0 ? (
+        {codirMeetings.length === 0 ? (
           <p className="text-xs text-ink-faint italic">Aucune date enregistrée. Cliquez ci-dessus pour marquer votre premier CODIR.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
-            {codirDates.map((date) => (
-              <span key={date} className="px-2.5 py-1 bg-[#1e1e1e] border border-line text-xs text-[#f2ede4] rounded-md font-mono">
-                {date}
+            {codirMeetings.map((meeting) => (
+              <span key={meeting.id} className="px-2.5 py-1 bg-[#1e1e1e] border border-line text-xs text-[#f2ede4] rounded-md font-mono">
+                {meeting.meeting_date.slice(0, 10)}
               </span>
             ))}
           </div>

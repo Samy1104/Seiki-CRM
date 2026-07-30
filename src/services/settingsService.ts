@@ -65,8 +65,10 @@ export interface DashboardTargets {
   target_prospection_positive: number;
 }
 
-export interface CodirHistory {
-  dates: string[];
+export interface CodirMeeting {
+  id: string;
+  meeting_date: string;
+  label: string | null;
 }
 
 export const settingsService = {
@@ -339,26 +341,20 @@ export const settingsService = {
     });
   },
 
-  async getCodirHistory(): Promise<string[]> {
-    const { data } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'codir_history')
-      .maybeSingle();
+  async getCodirHistory(): Promise<CodirMeeting[]> {
+    const { data, error } = await supabase
+      .from('codir_meetings')
+      .select('id, meeting_date, label')
+      .order('meeting_date', { ascending: true });
 
-    return data?.value?.dates || [];
+    if (error) throw error;
+    return data || [];
   },
 
-  async addCodirDate(dateIso: string): Promise<string[]> {
-    const current = await this.getCodirHistory();
-    if (current.includes(dateIso)) return current;
-    const updated = [...current, dateIso].sort();
-    await supabase.from('app_settings').upsert({
-      key: 'codir_history',
-      value: { dates: updated },
-      label: 'Historique des réunions CODIR',
-      category: 'general',
-    });
-    return updated;
+  async addCodirDate(dateIso?: string, label: string | null = null): Promise<CodirMeeting[]> {
+    await supabase.from('codir_meetings').insert([
+      { meeting_date: dateIso || new Date().toISOString(), label },
+    ]);
+    return this.getCodirHistory();
   }
 };
