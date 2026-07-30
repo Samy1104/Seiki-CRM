@@ -29,7 +29,7 @@ export const DashboardTasksTab: React.FC<DashboardTasksTabProps> = ({
         );
       case 'medium':
         return (
-          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/10 text-[#F59E0B] border border-amber-500/20">
+          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#D4C4A8]/10 text-[#D4C4A8] border border-[#D4C4A8]/20">
             Moyenne
           </span>
         );
@@ -75,7 +75,7 @@ export const DashboardTasksTab: React.FC<DashboardTasksTabProps> = ({
           <div className="px-3 py-1.5 bg-[#1e1e1e] border border-line rounded-xl text-emerald-400 font-bold">
             {groupedTasks.reduce((sum, g) => sum + g.completedInPeriod.length, 0)} accomplies
           </div>
-          <div className="px-3 py-1.5 bg-[#1e1e1e] border border-line rounded-xl text-[#F59E0B] font-bold">
+          <div className="px-3 py-1.5 bg-[#1e1e1e] border border-line rounded-xl text-[#D4C4A8] font-bold">
             {groupedTasks.reduce((sum, g) => sum + g.pending.length, 0)} en attente
           </div>
         </div>
@@ -123,7 +123,7 @@ export const DashboardTasksTab: React.FC<DashboardTasksTabProps> = ({
                     <span className="text-[11px] px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold rounded-md">
                       {completedInPeriod.length} accomplie{completedInPeriod.length > 1 ? 's' : ''}
                     </span>
-                    <span className="text-[11px] px-2 py-0.5 bg-amber-500/10 text-[#F59E0B] border border-amber-500/20 font-bold rounded-md">
+                    <span className="text-[11px] px-2 py-0.5 bg-[#D4C4A8]/10 text-[#D4C4A8] border border-[#D4C4A8]/20 font-bold rounded-md">
                       {pending.length} à faire
                     </span>
                   </div>
@@ -162,7 +162,7 @@ export const DashboardTasksTab: React.FC<DashboardTasksTabProps> = ({
 
                   {/* Pending Tasks Section */}
                   <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#F59E0B]">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-[#D4C4A8]">
                       <Clock className="w-3.5 h-3.5" />
                       <span>Tâches en attente ({sortedPending.length})</span>
                     </div>

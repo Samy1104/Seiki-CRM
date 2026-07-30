@@ -152,7 +152,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
         <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-medium text-ink-soft">
-              <Eye className="w-4 h-4 text-[#F59E0B]" />
+              <Eye className="w-4 h-4 text-[#D4C4A8]" />
               <span>Taux d'Ouverture</span>
             </div>
             <DeltaBadge delta={openRateDelta} />
@@ -164,7 +164,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
             {/* Progress Bar */}
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40 mt-2">
               <div
-                className="bg-gradient-to-r from-[#D4C4A8] to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${openRateA}%` }}
               />
             </div>
@@ -175,7 +175,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
         <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-medium text-ink-soft">
-              <MessageSquare className="w-4 h-4 text-emerald-400" />
+              <MessageSquare className="w-4 h-4 text-[#D4C4A8]" />
               <span>Taux de Réponse</span>
             </div>
             <DeltaBadge delta={replyRateDelta} />
@@ -187,7 +187,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
             {/* Progress Bar */}
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40 mt-2">
               <div
-                className="bg-gradient-to-r from-emerald-500 to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${replyRateA}%` }}
               />
             </div>
@@ -199,7 +199,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
       <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-4">
         <div className="flex items-center justify-between border-b border-line/60 pb-3">
           <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-[#F59E0B]/10 text-[#F59E0B] rounded-xl border border-amber-500/20">
+            <div className="p-2 bg-[#D4C4A8]/10 text-[#D4C4A8] rounded-xl border border-[#D4C4A8]/20">
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
@@ -232,8 +232,8 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
           </div>
 
           {/* Neutral Sentiment */}
-          <div className="bg-[#1e1e1e] border border-amber-500/30 rounded-xl p-4 space-y-2">
-            <div className="flex items-center justify-between text-[#F59E0B]">
+          <div className="bg-[#1e1e1e] border border-[#D4C4A8]/30 rounded-xl p-4 space-y-2">
+            <div className="flex items-center justify-between text-[#D4C4A8]">
               <div className="flex items-center gap-2 text-xs font-bold">
                 <Meh className="w-4 h-4" />
                 <span>Neutre / Question</span>
@@ -243,7 +243,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
             <div className="text-xl font-extrabold text-[#f2ede4]">{neuCount}</div>
             <div className="w-full bg-[#141414] h-2 rounded-full overflow-hidden border border-line/40">
               <div
-                className="bg-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${neuPercent}%` }}
               />
             </div>

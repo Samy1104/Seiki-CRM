@@ -20,7 +20,7 @@ const MetricDeltaBadge: React.FC<{ delta: DeltaResult; higherIsBetter?: boolean 
 
   if (isPositive) {
     const colorClass = higherIsBetter 
-      ? 'bg-amber-500/10 text-[#F59E0B] border-amber-500/30' 
+      ? 'bg-[#D4C4A8]/10 text-[#D4C4A8] border-[#D4C4A8]/30' 
       : 'bg-rose-500/10 text-rose-400 border-rose-500/30';
     return (
       <span className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-md text-[11px] font-bold border ${colorClass}`}>
@@ -126,11 +126,11 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px] text-ink-soft">
               <span>Progression</span>
-              <span className="font-bold text-[#F59E0B]">{caProgress}%</span>
+              <span className="font-bold text-[#D4C4A8]">{caProgress}%</span>
             </div>
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40">
               <div
-                className="bg-gradient-to-r from-[#D4C4A8] to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${caProgress}%` }}
               />
             </div>
@@ -155,11 +155,11 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px] text-ink-soft">
               <span>Objectif atteint</span>
-              <span className="font-bold text-[#F59E0B]">{leadsProgress}%</span>
+              <span className="font-bold text-[#D4C4A8]">{leadsProgress}%</span>
             </div>
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40">
               <div
-                className="bg-gradient-to-r from-[#D4C4A8] to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${leadsProgress}%` }}
               />
             </div>
@@ -184,11 +184,11 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px] text-ink-soft">
               <span>Ratio de succès</span>
-              <span className="font-bold text-[#F59E0B]">{winRateProgress}%</span>
+              <span className="font-bold text-[#D4C4A8]">{winRateProgress}%</span>
             </div>
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40">
               <div
-                className="bg-gradient-to-r from-[#D4C4A8] to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${winRateProgress}%` }}
               />
             </div>
@@ -213,11 +213,11 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
           <div className="space-y-1 pt-1">
             <div className="flex justify-between text-[11px] text-ink-soft">
               <span>Prospection</span>
-              <span className="font-bold text-[#F59E0B]">{posProgress}%</span>
+              <span className="font-bold text-[#D4C4A8]">{posProgress}%</span>
             </div>
             <div className="w-full bg-[#1e1e1e] h-2 rounded-full overflow-hidden border border-line/40">
               <div
-                className="bg-gradient-to-r from-[#D4C4A8] to-[#F59E0B] h-full rounded-full transition-all duration-500"
+                className="bg-gradient-to-r from-[#c8b89a] to-[#D4C4A8] h-full rounded-full transition-all duration-500"
                 style={{ width: `${posProgress}%` }}
               />
             </div>
@@ -231,7 +231,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
         <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-line/60 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-amber-500/10 text-[#F59E0B] rounded-xl border border-amber-500/20">
+              <div className="p-2 bg-[#D4C4A8]/10 text-[#D4C4A8] rounded-xl border border-[#D4C4A8]/20">
                 <Flame className="w-4 h-4" />
               </div>
               <div>
@@ -274,7 +274,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
                   </div>
 
                   <div className="text-right">
-                    <div className="text-sm font-extrabold text-[#F59E0B]">
+                    <div className="text-sm font-extrabold text-[#D4C4A8]">
                       {(lead.deal_value || 0).toLocaleString('fr-FR')} €
                     </div>
                     <div className="text-[10px] text-ink-soft">

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Download, Calendar, ArrowRightLeft } from 'lucide-react';
 import { PageTitle } from '../../components/ui/PageTitle';
+import { AccentButton } from '../../components/ui/AccentButton';
+import { SegmentedToggle } from '../../components/ui/SegmentedToggle';
 
 export interface DashboardHeaderProps {
   codirDates: string[];
@@ -40,17 +42,16 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
     <div className="mb-6 space-y-4">
       {/* Top Bar: Title & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <PageTitle subtitle="Vue d'ensemble commerciale, analyse comparative et suivi stratégique">
-          Dashboard
-        </PageTitle>
+        <PageTitle>Dashboard</PageTitle>
 
-        <button
+        <AccentButton
+          variant="primary"
+          icon={<Download size={14} />}
           onClick={onExportCsv}
-          className="flex items-center gap-2 px-4 py-2 bg-[#D4C4A8] text-[#0d0d0d] font-bold text-xs rounded-xl hover:bg-[#e2d5bd] transition-all cursor-pointer shadow-sm self-start sm:self-auto"
+          className="self-start sm:self-auto"
         >
-          <Download className="w-4 h-4" />
-          <span>Exporter CSV</span>
-        </button>
+          Exporter CSV
+        </AccentButton>
       </div>
 
       {/* Comparative Period Controls Card */}
@@ -61,31 +62,23 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <span>Mode de Comparaison temporelle</span>
           </div>
 
-          {/* Toggle buttons */}
-          <div className="flex items-center bg-[#1e1e1e] p-1 rounded-xl border border-line">
-            <button
-              onClick={() => setComparisonMode('codir')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                comparisonMode === 'codir'
-                  ? 'bg-[#D4C4A8] text-[#0d0d0d] font-bold shadow-xs'
-                  : 'text-ink-soft hover:text-[#f2ede4]'
-              }`}
-            >
-              <ArrowRightLeft className="w-3.5 h-3.5" />
-              <span>Comparaison CODIR</span>
-            </button>
-            <button
-              onClick={() => setComparisonMode('custom')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer ${
-                comparisonMode === 'custom'
-                  ? 'bg-[#D4C4A8] text-[#0d0d0d] font-bold shadow-xs'
-                  : 'text-ink-soft hover:text-[#f2ede4]'
-              }`}
-            >
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Périodes Personnalisées</span>
-            </button>
-          </div>
+          {/* SegmentedToggle Component */}
+          <SegmentedToggle<'codir' | 'custom'>
+            value={comparisonMode}
+            onChange={setComparisonMode}
+            options={[
+              {
+                value: 'codir',
+                label: 'Comparaison CODIR',
+                icon: <ArrowRightLeft className="w-3.5 h-3.5" />,
+              },
+              {
+                value: 'custom',
+                label: 'Périodes Personnalisées',
+                icon: <Calendar className="w-3.5 h-3.5" />,
+              },
+            ]}
+          />
         </div>
 
         {/* Inputs depending on Mode */}
