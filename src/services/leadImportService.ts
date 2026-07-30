@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import type ExcelJS from 'exceljs';
 import { supabase } from './supabaseClient';
 
 export const LEAD_IMPORT_HEADERS = [
@@ -111,6 +111,7 @@ function cellText(row: ExcelJS.Row, col: number): string {
 
 export const leadImportService = {
   async parseFile(file: File): Promise<RawImportRow[]> {
+    const ExcelJS = (await import('exceljs')).default;
     const buffer = await file.arrayBuffer();
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
