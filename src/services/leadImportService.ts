@@ -267,21 +267,30 @@ export const leadImportService = {
   },
 
   async fetchExistingLeadsByEmail(): Promise<Map<string, ExistingLeadRecord>> {
-    const { data, error } = await supabase
-      .from('leads')
-      .select('id, email, contact_name, phone, linkedin_url, website, deal_value, note')
-      .not('email', 'is', null)
-      .is('merged_into_id', null)
-      .eq('is_archived', false);
-
-    if (error) throw error;
-
+    const PAGE_SIZE = 1000;
     const map = new Map<string, ExistingLeadRecord>();
-    for (const lead of data || []) {
-      if (lead.email) {
-        map.set(lead.email.toLowerCase(), lead);
+
+    for (let offset = 0; ; offset += PAGE_SIZE) {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('id, email, contact_name, phone, linkedin_url, website, deal_value, note')
+        .not('email', 'is', null)
+        .is('merged_into_id', null)
+        .eq('is_archived', false)
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const page = data || [];
+      for (const lead of page) {
+        if (lead.email) {
+          map.set(lead.email.toLowerCase(), lead);
+        }
       }
+
+      if (page.length < PAGE_SIZE) break;
     }
+
     return map;
   },
 

@@ -10,7 +10,20 @@ import type { NewLeadRow, UpdateLeadRow } from './leadImportService';
 
 function queryResult<T>(data: T, error: any = null) {
   const promise: any = Promise.resolve({ data, error });
-  const chain = ['select', 'insert', 'update', 'delete', 'eq', 'neq', 'is', 'not', 'order', 'maybeSingle', 'single'];
+  const chain = [
+    'select',
+    'insert',
+    'update',
+    'delete',
+    'eq',
+    'neq',
+    'is',
+    'not',
+    'order',
+    'range',
+    'maybeSingle',
+    'single',
+  ];
   chain.forEach((method) => {
     promise[method] = vi.fn(() => promise);
   });
@@ -54,6 +67,57 @@ describe('leadImportService.fetchExistingLeadsByEmail', () => {
     expect(mockQueryChain.not).toHaveBeenCalledWith('email', 'is', null);
     expect(mockQueryChain.is).toHaveBeenCalledWith('merged_into_id', null);
     expect(mockQueryChain.eq).toHaveBeenCalledWith('is_archived', false);
+    expect(mockQueryChain.range).toHaveBeenCalledWith(0, 999);
+  });
+
+  it('paginates past the 1000-row default cap, accumulating leads from every page', async () => {
+    const PAGE_SIZE = 1000;
+    const firstPage = Array.from({ length: PAGE_SIZE }, (_, i) => ({
+      id: `lead-page1-${i}`,
+      email: `page1-${i}@acme.com`,
+      contact_name: null,
+      phone: null,
+      linkedin_url: null,
+      website: null,
+      deal_value: 0,
+      note: null,
+    }));
+    const secondPage = [
+      {
+        id: 'lead-page2-0',
+        email: 'page2-0@acme.com',
+        contact_name: null,
+        phone: null,
+        linkedin_url: null,
+        website: null,
+        deal_value: 0,
+        note: null,
+      },
+    ];
+
+    const chainMethods = ['select', 'not', 'is', 'eq'];
+    const mockQueryChain: any = {};
+    chainMethods.forEach((method) => {
+      mockQueryChain[method] = vi.fn(() => mockQueryChain);
+    });
+    mockQueryChain.range = vi
+      .fn()
+      .mockImplementationOnce(() => Promise.resolve({ data: firstPage, error: null }))
+      .mockImplementationOnce(() => Promise.resolve({ data: secondPage, error: null }));
+
+    mockedFrom.mockReturnValue(mockQueryChain);
+
+    const map = await leadImportService.fetchExistingLeadsByEmail();
+
+    expect(mockQueryChain.range).toHaveBeenNthCalledWith(1, 0, PAGE_SIZE - 1);
+    expect(mockQueryChain.range).toHaveBeenNthCalledWith(2, PAGE_SIZE, PAGE_SIZE * 2 - 1);
+    expect(mockQueryChain.range).toHaveBeenCalledTimes(2);
+
+    // Proves the loop continued past the first page: both pages' leads are present.
+    expect(map.get('page1-0@acme.com')?.id).toBe('lead-page1-0');
+    expect(map.get('page1-999@acme.com')?.id).toBe('lead-page1-999');
+    expect(map.get('page2-0@acme.com')?.id).toBe('lead-page2-0');
+    expect(map.size).toBe(PAGE_SIZE + 1);
   });
 });
 
