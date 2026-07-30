@@ -228,6 +228,7 @@ body {
   flex: 1;
   padding: 24px;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   height: 100vh;
   box-sizing: border-box;
   background: var(--bg-main);

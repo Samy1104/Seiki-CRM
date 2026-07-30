@@ -177,7 +177,7 @@ export const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="p-8 max-w-7xl mx-auto space-y-6">
+      <div className="w-full space-y-6">
         <div className="h-10 w-48 bg-[#1e1e1e] animate-pulse rounded-lg" />
         <div className="h-28 w-full bg-[#1e1e1e] animate-pulse rounded-2xl" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -197,7 +197,7 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-6 font-ui text-[#f2ede4]">
+    <div className="w-full space-y-6 font-ui text-[#f2ede4]">
       {/* Comparative Header */}
       <DashboardHeader
         codirDates={codirDates}
