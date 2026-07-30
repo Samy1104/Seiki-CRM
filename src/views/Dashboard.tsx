@@ -215,7 +215,7 @@ export const Dashboard: React.FC = () => {
       />
 
       {/* Tab Navigation Bar */}
-      <div className="flex items-center gap-2 border-b border-line pb-1 overflow-x-auto">
+      <div className="flex items-center gap-2 border-b border-line/60 pb-1 overflow-x-auto">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -223,21 +223,40 @@ export const Dashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 min-w-[210px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-t-xl transition-all cursor-pointer whitespace-nowrap ${
+              className={`group relative flex-1 min-w-[210px] flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-t-xl transition-all duration-300 ease-out cursor-pointer whitespace-nowrap active:scale-[0.98] ${
                 isActive
-                  ? 'bg-[#141414] text-[#D4C4A8] border-t-2 border-t-[#D4C4A8] border-x border-line shadow-xs'
-                  : 'text-ink-soft hover:text-[#f2ede4] hover:bg-[#1a1a1a]/50'
+                  ? 'bg-[#141414] text-[#D4C4A8] border-x border-t border-line/80 shadow-md'
+                  : 'text-ink-soft hover:text-[#f2ede4] hover:bg-[#1a1a1a]/60 border-x border-t border-transparent'
               }`}
             >
-              <Icon className={`w-4 h-4 ${isActive ? 'text-[#D4C4A8]' : 'text-ink-soft'}`} />
-              <span className="text-[11px] font-semibold uppercase tracking-[0.14em]">{tab.label}</span>
+              {/* Active top accent bar animation */}
+              <span
+                className={`absolute top-0 left-0 right-0 h-[2px] bg-[#D4C4A8] rounded-t-full transition-all duration-300 ease-out ${
+                  isActive
+                    ? 'opacity-100 scale-x-100 shadow-[0_0_8px_rgba(212,196,168,0.5)]'
+                    : 'opacity-0 scale-x-50 group-hover:opacity-40 group-hover:scale-x-75'
+                }`}
+              />
+
+              <Icon
+                className={`w-4 h-4 transition-all duration-300 ease-out group-hover:scale-110 ${
+                  isActive ? 'text-[#D4C4A8] drop-shadow-[0_0_6px_rgba(212,196,168,0.4)]' : 'text-ink-soft group-hover:text-[#f2ede4]'
+                }`}
+              />
+              <span
+                className={`text-[11px] font-semibold uppercase tracking-[0.14em] transition-colors duration-300 ${
+                  isActive ? 'text-[#D4C4A8]' : 'text-ink-soft group-hover:text-[#f2ede4]'
+                }`}
+              >
+                {tab.label}
+              </span>
             </button>
           );
         })}
       </div>
 
-      {/* Active Tab Component */}
-      <div className="pt-2">
+      {/* Active Tab Component with Smooth Transition */}
+      <div className="pt-2 transition-all duration-300">
         {activeTab === 'codir' && (
           <DashboardCodirTab
             leadsA={leadsA}
