@@ -233,9 +233,10 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
               await leadsService.updateLead(leadId, {
                 stage_id: toCol,
               });
-            } catch (err) {
+            } catch (err: any) {
               console.error('Error updating stage:', err);
-              showToast('Erreur lors de la mise à jour', 'error');
+              const detailMsg = err?.message ? `: ${err.message}` : '';
+              showToast(`Erreur lors de la mise à jour${detailMsg}`, 'error');
               reloadPipelineData();
             }
           }}
