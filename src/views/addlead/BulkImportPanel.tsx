@@ -25,10 +25,7 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
   const [errors, setErrors] = useState<RowError[]>([]);
   const [result, setResult] = useState<{ created: number; updated: number } | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processFile = async (file: File) => {
     setLoading(true);
     try {
       const rows = await leadImportService.parseFile(file);
@@ -42,6 +39,7 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
       setErrors(validation.errors);
       setStep('preview');
     } catch (err) {
+      console.error('Error reading/validating the import file:', err);
       showToast(err instanceof Error ? err.message : 'Erreur lors de la lecture du fichier', 'error');
     } finally {
       setLoading(false);
@@ -49,11 +47,29 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
     }
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLLabelElement>) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    await processFile(file);
+  };
+
   const handleConfirm = async () => {
     setLoading(true);
     try {
       const summary = await leadImportService.commitImport(toCreate, toUpdate);
       if (summary.error) {
+        console.error('Bulk import commit failed mid-loop:', summary.error);
         showToast(
           `Import interrompu après ${summary.created} création(s) et ${summary.updated} mise(s) à jour — vérifiez le pipeline avant de réessayer.`,
           'error'
@@ -97,6 +113,8 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
         <div className="flex flex-col gap-2">
           <label
             htmlFor="bulk-import-file"
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
             className="flex cursor-pointer flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-6 py-10 text-center text-ink-soft hover:border-amber/60"
           >
             <Upload size={20} />
