@@ -61,6 +61,11 @@ CREATE TABLE IF NOT EXISTS public.codir_meetings (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
+ALTER TABLE public.codir_meetings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow read/write on codir_meetings" ON public.codir_meetings;
+CREATE POLICY "Allow read/write on codir_meetings" ON public.codir_meetings
+  FOR ALL TO authenticated, anon USING (true) WITH CHECK (true);
+
 -- Migration des dates existantes depuis app_settings.codir_history
 INSERT INTO public.codir_meetings (meeting_date, label)
 SELECT (d)::timestamptz, 'Migré depuis app_settings'
