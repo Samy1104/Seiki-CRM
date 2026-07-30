@@ -32,6 +32,20 @@ describe('BulkImportPanel', () => {
     vi.mocked(leadImportService.commitImport).mockReset();
   });
 
+  it('renders the template download button and does not render astuce hint text', () => {
+    renderPanel();
+    const downloadLink = screen.getByRole('link', { name: /télécharger le modèle/i });
+    expect(downloadLink).toBeInTheDocument();
+    expect(downloadLink).toHaveAttribute('href', '/templates/leads-import-template.xlsx');
+
+    // Verify button styling/component presence
+    const downloadButton = screen.getByRole('button', { name: /télécharger le modèle/i });
+    expect(downloadButton).toBeInTheDocument();
+
+    // Verify astuce text is removed
+    expect(screen.queryByText(/astuce/i)).not.toBeInTheDocument();
+  });
+
   it('parses the selected file, shows a preview summary, then commits on confirm', async () => {
     vi.mocked(leadImportService.parseFile).mockResolvedValue([{ rowNumber: 2 } as any]);
     vi.mocked(leadImportService.fetchExistingLeadsByEmail).mockResolvedValue(new Map());
@@ -48,11 +62,11 @@ describe('BulkImportPanel', () => {
     const file = new File(['dummy'], 'leads.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    fireEvent.change(screen.getByLabelText(/importer un fichier/i), { target: { files: [file] } });
+    fireEvent.change(screen.getByLabelText(/glissez/i), { target: { files: [file] } });
 
     await waitFor(() => expect(leadImportService.validateRows).toHaveBeenCalled());
-    expect(screen.getByText('1 lead(s) prêt(s) à être créé(s)')).toBeInTheDocument();
-    expect(screen.getByText('1 erreur(s)')).toBeInTheDocument();
+    expect(screen.getByText('Lead(s) prêt(s) à être créé(s)')).toBeInTheDocument();
+    expect(screen.getByText('Erreur(s)')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: "Confirmer l'import" }));
 
@@ -85,7 +99,7 @@ describe('BulkImportPanel', () => {
     const file = new File(['dummy'], 'leads.xlsx', {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     });
-    fireEvent.change(screen.getByLabelText(/importer un fichier/i), { target: { files: [file] } });
+    fireEvent.change(screen.getByLabelText(/glissez/i), { target: { files: [file] } });
 
     await waitFor(() => expect(leadImportService.validateRows).toHaveBeenCalled());
     fireEvent.click(screen.getByRole('button', { name: "Confirmer l'import" }));
@@ -100,6 +114,6 @@ describe('BulkImportPanel', () => {
 
     // Returned to the select step (stale toCreate/toUpdate can't be replayed) rather than showing 'done'.
     expect(screen.queryByText(/lead\(s\) créé\(s\), \d+ mis à jour/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText(/importer un fichier/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/glissez/i)).toBeInTheDocument();
   });
 });
