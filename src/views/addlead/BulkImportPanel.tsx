@@ -94,22 +94,27 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
       </div>
 
       {step === 'select' && (
-        <label
-          htmlFor="bulk-import-file"
-          className="flex cursor-pointer flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-6 py-10 text-center text-ink-soft hover:border-amber/60"
-        >
-          <Upload size={20} />
-          <span className="text-sm">Importer un fichier (.xlsx)</span>
-          <input
-            id="bulk-import-file"
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            className="hidden"
-            onChange={handleFileChange}
-            disabled={loading}
-          />
-        </label>
+        <div className="flex flex-col gap-2">
+          <label
+            htmlFor="bulk-import-file"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-6 py-10 text-center text-ink-soft hover:border-amber/60"
+          >
+            <Upload size={20} />
+            <span className="text-sm">Importer un fichier (.xlsx)</span>
+            <input
+              id="bulk-import-file"
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              className="hidden"
+              onChange={handleFileChange}
+              disabled={loading}
+            />
+          </label>
+          <p className="text-xs text-ink-soft">
+            Astuce : supprimez la ligne d'exemple du modèle avant de l'importer.
+          </p>
+        </div>
       )}
 
       {step === 'preview' && (
