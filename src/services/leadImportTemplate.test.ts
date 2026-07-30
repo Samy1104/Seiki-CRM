@@ -1,7 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import ExcelJS from 'exceljs';
+
+vi.mock('./supabaseClient', () => ({
+  supabase: { from: vi.fn() },
+}));
+
 import { LEAD_IMPORT_HEADERS } from './leadImportService';
 
 const TEMPLATE_PATH = path.resolve(__dirname, '../../public/templates/leads-import-template.xlsx');
