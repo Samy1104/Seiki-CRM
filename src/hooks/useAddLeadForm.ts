@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { leadsService, type LeadScoreDetail } from '../services/leadsService';
 import { settingsService, type PipelineStage } from '../services/settingsService';
 import { useToast } from '../context/ToastContext';
+import { formatContactName } from '../utils/contactUtils';
 
 export const CRITERIA = [
   {
@@ -79,7 +80,9 @@ export function useAddLeadForm(setView: (view: string) => void) {
 
   const [form, setForm] = useState({
     company_name: '',
-    contact_name: '',
+    genre: '',
+    prenom: '',
+    nom: '',
     email: '',
     linkedin_url: '',
     phone: '',
@@ -130,7 +133,9 @@ export function useAddLeadForm(setView: (view: string) => void) {
   const handleReset = () => {
     setForm({
       company_name: '',
-      contact_name: '',
+      genre: '',
+      prenom: '',
+      nom: '',
       email: '',
       linkedin_url: '',
       phone: '',
@@ -190,7 +195,7 @@ export function useAddLeadForm(setView: (view: string) => void) {
 
       const leadPayload = {
         company_name: form.company_name.trim(),
-        contact_name: form.contact_name.trim() || '—',
+        contact_name: formatContactName(form.genre, form.prenom, form.nom),
         email: form.email.trim() || null,
         phone: form.phone.trim() || null,
         linkedin_url: form.linkedin_url.trim() || null,

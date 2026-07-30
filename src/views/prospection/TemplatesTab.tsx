@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { templatesService, type EmailTemplate } from '../../services/templatesService';
 import { leadsService, type Lead } from '../../services/leadsService';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Field, inputClass } from '../../components/ui/Field';
+import { parseContactName } from '../../utils/contactUtils';
 
 const SEGMENTS: EmailTemplate['segment'][] = ['Media', 'Instit', 'Retail'];
 const STEPS: { key: EmailTemplate['step']; label: string }[] = [
@@ -13,7 +14,9 @@ const STEPS: { key: EmailTemplate['step']; label: string }[] = [
   { key: 'relance_2', label: 'Relance 2' },
 ];
 const VARIABLES: { value: string; label: string }[] = [
-  { value: '{{contact_name}}', label: 'Contact' },
+  { value: '{{genre}}', label: 'Genre' },
+  { value: '{{prenom}}', label: 'Prénom' },
+  { value: '{{nom}}', label: 'Nom' },
   { value: '{{company_name}}', label: 'Entreprise' },
   { value: '{{poste}}', label: 'Poste' },
   { value: '{{segment}}', label: 'Segment' },
@@ -33,7 +36,9 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
   const [previewLeadId, setPreviewLeadId] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const subjectRef = useRef<HTMLInputElement>(null);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [activeField, setActiveField] = useState<'subject' | 'body'>('body');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -59,14 +64,35 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
   }, [segment, step, templates]);
 
   const insertVariable = (variable: string) => {
-    const textarea = bodyRef.current;
-    if (!textarea) {
-      setBody((prev) => prev + variable);
-      return;
+    if (activeField === 'subject') {
+      const input = subjectRef.current;
+      if (!input) {
+        setSubject((prev) => prev + variable);
+        return;
+      }
+      const start = input.selectionStart ?? input.value.length;
+      const end = input.selectionEnd ?? input.value.length;
+      const nextVal = subject.slice(0, start) + variable + subject.slice(end);
+      setSubject(nextVal);
+      setTimeout(() => {
+        input.focus();
+        input.setSelectionRange(start + variable.length, start + variable.length);
+      }, 0);
+    } else {
+      const textarea = bodyRef.current;
+      if (!textarea) {
+        setBody((prev) => prev + variable);
+        return;
+      }
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      const nextVal = body.slice(0, start) + variable + body.slice(end);
+      setBody(nextVal);
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + variable.length, start + variable.length);
+      }, 0);
     }
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    setBody((prev) => prev.slice(0, start) + variable + prev.slice(end));
   };
 
   const handleSave = async () => {
@@ -82,6 +108,18 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
     }
   };
 
+  const sortedLeads = useMemo(() => {
+    return [...leads].sort((a, b) =>
+      (a.company_name || '').localeCompare(b.company_name || '', undefined, { sensitivity: 'base' })
+    );
+  }, [leads]);
+
+  const formatLeadLabel = (l: Lead) => {
+    const { prenom, nom } = parseContactName(l.contact_name);
+    const contactStr = [nom, prenom].filter(Boolean).join(' ') || l.contact_name || '';
+    return contactStr ? `${l.company_name} - ${contactStr}` : l.company_name;
+  };
+
   const previewLead = leads.find((l) => l.id === previewLeadId);
   const preview = previewLead ? templatesService.renderTemplate({ subject, body }, previewLead) : null;
 
@@ -94,87 +132,115 @@ export const TemplatesTab: React.FC<TemplatesTabProps> = ({ showToast }) => {
   }
 
   return (
-    <div className="space-y-5 p-6 rounded-surface border border-line-strong bg-surface shadow-hover font-ui">
-      <div className="flex gap-4 flex-wrap">
-        <Field label="Segment" className="flex-1 min-w-[200px]">
-          <Select value={segment} onValueChange={(val) => setSegment(val as EmailTemplate['segment'])}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={segment} />
-            </SelectTrigger>
-            <SelectContent>
-              {SEGMENTS.map((s) => (
-                <SelectItem key={s} value={s}>
-                  {s}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
+    <div className="space-y-3 p-4 rounded-surface border border-line-strong bg-surface shadow-hover font-ui flex-1 flex flex-col overflow-hidden min-h-0">
+      {/* Header bar: Segment, Étape, Variables, Sauvegarder */}
+      <div className="flex items-end justify-between gap-3 flex-wrap border-b border-line-strong pb-2.5 shrink-0">
+        <div className="flex items-center gap-3 flex-wrap flex-1 min-w-0">
+          <div className="w-36 shrink-0">
+            <Field label="Segment">
+              <Select value={segment} onValueChange={(val) => setSegment(val as EmailTemplate['segment'])}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={segment} />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEGMENTS.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
-        <Field label="Étape" className="flex-1 min-w-[200px]">
-          <Select value={step} onValueChange={(val) => setStep(val as EmailTemplate['step'])}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder={step} />
-            </SelectTrigger>
-            <SelectContent>
-              {STEPS.map((s) => (
-                <SelectItem key={s.key} value={s.key}>
-                  {s.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      </div>
+          <div className="w-36 shrink-0">
+            <Field label="Étape">
+              <Select value={step} onValueChange={(val) => setStep(val as EmailTemplate['step'])}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder={step} />
+                </SelectTrigger>
+                <SelectContent>
+                  {STEPS.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+          </div>
 
-      <Field label="Sujet">
-        <input className={inputClass} value={subject} onChange={(e) => setSubject(e.target.value)} />
-      </Field>
-
-      <Field label="Corps">
-        <div className="flex gap-2 flex-wrap mb-2">
-          {VARIABLES.map((v) => (
-            <button
-              key={v.value}
-              type="button"
-              className="text-xs px-2.5 py-1 rounded-control bg-base border border-line-strong text-ink-soft hover:text-ink hover:border-line-focus cursor-pointer transition-colors"
-              onClick={() => insertVariable(v.value)}
-            >
-              {v.label}
-            </button>
-          ))}
+          <div className="flex-1 min-w-[200px]">
+            <Field label="Variables">
+              <div className="flex gap-1.5 flex-wrap items-center pt-0.5">
+                {VARIABLES.map((v) => (
+                  <button
+                    key={v.value}
+                    type="button"
+                    className="text-xs px-2 py-1 rounded-control bg-base border border-line-strong text-ink-soft hover:text-ink hover:border-line-focus cursor-pointer transition-colors"
+                    onClick={() => insertVariable(v.value)}
+                  >
+                    {v.label}
+                  </button>
+                ))}
+              </div>
+            </Field>
+          </div>
         </div>
-        <textarea ref={bodyRef} className={`${inputClass} resize-y`} rows={8} value={body} onChange={(e) => setBody(e.target.value)} />
-      </Field>
 
-      <div className="pt-1">
-        <AccentButton
-          variant="primary"
-          onClick={handleSave}
-          disabled={saving}
-          icon={
-            saving ? (
-              <Loader2 size={14} strokeWidth={2} className="animate-spin" />
-            ) : (
-              <Check size={14} strokeWidth={2.5} />
-            )
-          }
-        >
-          {saving ? 'Enregistrement...' : 'Sauvegarder'}
-        </AccentButton>
+        <div className="shrink-0">
+          <AccentButton
+            variant="primary"
+            onClick={handleSave}
+            disabled={saving}
+            icon={
+              saving ? (
+                <Loader2 size={14} strokeWidth={2} className="animate-spin" />
+              ) : (
+                <Check size={14} strokeWidth={2.5} />
+              )
+            }
+          >
+            {saving ? 'Enregistrement...' : 'Sauvegarder'}
+          </AccentButton>
+        </div>
       </div>
 
-      <div className="pt-4 border-t border-line-strong">
+      <div className="shrink-0">
+        <Field label="Sujet">
+          <input
+            ref={subjectRef}
+            className={inputClass}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            onFocus={() => setActiveField('subject')}
+          />
+        </Field>
+      </div>
+
+      <div className="flex-1 flex flex-col min-h-0">
+        <Field label="Corps" className="h-full flex flex-col min-h-0">
+          <textarea
+            ref={bodyRef}
+            className={`${inputClass} flex-1 min-h-[140px] resize-none overflow-y-auto`}
+            value={body}
+            onChange={(e) => setBody(e.target.value)}
+            onFocus={() => setActiveField('body')}
+          />
+        </Field>
+      </div>
+
+      <div className="pt-3 border-t border-line-strong shrink-0">
         <Field label="Aperçu sur un lead">
           <Select value={previewLeadId} onValueChange={(val) => setPreviewLeadId(val)}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="-- Choisir un lead --" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="top">
               <SelectItem value="">-- Choisir un lead --</SelectItem>
-              {leads.map((l) => (
+              {sortedLeads.map((l) => (
                 <SelectItem key={l.id} value={l.id}>
-                  {l.contact_name} — {l.company_name}
+                  {formatLeadLabel(l)}
                 </SelectItem>
               ))}
             </SelectContent>

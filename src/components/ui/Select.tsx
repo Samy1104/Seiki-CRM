@@ -306,7 +306,7 @@ export const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerPr
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
         className={cn(
-          "flex h-10 w-full items-center justify-between rounded-xl border border-[rgba(242,237,228,0.12)] bg-[#0d0d0d] px-3.5 py-2 text-[12px] text-[#f2ede4] hover:bg-[#161616] focus:outline-none transition-all duration-200 cursor-pointer",
+          "flex min-h-[38px] w-full items-center justify-between rounded-control border border-line-strong bg-[#0d0d0d] px-3 py-2 text-sm font-ui text-ink hover:bg-[#161616] focus:outline-none transition-all duration-200 cursor-pointer",
           open && "border-[var(--color-beige,#D4C4A8)]",
           className
         )}
@@ -350,10 +350,11 @@ export const SelectValue: React.FC<SelectValueProps> = ({ placeholder, className
 
 export interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
   children: React.ReactNode;
+  side?: 'top' | 'bottom';
 }
 
 export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(
-  ({ children, className, style, ...props }, ref) => {
+  ({ children, className, style, side = 'bottom', ...props }, ref) => {
     const { open, contentRef, contentId, triggerId, value, setFocusedValue, triggerRef } = useSelectContext();
     const [pos, setPos] = useState({ top: 0, left: 0, width: 0 });
 
@@ -363,12 +364,12 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
       if (open && triggerRef.current) {
         const rect = triggerRef.current.getBoundingClientRect();
         setPos({
-          top: rect.bottom + 6,
+          top: side === 'top' ? rect.top - 6 : rect.bottom + 6,
           left: rect.left,
           width: Math.max(rect.width, 180),
         });
       }
-    }, [open, triggerRef]);
+    }, [open, triggerRef, side]);
 
     useEffect(() => {
       if (open) {
@@ -383,7 +384,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
     if (!open) return null;
 
     const rect = triggerRef.current ? triggerRef.current.getBoundingClientRect() : null;
-    const top = rect ? rect.bottom + 6 : pos.top;
+    const top = rect ? (side === 'top' ? rect.top - 6 : rect.bottom + 6) : pos.top;
     const left = rect ? rect.left : pos.left;
     const width = rect ? Math.max(rect.width, 180) : Math.max(pos.width, 180);
 
@@ -413,6 +414,7 @@ export const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps
           top,
           left,
           width,
+          transform: side === 'top' ? 'translateY(-100%)' : undefined,
           zIndex: 9999,
         }}
       >

@@ -161,31 +161,6 @@ export const leadsService = {
   },
 
   async updateLead(id: string, updates: Partial<Lead>, historyLog?: { type: string; content: string }): Promise<void> {
-    if (updates.stage_id) {
-      try {
-        const { data: stage } = await supabase
-          .from('pipeline_stages')
-          .select('name, is_closed_lost')
-          .eq('id', updates.stage_id)
-          .maybeSingle();
-
-        const lostIds = await settingsService.getLostStageIds();
-        const stageName = (stage?.name || '').toLowerCase();
-        const isLost = Boolean(
-          stage?.is_closed_lost ||
-          lostIds.includes(updates.stage_id) ||
-          stageName.includes('perdu') ||
-          stageName.includes('lost') ||
-          stageName.includes('abandon')
-        );
-
-        if (isLost) {
-          updates.is_archived = true;
-        }
-      } catch {
-        // Fallback: continue with updates if check fails
-      }
-    }
 
     const { error } = await supabase
       .from('leads')

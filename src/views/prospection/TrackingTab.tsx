@@ -1,17 +1,20 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare, Search, X, Trash2 } from 'lucide-react';
+import { Activity, Loader2, RefreshCw, ArrowUpRight, ArrowDownLeft, ChevronDown, ChevronUp, Send, Eye, MessageSquare, Search, X, Trash2, Clock, AlertCircle } from 'lucide-react';
 import { prospectionService, type EmailLog } from '../../services/prospectionService';
+import { emailsService } from '../../services/emailsService';
 import { parseEmailBody } from '../../utils/emailParser';
 import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
 
-type StatusFilter = 'all' | 'positive' | 'negative' | 'opened' | 'bounced';
+type StatusFilter = 'all' | 'scheduled' | 'positive' | 'negative' | 'opened' | 'bounced';
 
 interface TrackingTabProps {
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
 }
 
-const STATUS_LABELS: Record<EmailLog['status'], string> = {
+const STATUS_LABELS: Record<EmailLog['status'] | 'scheduled' | 'approved', string> = {
   pending: 'En attente',
+  scheduled: 'Planifié',
+  approved: 'Approuvé',
   sent: 'Envoyé',
   delivered: 'Délivré',
   opened: 'Ouvert',
@@ -20,8 +23,10 @@ const STATUS_LABELS: Record<EmailLog['status'], string> = {
   failed: 'Échec',
 };
 
-const STATUS_CLASSES: Record<EmailLog['status'], string> = {
+const STATUS_CLASSES: Record<EmailLog['status'] | 'scheduled' | 'approved', string> = {
   pending: 'bg-surface text-ink-soft border-line-strong',
+  scheduled: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+  approved: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
   sent: 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus',
   delivered: 'bg-[#D4C4A8]/15 text-[#D4C4A8] border-line-focus',
   opened: 'bg-amber-400/15 text-amber-400 border-amber-400/30',
@@ -145,6 +150,61 @@ const EmailCard: React.FC<EmailCardProps> = ({
   );
 };
 
+interface BounceFixPanelProps {
+  log: EmailLog;
+  onFixed: (logId: string) => void;
+  showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
+}
+
+const BounceFixPanel: React.FC<BounceFixPanelProps> = ({ log, onFixed, showToast }) => {
+  const [email, setEmail] = useState(log.to_email || '');
+  const [loading, setLoading] = useState(false);
+
+  const handleRetry = async () => {
+    if (!email.trim() || !log.lead_id) return;
+    setLoading(true);
+    try {
+      await prospectionService.resetLeadEmailAndRetry(log.lead_id, email.trim());
+      showToast('Email corrigé — nouveau draft créé en validation', 'success');
+      onFixed(log.id);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur lors de la correction', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-3 rounded-lg border border-danger/25 bg-danger/5 space-y-2.5">
+      <p className="text-xs font-semibold text-danger flex items-center gap-2">
+        <AlertCircle size={13} strokeWidth={2} />
+        Adresse invalide — la séquence est arrêtée
+      </p>
+      <p className="text-[11px] text-ink-soft">
+        Corrigez l'adresse email et relancez pour créer un nouveau brouillon en validation.
+      </p>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleRetry()}
+          placeholder="nouvelle@adresse.com"
+          className="flex-1 px-3 py-1.5 text-xs bg-surface border border-line-strong rounded-control text-ink placeholder:text-ink-faint focus:outline-none focus:border-line-focus transition-all"
+        />
+        <button
+          onClick={handleRetry}
+          disabled={loading || !email.trim()}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-[#D4C4A8]/15 text-[#D4C4A8] border border-[#D4C4A8]/30 hover:bg-[#D4C4A8]/25 rounded-control transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          {loading ? <Loader2 size={12} strokeWidth={2} className="animate-spin" /> : <RefreshCw size={12} strokeWidth={2} />}
+          {loading ? 'En cours...' : 'Corriger & Relancer'}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [logs, setLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,12 +212,39 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [deleteTarget, setDeleteTarget] = useState<{ logId: string; replyIds: string[] } | null>(null);
+  const [fixedLogIds, setFixedLogIds] = useState<Set<string>>(new Set());
 
   const loadLogs = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
     try {
-      const data = await prospectionService.getRecentEmailLogs();
-      setLogs(data);
+      const [data, scheduledEmails] = await Promise.all([
+        prospectionService.getRecentEmailLogs(),
+        emailsService.getGeneratedEmails(['scheduled', 'approved']),
+      ]);
+
+      const scheduledLogs: EmailLog[] = scheduledEmails.map((e) => ({
+        id: `gen-${e.id}`,
+        generated_email_id: e.id,
+        lead_id: e.lead_id,
+        direction: 'outbound',
+        from_email: 'Seiki CRM',
+        to_email: e.lead?.email || 'Prospect',
+        subject: e.sujet || '(sans sujet)',
+        status: e.statut_envoi as any,
+        gmail_thread_id: e.gmail_thread_id || null,
+        body_preview: e.corps_du_mail || '',
+        error_message: null,
+        opened_at: null,
+        replied_at: null,
+        sent_at: null,
+        received_at: null,
+        created_at: e.scheduled_at || e.approved_at || new Date().toISOString(),
+        reply_sentiment: null,
+        reply_sentiment_reason: null,
+        lead: e.lead ? { contact_name: e.lead.contact_name, company_name: e.lead.company_name } : null,
+      }));
+
+      setLogs([...scheduledLogs, ...data]);
     } catch {
       if (!silent) showToast('Erreur chargement du suivi', 'error');
     } finally {
@@ -168,8 +255,13 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
     try {
-      const idsToDelete = [deleteTarget.logId, ...deleteTarget.replyIds];
-      await prospectionService.deleteEmailLog(idsToDelete);
+      if (deleteTarget.logId.startsWith('gen-')) {
+        const cleanId = deleteTarget.logId.replace('gen-', '');
+        await emailsService.deleteGeneratedEmail(cleanId);
+      } else {
+        const idsToDelete = [deleteTarget.logId, ...deleteTarget.replyIds];
+        await prospectionService.deleteEmailLog(idsToDelete);
+      }
       showToast('Email supprimé de l\'historique', 'success');
       loadLogs(true);
     } catch {
@@ -185,15 +277,23 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
     return () => clearInterval(interval);
   }, [loadLogs]);
 
-  const entries = useMemo(() => groupByConversation(logs), [logs]);
+  const entries = useMemo(
+    () => groupByConversation(logs.filter((l) => !fixedLogIds.has(l.id))),
+    [logs, fixedLogIds],
+  );
 
   const counts = useMemo(() => {
     let positive = 0;
     let negative = 0;
     let opened = 0;
     let bounced = 0;
+    let scheduled = 0;
 
     for (const entry of entries) {
+      if (entry.log.status === 'scheduled' || entry.log.status === 'approved') {
+        scheduled++;
+        continue;
+      }
       const hasPos = entry.replies.some((r) => r.reply_sentiment === 'positive') || entry.log.reply_sentiment === 'positive';
       const hasNeg = entry.replies.some((r) => r.reply_sentiment === 'negative') || entry.log.reply_sentiment === 'negative';
       const isBounced = entry.log.status === 'bounced' || entry.log.status === 'failed' || entry.replies.some((r) => r.status === 'bounced' || r.status === 'failed');
@@ -207,6 +307,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
 
     return {
       all: entries.length,
+      scheduled,
       positive,
       negative,
       opened,
@@ -217,7 +318,9 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
   const filteredEntries = useMemo(() => {
     return entries.filter((entry) => {
       // 1. Status/Sentiment filter
-      if (statusFilter === 'positive') {
+      if (statusFilter === 'scheduled') {
+        if (entry.log.status !== 'scheduled' && entry.log.status !== 'approved') return false;
+      } else if (statusFilter === 'positive') {
         const hasPos = entry.replies.some((r) => r.reply_sentiment === 'positive') || entry.log.reply_sentiment === 'positive';
         if (!hasPos) return false;
       } else if (statusFilter === 'negative') {
@@ -309,6 +412,12 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
             Tous <span className="opacity-60 text-[10px] ml-1">({counts.all})</span>
           </button>
           <button
+            onClick={() => setStatusFilter('scheduled')}
+            className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'scheduled' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
+          >
+            Planifiés <span className="opacity-60 text-[10px] ml-1">({counts.scheduled})</span>
+          </button>
+          <button
             onClick={() => setStatusFilter('positive')}
             className={`px-2.5 py-1 rounded-control font-medium border transition-all cursor-pointer ${statusFilter === 'positive' ? 'bg-success/15 text-success border-success/30' : 'bg-transparent text-ink-soft border-transparent hover:border-line-strong'}`}
           >
@@ -363,7 +472,7 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
         <div className="space-y-2 font-ui">
           {filteredEntries.map(({ log, replies }) => {
             const hasNegSentiment = replies.some((r) => r.reply_sentiment === 'negative') || log.reply_sentiment === 'negative';
-            const effectiveStatus = getEntryEffectiveStatus(log, replies);
+            const effectiveStatus = log.status === 'scheduled' || log.status === 'approved' ? log.status : getEntryEffectiveStatus(log, replies);
             const isReplied = effectiveStatus === 'replied';
 
             return (
@@ -376,7 +485,9 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                   onClick={() => setExpandedId((prev) => (prev === log.id ? null : log.id))}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    {log.direction === 'outbound' ? (
+                    {log.status === 'scheduled' || log.status === 'approved' ? (
+                      <Clock size={15} strokeWidth={2} className="text-purple-400 shrink-0" />
+                    ) : log.direction === 'outbound' ? (
                       <ArrowUpRight size={15} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
                     ) : (
                       <ArrowDownLeft size={15} strokeWidth={2} className="text-success shrink-0" />
@@ -384,11 +495,11 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <strong className="text-ink font-semibold text-sm">
-                          {log.lead?.contact_name || (log.lead_id ? '—' : 'Envoi manuel')}
+                          {log.lead?.company_name || log.lead?.contact_name || (log.lead_id ? '—' : 'Envoi manuel')}
                         </strong>
-                        {log.lead?.company_name && (
+                        {log.lead?.contact_name && log.lead?.company_name && (
                           <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
-                            {log.lead.company_name}
+                            {log.lead.contact_name}
                           </span>
                         )}
                       </div>
@@ -478,6 +589,14 @@ export const TrackingTab: React.FC<TrackingTabProps> = ({ showToast }) => {
 
                   {log.error_message && (
                     <p className="text-danger p-2 rounded bg-danger/10 border border-danger/20">{log.error_message}</p>
+                  )}
+
+                  {effectiveStatus === 'bounced' && log.direction === 'outbound' && log.lead_id && (
+                    <BounceFixPanel
+                      log={log}
+                      onFixed={(logId) => setFixedLogIds((prev) => new Set([...prev, logId]))}
+                      showToast={showToast}
+                    />
                   )}
 
                   {/* Outbound/Primary Email Card */}

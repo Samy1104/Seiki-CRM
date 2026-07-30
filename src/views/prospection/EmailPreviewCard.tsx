@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { Mail, ChevronDown, ChevronUp, AlertTriangle, Zap, Check, Send, Edit3, Trash2, Loader2 } from 'lucide-react';
 import { emailsService, type GeneratedEmail } from '../../services/emailsService';
+import { templatesService, type EmailTemplate } from '../../services/templatesService';
+import type { Lead } from '../../services/leadsService';
+import { detectMissingVariables } from '../../utils/templateVariableChecker';
 import { confirmAction } from '../../utils/confirmAction';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Button } from '../../components/ui/Button';
@@ -8,21 +11,50 @@ import { Field, inputClass } from '../../components/ui/Field';
 
 interface EmailPreviewCardProps {
   email: GeneratedEmail;
+  templates?: EmailTemplate[];
   showToast: (m: string, t?: 'success' | 'error' | 'info') => void;
   onUpdate: () => void;
 }
 
-export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showToast, onUpdate }) => {
+export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, templates = [], showToast, onUpdate }) => {
   const [expanded, setExpanded] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isSendingNow, setIsSendingNow] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedCorps, setEditedCorps] = useState(email.corps_du_mail);
-  const [editedSujet, setEditedSujet] = useState(email.sujet);
+
+  // Live render from latest template and latest lead data
+  const segment = (email.lead?.segment || 'Media') as EmailTemplate['segment'];
+  const step = 'initial';
+  const matchingTemplate = templatesService.resolveTemplate(templates, segment, step);
+
+  const liveRendered = matchingTemplate && email.lead
+    ? templatesService.renderTemplate(matchingTemplate, email.lead as unknown as Lead)
+    : { subject: email.sujet, body: email.corps_du_mail };
+
+  const isManual = email.model_used === 'manual';
+  const displaySubject = isManual ? email.sujet : liveRendered.subject;
+  const displayBody = isManual ? email.corps_du_mail : liveRendered.body;
+
+  const [editedCorps, setEditedCorps] = useState(displayBody);
+  const [editedSujet, setEditedSujet] = useState(displaySubject);
+
+  const missingVars = detectMissingVariables(email, templates);
+
+  const handleStartEdit = () => {
+    setEditedSujet(displaySubject);
+    setEditedCorps(displayBody);
+    setIsEditing(true);
+  };
 
   const handleApprove = async () => {
     setIsSending(true);
     try {
+      if (!isManual) {
+        await emailsService.updateGeneratedEmail(email.id, {
+          sujet: displaySubject,
+          corps_du_mail: displayBody,
+        });
+      }
       await emailsService.approveAndSchedule(email.id);
       showToast(
         email.statut_envoi === 'failed'
@@ -41,6 +73,12 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
   const handleSendNow = async () => {
     setIsSendingNow(true);
     try {
+      if (!isManual) {
+        await emailsService.updateGeneratedEmail(email.id, {
+          sujet: displaySubject,
+          corps_du_mail: displayBody,
+        });
+      }
       await emailsService.sendNow(email.id);
       showToast(`Email envoyé immédiatement à ${email.lead?.contact_name || 'ce prospect'}.`, 'success');
       onUpdate();
@@ -59,6 +97,7 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
       });
       showToast('Email modifié', 'success');
       setIsEditing(false);
+      onUpdate();
     } catch {
       showToast('Erreur sauvegarde', 'error');
     }
@@ -77,30 +116,30 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
   return (
     <div className="rounded-surface border border-line-strong bg-surface overflow-hidden transition-all shadow-hover mb-3">
       <div
-        className="p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-hover transition-colors font-ui"
+        className="py-2.5 px-3.5 flex items-center justify-between gap-4 cursor-pointer hover:bg-hover transition-colors font-ui"
         onClick={() => setExpanded((v) => !v)}
       >
-        <div className="flex items-center gap-3 min-w-0">
-          <Mail size={16} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <strong className="text-ink font-semibold">{email.lead?.contact_name || '—'}</strong>
-              {email.lead?.company_name && (
-                <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
-                  {email.lead.company_name}
-                </span>
-              )}
-              {email.lead?.poste && (
-                <span className="text-xs text-ink-faint truncate">({email.lead.poste})</span>
-              )}
-            </div>
-            <div className="text-xs text-ink-soft truncate mt-0.5">
-              {email.sujet}
-            </div>
+        <div className="flex items-center gap-2.5 min-w-0">
+          <Mail size={15} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
+          <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <strong className="text-sm text-ink font-semibold">{email.lead?.company_name || '—'}</strong>
+            {email.lead?.contact_name && (
+              <span className="text-xs text-ink-soft bg-base px-2 py-0.5 rounded-control border border-line-strong">
+                {email.lead.contact_name}
+              </span>
+            )}
+            {email.lead?.poste && (
+              <span className="text-xs text-ink-faint truncate">({email.lead.poste})</span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {missingVars.length > 0 && (
+            <span className="text-xs text-amber-400 font-semibold bg-amber-400/10 px-2.5 py-1 rounded-control border border-amber-400/30 flex items-center gap-1">
+              <AlertTriangle size={12} strokeWidth={2} /> Variable(s) manquante(s) ({missingVars.join(', ')})
+            </span>
+          )}
           {email.statut_envoi === 'failed' && (
             <span className="text-xs text-danger font-semibold bg-danger/10 px-2.5 py-1 rounded-control border border-danger/20 flex items-center gap-1">
               <AlertTriangle size={12} strokeWidth={2} /> Échec d'envoi
@@ -114,6 +153,17 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
 
       {expanded && (
         <div className="p-4 border-t border-line-strong bg-base space-y-4 font-ui">
+          {missingVars.length > 0 && (
+            <div className="p-3.5 rounded-control border border-amber-500/30 bg-amber-500/10 text-xs text-amber-200 flex items-start gap-2.5">
+              <AlertTriangle size={16} strokeWidth={2} className="text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <strong className="text-amber-300 font-semibold">Information manquante pour le template</strong>
+                <p className="mt-0.5 text-amber-200/90 leading-relaxed">
+                  L'email utilise la/les variable(s) <strong className="text-amber-300">{missingVars.join(', ')}</strong> mais cette donnée n'est pas renseignée pour ce lead.
+                </p>
+              </div>
+            </div>
+          )}
           {email.icebreaker && (
             <div className="p-3 rounded-control border border-line-focus bg-[#D4C4A8]/10 text-xs text-ink flex items-center gap-2">
               <Zap size={14} strokeWidth={2} className="text-[#D4C4A8] shrink-0" />
@@ -153,7 +203,10 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
             </div>
           ) : (
             <div className="text-sm text-ink-soft whitespace-pre-line leading-relaxed bg-surface p-4 rounded-control border border-line-strong">
-              {email.corps_du_mail}
+              <div className="text-xs font-bold text-ink mb-2 pb-1.5 border-b border-line-strong">
+                Sujet : {displaySubject}
+              </div>
+              {displayBody}
             </div>
           )}
 
@@ -186,7 +239,7 @@ export const EmailPreviewCard: React.FC<EmailPreviewCardProps> = ({ email, showT
                 )}
                 Envoyer maintenant
               </Button>
-              <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>
+              <Button variant="secondary" size="sm" onClick={handleStartEdit}>
                 <Edit3 size={13} strokeWidth={2} className="text-[#D4C4A8]" /> Modifier
               </Button>
               <Button variant="danger" size="sm" onClick={handleDelete}>

@@ -36,13 +36,15 @@ serve(async (req: Request) => {
     const mode = (modeSetting?.value as { mode?: string } | null)?.mode ?? "manual";
 
     let triggeredBy: string | undefined;
+    let targetEmailId: string | undefined;
     try {
       const body = await req.json();
       triggeredBy = body?.triggeredBy;
+      targetEmailId = body?.emailId;
     } catch {
       // pas de corps (appel cron) — reste undefined
     }
-    const isManualTrigger = triggeredBy === "manual-button";
+    const isManualTrigger = triggeredBy === "manual-button" || Boolean(targetEmailId);
     if (mode === "manual" && !isManualTrigger) {
       return new Response(
         JSON.stringify({ skipped: "prospection_mode is manual", processed: 0, sent: 0, failed: 0 }),
@@ -50,34 +52,41 @@ serve(async (req: Request) => {
       );
     }
 
-    // Lignes dont le scheduled_at a plus d'1h de retard : leur créneau est
-    // manqué (cron coupé, redémarrage...). On les repasse en 'approved' pour
-    // que le prochain schedule-gmail-sends leur attribue un nouveau créneau
-    // dans la fenêtre, au lieu de toutes les faire partir d'un coup — et
-    // potentiellement hors des heures de bureau.
-    const staleThreshold = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    await supabase
-      .from("generated_emails")
-      .update({ statut_envoi: "approved", scheduled_at: null })
-      .eq("statut_envoi", "scheduled")
-      .lt("scheduled_at", staleThreshold);
+    let rowsToSend: Array<{ id: string }> = [];
 
-    const MAX_BATCH = 20;
-    const { data: due, error: dueErr } = await supabase
-      .from("generated_emails")
-      .select("id")
-      .eq("statut_envoi", "scheduled")
-      .gte("scheduled_at", staleThreshold)
-      .lte("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: true })
-      .limit(MAX_BATCH);
+    if (targetEmailId) {
+      rowsToSend = [{ id: targetEmailId }];
+    } else {
+      // Lignes dont le scheduled_at a plus d'1h de retard : leur créneau est
+      // manqué (cron coupé, redémarrage...). On les repasse en 'approved' pour
+      // que le prochain schedule-gmail-sends leur attribue un nouveau créneau
+      // dans la fenêtre, au lieu de toutes les faire partir d'un coup — et
+      // potentiellement hors des heures de bureau.
+      const staleThreshold = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+      await supabase
+        .from("generated_emails")
+        .update({ statut_envoi: "approved", scheduled_at: null })
+        .eq("statut_envoi", "scheduled")
+        .lt("scheduled_at", staleThreshold);
 
-    if (dueErr) throw dueErr;
+      const MAX_BATCH = 20;
+      const { data: due, error: dueErr } = await supabase
+        .from("generated_emails")
+        .select("id")
+        .eq("statut_envoi", "scheduled")
+        .gte("scheduled_at", staleThreshold)
+        .lte("scheduled_at", new Date().toISOString())
+        .order("scheduled_at", { ascending: true })
+        .limit(MAX_BATCH);
+
+      if (dueErr) throw dueErr;
+      rowsToSend = due ?? [];
+    }
 
     let sent = 0;
     let failed = 0;
 
-    for (const row of due ?? []) {
+    for (const row of rowsToSend) {
       try {
         const outcome = await sendGeneratedEmailViaGmail(supabase, row.id as string);
         if (outcome.success) sent++;
@@ -94,7 +103,7 @@ serve(async (req: Request) => {
     }
 
     return new Response(
-      JSON.stringify({ processed: (due ?? []).length, sent, failed }),
+      JSON.stringify({ processed: rowsToSend.length, sent, failed }),
       { status: 200, headers: { ...corsHeaders(req), "Content-Type": "application/json" } },
     );
   } catch (err) {

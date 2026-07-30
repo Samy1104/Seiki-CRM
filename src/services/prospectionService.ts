@@ -285,6 +285,55 @@ export const prospectionService = {
   },
 
   /**
+   * Corrige l'adresse email d'un lead après un rebond et recrée un draft initial.
+   * Remet sequence_status à 'idle' pour que le lead rentre à nouveau dans le pipeline.
+   */
+  async resetLeadEmailAndRetry(leadId: string, newEmail: string): Promise<void> {
+    const now = new Date().toISOString();
+
+    const { error: updateErr } = await supabase
+      .from('leads')
+      .update({ email: newEmail, sequence_status: 'idle', updated_at: now })
+      .eq('id', leadId);
+    if (updateErr) throw updateErr;
+
+    await supabase.from('history').insert([{
+      lead_id: leadId,
+      action_type: 'note',
+      content: `Rebond corrigé — nouvelle adresse : ${newEmail}. Séquence réinitialisée.`,
+      metadata: { new_email: newEmail, reason: 'bounce_retry' },
+      is_auto: true,
+    }]);
+
+    const { data: lead, error: leadErr } = await supabase
+      .from('leads')
+      .select('*')
+      .eq('id', leadId)
+      .single();
+    if (leadErr || !lead) throw leadErr ?? new Error('Lead introuvable');
+
+    const templates = await templatesService.getTemplates();
+    const template = templatesService.resolveTemplate(
+      templates,
+      lead.segment as 'Media' | 'Retail' | 'Instit' | 'All',
+      'initial',
+    );
+    if (!template) throw new Error(`Aucun template initial trouvé pour le segment ${lead.segment}`);
+
+    const rendered = templatesService.renderTemplate(template, lead as unknown as Lead);
+
+    const { error: draftErr } = await supabase.from('generated_emails').insert([{
+      lead_id: leadId,
+      step: 'initial',
+      sujet: rendered.subject,
+      corps_du_mail: rendered.body,
+      statut_envoi: 'draft',
+      model_used: 'template',
+    }]);
+    if (draftErr) throw draftErr;
+  },
+
+  /**
    * Met à jour le poste d'un lead (pour la personnalisation IA).
    */
   async updateLeadPoste(leadId: string, poste: string): Promise<void> {

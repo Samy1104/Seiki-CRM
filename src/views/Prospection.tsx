@@ -46,8 +46,8 @@ export const Prospection: React.FC = () => {
   };
 
   return (
-    <div className="p-8 space-y-6" style={{ overflowY: 'auto' }}>
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="p-4 md:p-6 space-y-4 h-full flex flex-col overflow-y-auto">
+      <div className="max-w-7xl w-full mx-auto space-y-4 flex-1 flex flex-col">
         {/* Header & Tabs */}
         <ProspectionHeader
           mode={mode}
@@ -59,7 +59,7 @@ export const Prospection: React.FC = () => {
         />
 
         {/* Active Tab Content */}
-        <div>
+        <div className="flex-1 flex flex-col">
           {activeTab === 'validation' && <ValidationTab showToast={showToast} />}
           {activeTab === 'templates' && <TemplatesTab showToast={showToast} />}
           {activeTab === 'followup' && <FollowUpTab showToast={showToast} />}

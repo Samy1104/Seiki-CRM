@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mail, Send, Loader2 } from 'lucide-react';
 import { emailsService, type GeneratedEmail } from '../../services/emailsService';
+import { templatesService, type EmailTemplate } from '../../services/templatesService';
 import { EmailPreviewCard } from './EmailPreviewCard';
 import { ManualSendPanel } from './ManualSendPanel';
 import { AccentButton } from '../../components/ui/AccentButton';
@@ -11,34 +12,49 @@ interface ValidationTabProps {
 
 export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
   const [drafts, setDrafts] = useState<GeneratedEmail[]>([]);
+  const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState(false);
+  const initialLoaded = useRef(false);
 
-  const loadDrafts = useCallback(async () => {
-    setLoading(true);
+  const loadDrafts = useCallback(async (isSilent = false) => {
+    if (!initialLoaded.current && !isSilent) {
+      setLoading(true);
+    }
     try {
-      const data = await emailsService.getGeneratedEmails(['draft', 'failed']);
-      setDrafts(data);
+      const [d, t] = await Promise.all([
+        emailsService.getGeneratedEmails(['draft', 'failed']),
+        templatesService.getTemplates(),
+      ]);
+      setDrafts(d);
+      setTemplates(t);
+      initialLoaded.current = true;
     } catch {
-      showToast('Erreur chargement de la file de validation', 'error');
+      if (!isSilent) {
+        showToast('Erreur chargement de la file de validation', 'error');
+      }
     } finally {
       setLoading(false);
     }
   }, [showToast]);
 
   useEffect(() => {
-    loadDrafts();
+    loadDrafts(false);
+
+    const handleFocus = () => loadDrafts(true);
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(() => loadDrafts(true), 5000);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [loadDrafts]);
 
   const handleRunNow = async () => {
     setRunning(true);
     try {
       const result = await emailsService.runPacingCycleNow();
-      // Les créneaux fraîchement planifiés tombent dans la fenêtre horaire
-      // restante (donc dans le futur) : le dispatch lancé dans la foulée ne
-      // les voit presque jamais comme échus, et `sent` vaut 0 même quand le
-      // cycle a parfaitement fonctionné. On distingue donc explicitement
-      // "planifié" de "envoyé" plutôt que d'annoncer "0 email envoyé".
       if (result.scheduled === 0 && result.sent === 0) {
         showToast('Rien à envoyer pour le moment (hors fenêtre, quota du jour atteint, ou aucun brouillon approuvé)', 'info');
       } else if (result.sent > 0) {
@@ -95,6 +111,7 @@ export const ValidationTab: React.FC<ValidationTabProps> = ({ showToast }) => {
             <EmailPreviewCard
               key={email.id}
               email={email}
+              templates={templates}
               showToast={showToast}
               onUpdate={() => setDrafts((prev) => prev.filter((e) => e.id !== email.id))}
             />

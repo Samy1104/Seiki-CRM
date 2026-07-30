@@ -8,6 +8,7 @@
 
 import { supabase } from './supabaseClient';
 import type { Lead } from './leadsService';
+import { parseContactName, formatGenreDisplay } from '../utils/contactUtils';
 
 export interface EmailTemplate {
   id: string;
@@ -28,10 +29,16 @@ function escapeReplacement(value: string): string {
 }
 
 function fillOne(template: string, lead: Lead): string {
+  const { genre, prenom, nom } = parseContactName(lead.contact_name);
+  const displayGenre = formatGenreDisplay(genre);
+
   // D'anciens templates ont été enregistrés avec des "\n" littéraux (texte)
   // au lieu de vrais retours à la ligne — on les normalise avant la fusion.
   let result = template
     .replace(/\\n/g, '\n')
+    .replace(/\{\{genre\}\}/g, escapeReplacement(displayGenre))
+    .replace(/\{\{prenom\}\}/g, escapeReplacement(prenom || ''))
+    .replace(/\{\{nom\}\}/g, escapeReplacement(nom || ''))
     .replace(/\{\{contact_name\}\}/g, escapeReplacement(lead.contact_name || ''))
     .replace(/\{\{company_name\}\}/g, escapeReplacement(lead.company_name || ''))
     .replace(/\{\{poste\}\}/g, escapeReplacement((lead as unknown as { poste?: string }).poste || ''))

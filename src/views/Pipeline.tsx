@@ -206,14 +206,6 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
           )}
           onCardMove={async (leadId, _fromCol, toCol) => {
             const targetStage = stages.find((s) => s.id === toCol);
-            const stageName = (targetStage?.name || '').toLowerCase();
-            const shouldArchive = Boolean(
-              targetStage?.is_closed_lost ||
-              stageName.includes('perdu') ||
-              stageName.includes('lost') ||
-              stageName.includes('abandon')
-            );
-
             const activeMatch = leadsRes.data.find((l) => l.id === leadId);
             const archivedMatch = archivedLeadsRes.data.find((l) => l.id === leadId);
             const currentLead = activeMatch || archivedMatch;
@@ -223,40 +215,28 @@ export const Pipeline: React.FC<PipelineProps> = ({ setView }) => {
                 ...currentLead,
                 stage_id: toCol,
                 stage: targetStage || currentLead.stage,
-                is_archived: shouldArchive,
               };
 
-              if (shouldArchive) {
-                // Move to archived list, remove from active list
-                leadsRes.setData((prev) => prev.filter((l) => l.id !== leadId));
-                archivedLeadsRes.setData((prev) => {
-                  const filtered = prev.filter((l) => l.id !== leadId);
-                  return [...filtered, updatedLead];
-                });
+              if (currentLead.is_archived) {
+                archivedLeadsRes.setData((prev) =>
+                  prev.map((l) => (l.id === leadId ? updatedLead : l))
+                );
               } else {
-                // Move to active list, remove from archived list
-                leadsRes.setData((prev) => {
-                  const filtered = prev.filter((l) => l.id !== leadId);
-                  return [...filtered, updatedLead];
-                });
-                archivedLeadsRes.setData((prev) => prev.filter((l) => l.id !== leadId));
+                leadsRes.setData((prev) =>
+                  prev.map((l) => (l.id === leadId ? updatedLead : l))
+                );
               }
             }
 
-            // 2. Perform async network update in background
+            // Perform async network update in background
             try {
               await leadsService.updateLead(leadId, {
                 stage_id: toCol,
-                is_archived: shouldArchive,
               });
-              if (shouldArchive) {
-                showToast('Lead déplacé vers un statut perdu et archivé', 'info');
-              }
             } catch (err) {
-              console.error('Error updating lead stage:', err);
-              showToast('Erreur lors du déplacement du lead', 'error');
-              leadsRes.reload();
-              archivedLeadsRes.reload();
+              console.error('Error updating stage:', err);
+              showToast('Erreur lors de la mise à jour', 'error');
+              reloadPipelineData();
             }
           }}
           onCardClick={(lead) => handleOpenLead(lead.id)}

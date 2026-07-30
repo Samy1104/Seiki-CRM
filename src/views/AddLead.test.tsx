@@ -115,6 +115,16 @@ describe('AddLead View', () => {
     // Fill Company Name
     fireEvent.change(screen.getByPlaceholderText('ex : LVMH'), { target: { value: 'Acme' } });
 
+    // Select Genre
+    const genreField = screen.getByText('Genre').closest('div') as HTMLElement;
+    const genreTrigger = within(genreField).getByRole('button');
+    fireEvent.click(genreTrigger);
+    fireEvent.click(screen.getByText('M.'));
+
+    // Fill Prénom & Nom
+    fireEvent.change(screen.getByPlaceholderText('ex : Jean'), { target: { value: 'Jean' } });
+    fireEvent.change(screen.getByPlaceholderText('ex : DUPONT'), { target: { value: 'Dupont' } });
+
     // Select Segment
     fireEvent.click(screen.getByText('— Choisir'));
     fireEvent.click(screen.getByText('Media'));
@@ -132,6 +142,7 @@ describe('AddLead View', () => {
       expect(leadsService.createLead).toHaveBeenCalledWith(
         expect.objectContaining({
           company_name: 'Acme',
+          contact_name: 'M. Jean DUPONT',
           segment: 'Media',
           stage_id: 'stage-1', // Default auto stage for score < 60
         }),

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { leadsService } from '../../services/leadsService';
 import type { Lead } from '../../services/leadsService';
 import type { PipelineStage, TeamMember, SlaLimits } from '../../services/settingsService';
@@ -6,6 +6,7 @@ import { tasksService } from '../../services/tasksService';
 import type { Task } from '../../services/tasksService';
 import { isSlaBreached } from '../../utils/leadMetrics';
 import { confirmAction } from '../../utils/confirmAction';
+import { parseContactName, formatContactName } from '../../utils/contactUtils';
 import {
   Trash2,
   User,
@@ -25,6 +26,7 @@ import {
   CheckCircle2,
   Circle,
   Calendar,
+  Loader2,
 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
@@ -61,9 +63,13 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
   const [lead, setLead] = useState(initialLead);
   const [modalTab, setModalTab] = useState<'info' | 'edit' | 'history' | 'tasks'>(initialTab);
 
+  const initialParsedContact = parseContactName(initialLead.contact_name);
+
   const [editForm, setEditForm] = useState({
     company_name: initialLead.company_name,
-    contact_name: initialLead.contact_name || '',
+    genre: initialParsedContact.genre,
+    prenom: initialParsedContact.prenom,
+    nom: initialParsedContact.nom,
     phone: initialLead.phone || '',
     email: initialLead.email || '',
     linkedin_url: initialLead.linkedin_url || '',
@@ -130,78 +136,111 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     setLead(leadDetails);
   };
 
-  const handleSaveLead = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const isFirstRender = useRef(true);
+  const prevLeadIdRef = useRef(initialLead.id);
 
-    try {
-      const oldStageId = lead.stage_id;
-      const newStageId = editForm.stage_id;
-      let stageChangeLog = undefined;
+  const saveLeadChanges = useCallback(
+    async (currentForm: typeof editForm, currentScores: typeof scores) => {
+      if (!currentForm.company_name.trim()) return;
 
-      if (oldStageId !== newStageId) {
-        const oldStage = stages.find((s) => s.id === oldStageId)?.name || 'Inconnue';
-        const newStage = stages.find((s) => s.id === newStageId)?.name || 'Inconnue';
-        stageChangeLog = {
-          type: 'stage_change',
-          content: `Étape changée : ${oldStage} → ${newStage}`,
-        };
+      setSaveStatus('saving');
+      try {
+        const formattedContact = formatContactName(currentForm.genre, currentForm.prenom, currentForm.nom);
+        const calculatedScore = Object.values(currentScores).reduce((acc, curr) => acc + curr.value, 0);
+
+        const oldStageId = lead.stage_id;
+        const newStageId = currentForm.stage_id;
+        let stageChangeLog = undefined;
+
+        if (oldStageId !== newStageId) {
+          const oldStage = stages.find((s) => s.id === oldStageId)?.name || 'Inconnue';
+          const newStage = stages.find((s) => s.id === newStageId)?.name || 'Inconnue';
+          stageChangeLog = {
+            type: 'stage_change',
+            content: `Étape changée : ${oldStage} → ${newStage}`,
+          };
+        }
+
+        const oldScore = lead.score;
+        const newScore = calculatedScore;
+        let scoreChangeLog = undefined;
+
+        if (oldScore !== newScore) {
+          scoreChangeLog = {
+            type: 'score_update',
+            content: `Score ICP modifié : ${oldScore} → ${newScore}`,
+          };
+        }
+
+        await leadsService.updateLead(
+          lead.id,
+          {
+            company_name: currentForm.company_name,
+            contact_name: formattedContact,
+            phone: currentForm.phone || null,
+            email: currentForm.email || null,
+            linkedin_url: currentForm.linkedin_url || null,
+            deal_value: currentForm.deal_value,
+            score: calculatedScore,
+            stage_id: currentForm.stage_id,
+            owner_id: currentForm.owner_id || null,
+            note: currentForm.note || null,
+          },
+          scoreChangeLog || stageChangeLog
+        );
+
+        const scoresToSave = CRITERIA.map((c) => ({
+          criterion: c.id as 'taille' | 'budget' | 'urgence' | 'decideur' | 'fit' | 'concurrence',
+          value: currentScores[c.id]?.value || 0,
+          max_value: c.max,
+          label_selected: currentScores[c.id]?.label || '',
+        }));
+
+        await leadsService.updateLeadScores(lead.id, scoresToSave);
+
+        setLead((prev) => ({
+          ...prev,
+          company_name: currentForm.company_name,
+          contact_name: formattedContact,
+          phone: currentForm.phone || null,
+          email: currentForm.email || null,
+          linkedin_url: currentForm.linkedin_url || null,
+          deal_value: currentForm.deal_value,
+          score: calculatedScore,
+          stage_id: currentForm.stage_id,
+          stage: stages.find((s) => s.id === currentForm.stage_id) || prev.stage,
+          owner_id: currentForm.owner_id || null,
+          note: currentForm.note || null,
+        }));
+
+        onChanged();
+        setSaveStatus('saved');
+      } catch (err) {
+        console.error('Error auto-saving lead:', err);
+        setSaveStatus('error');
       }
+    },
+    [lead.id, lead.stage_id, lead.score, stages, onChanged]
+  );
 
-      const oldScore = lead.score;
-      const newScore = totalScore;
-      let scoreChangeLog = undefined;
+  if (prevLeadIdRef.current !== lead.id) {
+    prevLeadIdRef.current = lead.id;
+    isFirstRender.current = true;
+  }
 
-      if (oldScore !== newScore) {
-        scoreChangeLog = {
-          type: 'score_update',
-          content: `Score ICP modifié : ${oldScore} → ${newScore}`,
-        };
-      }
-
-      const targetStage = stages.find((s) => s.id === editForm.stage_id);
-      const stageName = (targetStage?.name || '').toLowerCase();
-      const shouldArchive = Boolean(
-        targetStage?.is_closed_lost ||
-        stageName.includes('perdu') ||
-        stageName.includes('lost') ||
-        stageName.includes('abandon')
-      );
-
-      await leadsService.updateLead(
-        lead.id,
-        {
-          company_name: editForm.company_name,
-          contact_name: editForm.contact_name,
-          phone: editForm.phone || null,
-          email: editForm.email || null,
-          linkedin_url: editForm.linkedin_url || null,
-          deal_value: editForm.deal_value,
-          score: totalScore,
-          stage_id: editForm.stage_id,
-          ...(shouldArchive ? { is_archived: true } : {}),
-          owner_id: editForm.owner_id || null,
-          note: editForm.note || null,
-        },
-        scoreChangeLog || stageChangeLog || { type: 'note', content: 'Informations mises à jour' }
-      );
-
-      const scoresToSave = CRITERIA.map((c) => ({
-        criterion: c.id as 'taille' | 'budget' | 'urgence' | 'decideur' | 'fit' | 'concurrence',
-        value: scores[c.id]?.value || 0,
-        max_value: c.max,
-        label_selected: scores[c.id]?.label || '',
-      }));
-
-      await leadsService.updateLeadScores(lead.id, scoresToSave);
-
-      showToast('Lead mis à jour avec succès');
-      onChanged();
-      onClose();
-    } catch (err) {
-      console.error('Error saving lead:', err);
-      showToast('Erreur lors de la mise à jour', 'error');
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-  };
+
+    const timer = setTimeout(() => {
+      saveLeadChanges(editForm, scores);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [editForm, scores, saveLeadChanges]);
 
   const handleDeleteLead = async () => {
     if (confirmAction('Supprimer ce lead définitivement ?')) {
@@ -481,7 +520,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
 
         {/* 2. EDIT TAB */}
         {modalTab === 'edit' && (
-          <form onSubmit={handleSaveLead} className="space-y-5">
+          <div className="space-y-5">
             {/* Form Info */}
             <div className="rounded-surface border border-line bg-elevated p-5">
               <div className="mb-4 text-xs font-bold uppercase tracking-wider text-ink-soft">
@@ -498,12 +537,40 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
                   />
                 </Field>
 
-                <Field label="Contact">
+                <Field label="Genre">
+                  <Select
+                    value={editForm.genre}
+                    onValueChange={(val) => setEditForm({ ...editForm, genre: val })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="— Genre" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">— Non précisé</SelectItem>
+                      <SelectItem value="M.">M.</SelectItem>
+                      <SelectItem value="Mme">Mme</SelectItem>
+                      <SelectItem value="Autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
+
+                <Field label="Prénom">
                   <input
                     type="text"
-                    value={editForm.contact_name}
-                    onChange={(e) => setEditForm({ ...editForm, contact_name: e.target.value })}
+                    placeholder="ex : Jean"
+                    value={editForm.prenom}
+                    onChange={(e) => setEditForm({ ...editForm, prenom: e.target.value })}
                     className={inputClass}
+                  />
+                </Field>
+
+                <Field label="Nom">
+                  <input
+                    type="text"
+                    placeholder="ex : DUPONT"
+                    value={editForm.nom}
+                    onChange={(e) => setEditForm({ ...editForm, nom: e.target.value.toUpperCase() })}
+                    className={`${inputClass} uppercase`}
                   />
                 </Field>
 
@@ -574,13 +641,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
               totalScore={totalScore}
               recommendation={recommendation}
             />
-
-            <div className="pt-2 border-t border-line flex justify-end">
-              <AccentButton type="submit" variant="primary" icon={<Save size={14} />}>
-                Enregistrer les modifications
-              </AccentButton>
-            </div>
-          </form>
+          </div>
         )}
 
         {/* 3. HISTORY TAB */}

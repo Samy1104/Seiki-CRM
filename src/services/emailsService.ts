@@ -6,6 +6,8 @@
 
 import { supabase } from './supabaseClient';
 import { callEdgeFunction } from './edgeFunctions';
+import { templatesService } from './templatesService';
+import type { Lead } from './leadsService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -28,11 +30,13 @@ export interface GeneratedEmail {
   gmail_thread_id: string | null;
   created_at: string;
   lead?: {
+    id?: string;
     contact_name: string;
     company_name: string;
     email: string | null;
     poste: string | null;
     segment: string;
+    custom_fields?: Record<string, string>;
   } | null;
 }
 
@@ -49,7 +53,7 @@ export const emailsService = {
       .from('generated_emails')
       .select(`
         *,
-        lead:leads!lead_id(contact_name, company_name, email, poste, segment)
+        lead:leads!lead_id(id, contact_name, company_name, email, poste, segment, custom_fields)
       `)
       .order('created_at', { ascending: false });
 
@@ -61,7 +65,29 @@ export const emailsService = {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as GeneratedEmail[];
+    const emails = (data || []) as GeneratedEmail[];
+
+    // Auto-render placeholders if any raw {{variable}} tags exist in draft subject or body
+    for (const email of emails) {
+      if (email.lead && (email.sujet?.includes('{{') || email.corps_du_mail?.includes('{{'))) {
+        const rendered = templatesService.renderTemplate(
+          { subject: email.sujet, body: email.corps_du_mail },
+          email.lead as unknown as Lead
+        );
+        if (rendered.subject !== email.sujet || rendered.body !== email.corps_du_mail) {
+          email.sujet = rendered.subject;
+          email.corps_du_mail = rendered.body;
+          // Persist rendered subject and body to DB asynchronously
+          supabase
+            .from('generated_emails')
+            .update({ sujet: rendered.subject, corps_du_mail: rendered.body })
+            .eq('id', email.id)
+            .then(() => {});
+        }
+      }
+    }
+
+    return emails;
   },
 
   /** Récupère un email généré par ID */
@@ -70,13 +96,22 @@ export const emailsService = {
       .from('generated_emails')
       .select(`
         *,
-        lead:leads!lead_id(contact_name, company_name, email, poste, segment)
+        lead:leads!lead_id(id, contact_name, company_name, email, poste, segment, custom_fields)
       `)
       .eq('id', id)
       .single();
 
     if (error) throw error;
-    return data as GeneratedEmail;
+    const email = data as GeneratedEmail;
+    if (email.lead && (email.sujet?.includes('{{') || email.corps_du_mail?.includes('{{'))) {
+      const rendered = templatesService.renderTemplate(
+        { subject: email.sujet, body: email.corps_du_mail },
+        email.lead as unknown as Lead
+      );
+      email.sujet = rendered.subject;
+      email.corps_du_mail = rendered.body;
+    }
+    return email;
   },
 
   /** Met à jour le corps/sujet d'un email généré (édition manuelle) */
@@ -114,7 +149,7 @@ export const emailsService = {
       .eq('id', generatedEmailId);
 
     if (error) throw error;
-    await callEdgeFunction('dispatch-gmail-sends', { triggeredBy: 'manual-button' });
+    await callEdgeFunction('dispatch-gmail-sends', { triggeredBy: 'manual-button', emailId: generatedEmailId });
   },
 
   /** Lance immédiatement un cycle pacing + dispatch (bouton manuel de test) */

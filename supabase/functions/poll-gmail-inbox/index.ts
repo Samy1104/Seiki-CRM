@@ -42,7 +42,7 @@ async function loadReplyClassificationSettings(
   const { data: negativeSetting } = await supabase.from("app_settings").select("value").eq("key", "reply_negative_stage_id").maybeSingle();
 
   return {
-    enabled: (enabledSetting?.value as { enabled?: boolean } | null)?.enabled ?? false,
+    enabled: (enabledSetting?.value as { enabled?: boolean } | null)?.enabled ?? true,
     positiveStageId: (positiveSetting?.value as { stage_id?: string | null } | null)?.stage_id ?? null,
     negativeStageId: (negativeSetting?.value as { stage_id?: string | null } | null)?.stage_id ?? null,
     geminiKey: Deno.env.get("GEMINI_API_KEY") ?? null,

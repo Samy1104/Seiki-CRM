@@ -26,7 +26,7 @@ const TEST_SEGMENTS: ('Media' | 'Retail' | 'Instit')[] = ['Media', 'Retail', 'In
 const DEFAULT_TEMPLATES: Record<'Media' | 'Retail' | 'Instit', { subject: string; body: string }> = {
   Media: {
     subject: "Accompagnement Media — {{company_name}}",
-    body: `Bonjour {{contact_name}},
+    body: `Bonjour {{prenom}},
 
 Je me permets de vous contacter au sujet des enjeux media de {{company_name}}.
 
@@ -39,7 +39,7 @@ Jaafar EL ALAMY`,
   },
   Retail: {
     subject: "Performance & Stratégie Retail — {{company_name}}",
-    body: `Bonjour {{contact_name}},
+    body: `Bonjour {{prenom}},
 
 Je vous contacte suite à nos récents projets auprès des acteurs majeurs du Retail.
 
@@ -52,7 +52,7 @@ Jaafar EL ALAMY`,
   },
   Instit: {
     subject: "Projets et transformation — {{company_name}}",
-    body: `Bonjour {{contact_name}},
+    body: `Bonjour {{prenom}},
 
 Je prends contact avec vous concernant les enjeux stratégiques et institutionnels de {{company_name}}.
 

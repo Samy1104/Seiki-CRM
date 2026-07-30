@@ -2,6 +2,7 @@ import React from 'react';
 import { FileText } from 'lucide-react';
 import type { PipelineStage } from '../../services/settingsService';
 import type { Lead } from '../../services/leadsService';
+import { formatContactName } from '../../utils/contactUtils';
 import { EmailGenerator } from '../../components/EmailGenerator';
 import { Button } from '../../components/ui/Button';
 import { AccentButton } from '../../components/ui/AccentButton';
@@ -11,7 +12,9 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 interface LeadGeneralInfoSectionProps {
   form: {
     company_name: string;
-    contact_name: string;
+    genre: string;
+    prenom: string;
+    nom: string;
     email: string;
     linkedin_url: string;
     phone: string;
@@ -63,13 +66,40 @@ export const LeadGeneralInfoSection: React.FC<LeadGeneralInfoSectionProps> = ({
             />
           </Field>
 
-          <Field label="Contact">
+          <Field label="Genre">
+            <Select
+              value={form.genre}
+              onValueChange={(val) => setForm({ ...form, genre: val })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="— Genre" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">— Non précisé</SelectItem>
+                <SelectItem value="M.">M.</SelectItem>
+                <SelectItem value="Mme">Mme</SelectItem>
+                <SelectItem value="Autre">Autre</SelectItem>
+              </SelectContent>
+            </Select>
+          </Field>
+
+          <Field label="Prénom">
             <input
               type="text"
-              placeholder="ex : Dir. Mobilité"
-              value={form.contact_name}
-              onChange={(e) => setForm({ ...form, contact_name: e.target.value })}
+              placeholder="ex : Jean"
+              value={form.prenom}
+              onChange={(e) => setForm({ ...form, prenom: e.target.value })}
               className={inputClass}
+            />
+          </Field>
+
+          <Field label="Nom">
+            <input
+              type="text"
+              placeholder="ex : DUPONT"
+              value={form.nom}
+              onChange={(e) => setForm({ ...form, nom: e.target.value.toUpperCase() })}
+              className={`${inputClass} uppercase`}
             />
           </Field>
 
@@ -228,7 +258,7 @@ export const LeadGeneralInfoSection: React.FC<LeadGeneralInfoSectionProps> = ({
       </form>
 
       <EmailGenerator
-        contactName={form.contact_name}
+        contactName={formatContactName(form.genre, form.prenom, form.nom)}
         website={form.website}
         onSelectEmail={(email) => setForm((prev: any) => ({ ...prev, email }))}
       />
