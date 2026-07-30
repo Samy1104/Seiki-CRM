@@ -198,18 +198,20 @@ export const leadsService = {
   },
 
   async updateLead(id: string, updates: Partial<Lead>, historyLog?: { type: string; content: string }): Promise<void> {
+    const { owner, stage, scores, history, ...cleanUpdates } = updates as Lead;
+    const payload = { ...cleanUpdates, updated_at: new Date().toISOString() };
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('leads')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update(payload)
       .eq('id', id);
 
     if (error) {
-      if ('is_disqualified' in updates && (error.code === '42703' || (error.message && error.message.includes('is_disqualified')))) {
-        const { is_disqualified: _, ...fallbackUpdates } = updates;
+      if ('is_disqualified' in payload && (error.code === '42703' || (error.message && error.message.includes('is_disqualified')))) {
+        const { is_disqualified: _, ...fallbackUpdates } = payload;
         const { error: fbError } = await supabase
           .from('leads')
-          .update({ ...fallbackUpdates, updated_at: new Date().toISOString() })
+          .update(fallbackUpdates)
           .eq('id', id);
         if (fbError) throw fbError;
       } else {
@@ -218,14 +220,18 @@ export const leadsService = {
     }
 
     if (historyLog) {
-      await supabase
-        .from('history')
-        .insert([{
-          lead_id: id,
-          action_type: historyLog.type,
-          content: historyLog.content,
-          metadata: { updates }
-        }]);
+      try {
+        await supabase
+          .from('history')
+          .insert([{
+            lead_id: id,
+            action_type: historyLog.type,
+            content: historyLog.content,
+            metadata: { updates: cleanUpdates }
+          }]);
+      } catch (histErr) {
+        console.warn('Non-blocking history insert error:', histErr);
+      }
     }
   },
 
