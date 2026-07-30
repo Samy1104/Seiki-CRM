@@ -14,17 +14,17 @@ Leads currently must be entered one-by-one via `/crm/add`. User wants to import 
 
 Static `.xlsx` file at `public/templates/leads-import-template.xlsx`, one header row + one example data row. Columns, in order:
 
-| Column | Required | DB field | Notes |
+| Column (French, matching the rest of the app's copy) | Required | DB field | Notes |
 |---|---|---|---|
-| Company Name | Yes | `company_name` | row rejected if blank |
+| Nom de la société | Yes | `company_name` | row rejected if blank |
 | Segment | Yes | `segment` | must be `Media` / `Retail` / `Instit`; xlsx data-validation dropdown on the column; row rejected if blank or invalid |
-| Contact Name | No | `contact_name` | defaults to `—` if blank |
+| Nom du contact | No | `contact_name` | defaults to `—` if blank |
 | Email | No | `email` | used for duplicate matching; light sanity check only (must contain `@` if present, not full RFC validation) |
-| Phone | No | `phone` | |
-| LinkedIn URL | No | `linkedin_url` | |
-| Website | No | `website` | |
+| Téléphone | No | `phone` | |
+| URL LinkedIn | No | `linkedin_url` | |
+| Site web | No | `website` | |
 | Source | No | `source` | if provided must be one of `LinkedIn` / `Événement` / `Réseau` / `AndZup` / `Inbound` / `Chrome Extension` / `Autre`, else row error; if blank, defaults to `Autre` |
-| Deal Value (k€) | No | `deal_value` | defaults to `0` |
+| Valeur de l'affaire (k€) | No | `deal_value` | defaults to `0` |
 | Note | No | `note` | |
 
 Fixed template only — no column-mapping UI. If the uploaded file's header row doesn't match the template's headers exactly, the whole file is rejected upfront with a "please use the provided template" message (no per-row processing attempted).
@@ -40,7 +40,7 @@ Fields not on the template, and their value for every imported lead:
 ## Validation & duplicate rules
 
 Per row, in order:
-1. Company Name blank → error, row skipped.
+1. Nom de la société blank → error, row skipped.
 2. Segment blank or not in the allowed set → error, row skipped.
 3. Source provided but not in the allowed set → error, row skipped. Blank Source → defaults to `Autre`.
 4. Email present but obviously malformed (no `@`) → error, row skipped.
