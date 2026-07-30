@@ -1,194 +1,139 @@
 import React, { useState } from 'react';
-import { Download, Calendar, ArrowRightLeft, ChevronDown } from 'lucide-react';
+import { Download, Calendar, Check } from 'lucide-react';
 import { PageTitle } from '../../components/ui/PageTitle';
 import { AccentButton } from '../../components/ui/AccentButton';
-import { SegmentedToggle } from '../../components/ui/SegmentedToggle';
+import { Modal } from '../../components/ui/Modal';
+import type { PeriodPreset } from '../../utils/dashboardCalculations';
+import type { CodirMeeting } from '../../services/settingsService';
 
 export interface DashboardHeaderProps {
-  codirDates: string[];
-  comparisonMode: 'codir' | 'custom';
-  setComparisonMode: (mode: 'codir' | 'custom') => void;
-  selectedCodirA: string;
-  setSelectedCodirA: (d: string) => void;
-  selectedCodirB: string;
-  setSelectedCodirB: (d: string) => void;
-  customDateA: { start: string; end: string };
-  setCustomDateA: (dates: { start: string; end: string }) => void;
-  customDateB: { start: string; end: string };
-  setCustomDateB: (dates: { start: string; end: string }) => void;
+  preset: PeriodPreset;
+  setPreset: (p: PeriodPreset) => void;
+  customRange: { start: string; end: string };
+  setCustomRange: (r: { start: string; end: string }) => void;
+  codirMeetings: CodirMeeting[];
+  onValidateCodir: () => Promise<void>;
   onExportCsv: () => void;
 }
 
+const PRESET_LABELS: Record<PeriodPreset, string> = {
+  since_last_codir: 'Depuis le dernier CODIR',
+  last_two_codirs: 'Entre les 2 derniers CODIR',
+  month: 'Mois en cours',
+  quarter: 'Trimestre en cours',
+  year: 'Année en cours',
+  custom: 'Période personnalisée',
+};
+
 export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
-  codirDates,
-  comparisonMode,
-  setComparisonMode,
-  selectedCodirA,
-  setSelectedCodirA,
-  selectedCodirB,
-  setSelectedCodirB,
-  customDateA,
-  setCustomDateA,
-  customDateB,
-  setCustomDateB,
+  preset,
+  setPreset,
+  customRange,
+  setCustomRange,
+  codirMeetings,
+  onValidateCodir,
   onExportCsv,
 }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [validating, setValidating] = useState(false);
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const thirtyDaysAgoIso = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-
-  const effectiveCodirDates = codirDates.length > 0 ? codirDates : [todayIso, thirtyDaysAgoIso];
+  const handleConfirmValidate = async () => {
+    setValidating(true);
+    try {
+      await onValidateCodir();
+    } finally {
+      setValidating(false);
+      setConfirmOpen(false);
+    }
+  };
 
   return (
     <div className="mb-4 space-y-3">
-      {/* Top Bar: Title & Action */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <PageTitle>Dashboard</PageTitle>
 
-        <AccentButton
-          variant="primary"
-          icon={<Download size={14} />}
-          onClick={onExportCsv}
-          className="self-start sm:self-auto"
-        >
-          Exporter CSV
-        </AccentButton>
-      </div>
-
-      {/* Comparative Period Controls Card (Compact & Fullcaps Title) */}
-      <div className="bg-[#141414] border border-line rounded-xl px-3.5 py-2.5 space-y-2.5 transition-all">
-        <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 ${!isCollapsed ? 'border-b border-line/50 pb-2' : ''}`}>
-          <button
-            type="button"
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer py-0.5"
-          >
-            <ChevronDown className={`w-4 h-4 text-[#D4C4A8] transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
-            <Calendar className="w-4 h-4 text-[#D4C4A8]" />
-            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">
-              Mode de Comparaison temporelle
-            </span>
-          </button>
-
-          {/* SegmentedToggle Component */}
-          <SegmentedToggle<'codir' | 'custom'>
-            value={comparisonMode}
-            onChange={setComparisonMode}
-            options={[
-              {
-                value: 'codir',
-                label: 'Comparaison CODIR',
-                icon: <ArrowRightLeft className="w-3.5 h-3.5" />,
-              },
-              {
-                value: 'custom',
-                label: 'Périodes Personnalisées',
-                icon: <Calendar className="w-3.5 h-3.5" />,
-              },
-            ]}
-          />
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <AccentButton variant="secondary" icon={<Check size={14} />} onClick={() => setConfirmOpen(true)}>
+            Valider le CODIR du jour
+          </AccentButton>
+          <AccentButton variant="primary" icon={<Download size={14} />} onClick={onExportCsv}>
+            Exporter CSV
+          </AccentButton>
         </div>
-
-        {/* Collapsible Content */}
-        {!isCollapsed && (
-          <div className="pt-0.5 transition-all">
-            {comparisonMode === 'codir' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft mb-1">
-                    CODIR Actuel (Période A)
-                  </label>
-                  <select
-                    value={selectedCodirA}
-                    onChange={(e) => setSelectedCodirA(e.target.value)}
-                    className="w-full bg-[#1e1e1e] border border-line rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                  >
-                    {effectiveCodirDates.map((date) => (
-                      <option key={`a-${date}`} value={date}>
-                        Réunion CODIR du {date} {codirDates.length === 0 ? '(Par défaut)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft mb-1">
-                    CODIR Référence (Période B)
-                  </label>
-                  <select
-                    value={selectedCodirB}
-                    onChange={(e) => setSelectedCodirB(e.target.value)}
-                    className="w-full bg-[#1e1e1e] border border-line rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                  >
-                    {effectiveCodirDates.map((date) => (
-                      <option key={`b-${date}`} value={date}>
-                        Réunion CODIR du {date} {codirDates.length === 0 ? '(Par défaut)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {/* Custom Date Range A */}
-                <div className="space-y-1.5 bg-[#1e1e1e]/60 border border-line/80 rounded-lg p-2.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4C4A8] block">
-                    Période Actuelle (A)
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Début</label>
-                      <input
-                        type="date"
-                        value={customDateA.start}
-                        onChange={(e) => setCustomDateA({ ...customDateA, start: e.target.value })}
-                        className="w-full bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Fin</label>
-                      <input
-                        type="date"
-                        value={customDateA.end}
-                        onChange={(e) => setCustomDateA({ ...customDateA, end: e.target.value })}
-                        className="w-full bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Custom Date Range B */}
-                <div className="space-y-1.5 bg-[#1e1e1e]/60 border border-line/80 rounded-lg p-2.5">
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft block">
-                    Période de Référence (B)
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Début</label>
-                      <input
-                        type="date"
-                        value={customDateB.start}
-                        onChange={(e) => setCustomDateB({ ...customDateB, start: e.target.value })}
-                        className="w-full bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Fin</label>
-                      <input
-                        type="date"
-                        value={customDateB.end}
-                        onChange={(e) => setCustomDateB({ ...customDateB, end: e.target.value })}
-                        className="w-full bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
       </div>
+
+      <div className="bg-[#141414] border border-line rounded-xl px-3.5 py-2.5">
+        <div className="flex flex-col md:flex-row md:items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-[#D4C4A8]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Période</span>
+          </div>
+
+          <select
+            id="dashboard-period-preset"
+            aria-label="Période"
+            value={preset}
+            onChange={(e) => setPreset(e.target.value as PeriodPreset)}
+            className="bg-[#1e1e1e] border border-line rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+          >
+            {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
+              <option key={p} value={p}>
+                {PRESET_LABELS[p]}
+              </option>
+            ))}
+          </select>
+
+          {preset === 'custom' && (
+            <div className="flex items-center gap-2">
+              <div>
+                <label htmlFor="dashboard-custom-start" className="sr-only">Début</label>
+                <input
+                  id="dashboard-custom-start"
+                  aria-label="Début"
+                  type="date"
+                  value={customRange.start}
+                  onChange={(e) => setCustomRange({ ...customRange, start: e.target.value })}
+                  className="bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+                />
+              </div>
+              <div>
+                <label htmlFor="dashboard-custom-end" className="sr-only">Fin</label>
+                <input
+                  id="dashboard-custom-end"
+                  aria-label="Fin"
+                  type="date"
+                  value={customRange.end}
+                  onChange={(e) => setCustomRange({ ...customRange, end: e.target.value })}
+                  className="bg-[#1e1e1e] border border-line rounded-md px-2 py-1 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+                />
+              </div>
+            </div>
+          )}
+
+          <span className="text-[11px] text-ink-soft ml-auto">
+            {codirMeetings.length} réunion{codirMeetings.length > 1 ? 's' : ''} CODIR enregistrée{codirMeetings.length > 1 ? 's' : ''}
+          </span>
+        </div>
+      </div>
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} header="Confirmer l'enregistrement du CODIR">
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-ink-soft">
+            Cette action enregistre la date et l'heure actuelles comme nouvelle réunion CODIR de référence pour les prochains calculs de delta.
+          </p>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => setConfirmOpen(false)}
+              className="px-4 py-2 rounded-lg text-xs font-semibold text-ink-soft hover:text-[#f2ede4] transition-colors cursor-pointer"
+            >
+              Annuler
+            </button>
+            <AccentButton variant="primary" onClick={handleConfirmValidate} disabled={validating}>
+              {validating ? 'Enregistrement...' : 'Confirmer'}
+            </AccentButton>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
