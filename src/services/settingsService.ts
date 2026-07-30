@@ -347,14 +347,43 @@ export const settingsService = {
       .select('id, meeting_date, label')
       .order('meeting_date', { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42P01' || (error.message && error.message.includes('codir_meetings'))) {
+        const { data: legacy } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'codir_history')
+          .maybeSingle();
+
+        const dates: string[] = legacy?.value?.dates || [];
+        return dates.map((d, i) => ({ id: `legacy-${i}`, meeting_date: d, label: 'Migré depuis app_settings' }));
+      }
+      throw error;
+    }
     return data || [];
   },
 
   async addCodirDate(dateIso?: string, label: string | null = null): Promise<CodirMeeting[]> {
-    await supabase.from('codir_meetings').insert([
-      { meeting_date: dateIso || new Date().toISOString(), label },
+    const targetDate = dateIso || new Date().toISOString();
+    const { error } = await supabase.from('codir_meetings').insert([
+      { meeting_date: targetDate, label },
     ]);
+
+    if (error) {
+      if (error.code === '42P01' || (error.message && error.message.includes('codir_meetings'))) {
+        const current = await this.getCodirHistory();
+        const dateOnly = targetDate.slice(0, 10);
+        const dates = [...current.map((m) => m.meeting_date), dateOnly];
+        await supabase.from('app_settings').upsert({
+          key: 'codir_history',
+          value: { dates },
+          label: 'Historique des réunions CODIR',
+          category: 'general',
+        });
+        return this.getCodirHistory();
+      }
+      throw error;
+    }
     return this.getCodirHistory();
   }
 };

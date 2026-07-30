@@ -80,10 +80,10 @@ export const Dashboard: React.FC = () => {
         prospectionService.getRecentEmailLogs(1000),
         settingsService.getTeamMembers(),
         settingsService.getDashboardTargets(),
-        settingsService.getCodirHistory(),
+        settingsService.getCodirHistory().catch(() => []),
         settingsService.getSlaLimits().catch(() => undefined),
         supabase.from('history').select('*, user:team_members!user_id(full_name, initials, color)').order('created_at', { ascending: false }),
-        pipelineHistoryService.getStageHistory(),
+        pipelineHistoryService.getStageHistory().catch(() => []),
       ]);
 
       setLeads(fetchedLeads);

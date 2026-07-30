@@ -91,7 +91,24 @@ export const leadsService = {
 
     const { data, error } = await query.order('score', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42703' || (error.message && error.message.includes('is_disqualified'))) {
+        const fallbackQuery = supabase
+          .from('leads')
+          .select(`
+            *,
+            owner:team_members!owner_id(*),
+            stage:pipeline_stages!stage_id(*)
+          `)
+          .eq('is_archived', archived)
+          .is('merged_into_id', null);
+
+        const { data: fbData, error: fbError } = await fallbackQuery.order('score', { ascending: false });
+        if (fbError) throw fbError;
+        return (fbData || []).map((l: any) => ({ ...l, is_disqualified: l.is_disqualified ?? false }));
+      }
+      throw error;
+    }
     return data || [];
   },
 
@@ -127,13 +144,28 @@ export const leadsService = {
     scores: Omit<LeadScoreDetail, 'id' | 'lead_id'>[]
   ): Promise<Lead> {
     // 1. Insert Lead
-    const { data: newLead, error: leadError } = await supabase
+    let newLead: Lead;
+    const { data: leadData, error: leadError } = await supabase
       .from('leads')
       .insert([{ is_disqualified: false, ...lead }])
       .select()
       .single();
 
-    if (leadError) throw leadError;
+    if (leadError) {
+      if (leadError.code === '42703' || (leadError.message && leadError.message.includes('is_disqualified'))) {
+        const { data: fbData, error: fbError } = await supabase
+          .from('leads')
+          .insert([lead])
+          .select()
+          .single();
+        if (fbError) throw fbError;
+        newLead = { ...fbData, is_disqualified: (fbData as any).is_disqualified ?? false };
+      } else {
+        throw leadError;
+      }
+    } else {
+      newLead = leadData;
+    }
 
     // 2. Insert Scores details
     if (scores.length > 0) {
@@ -172,7 +204,18 @@ export const leadsService = {
       .update({ ...updates, updated_at: new Date().toISOString() })
       .eq('id', id);
 
-    if (error) throw error;
+    if (error) {
+      if ('is_disqualified' in updates && (error.code === '42703' || (error.message && error.message.includes('is_disqualified')))) {
+        const { is_disqualified: _, ...fallbackUpdates } = updates;
+        const { error: fbError } = await supabase
+          .from('leads')
+          .update({ ...fallbackUpdates, updated_at: new Date().toISOString() })
+          .eq('id', id);
+        if (fbError) throw fbError;
+      } else {
+        throw error;
+      }
+    }
 
     if (historyLog) {
       await supabase

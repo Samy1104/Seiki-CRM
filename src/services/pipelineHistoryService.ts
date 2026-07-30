@@ -16,7 +16,12 @@ export const pipelineHistoryService = {
       .order('changed_at', { ascending: true })
       .limit(limit);
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === '42P01' || (error.message && error.message.includes('lead_stage_history'))) {
+        return [];
+      }
+      throw error;
+    }
     return data || [];
   },
 };
