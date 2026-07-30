@@ -3,6 +3,12 @@ import {
   computeDelta,
   computeLeadsProgression,
   groupTasksByMember,
+  computePeriodWindows,
+  isWithinWindow,
+  reconstructStageSnapshot,
+  countByStage,
+  computeCohortMatrix,
+  computeVelocityDays,
 } from './dashboardCalculations';
 
 describe('dashboardCalculations', () => {
@@ -129,6 +135,162 @@ describe('dashboardCalculations', () => {
       // Alice should have 2 completed (t1 and t3)
       expect(grouped[0].completedInPeriod).toHaveLength(2);
       expect(grouped[0].pending).toHaveLength(1);
+    });
+  });
+
+  describe('computePeriodWindows', () => {
+    const now = new Date('2026-07-30T12:00:00.000Z');
+
+    it('since_last_codir: current runs from last meeting to now, comparison is the prior CODIR-to-CODIR window', () => {
+      const meetings = [{ meeting_date: '2026-06-01T00:00:00.000Z' }, { meeting_date: '2026-07-15T00:00:00.000Z' }];
+      const { current, comparison } = computePeriodWindows('since_last_codir', meetings, now);
+      expect(current).toEqual({ start: '2026-07-15T00:00:00.000Z', end: now.toISOString() });
+      expect(comparison).toEqual({ start: '2026-06-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' });
+    });
+
+    it('since_last_codir: falls back to a 30/60-day window when no meetings exist', () => {
+      const { current, comparison } = computePeriodWindows('since_last_codir', [], now);
+      expect(current.end).toBe(now.toISOString());
+      expect(new Date(current.start).getTime()).toBeLessThan(now.getTime());
+      expect(new Date(comparison.start).getTime()).toBeLessThan(new Date(comparison.end).getTime());
+    });
+
+    it('last_two_codirs: current is N-1..N, comparison is N-2..N-1', () => {
+      const meetings = [
+        { meeting_date: '2026-05-01T00:00:00.000Z' },
+        { meeting_date: '2026-06-01T00:00:00.000Z' },
+        { meeting_date: '2026-07-15T00:00:00.000Z' },
+      ];
+      const { current, comparison } = computePeriodWindows('last_two_codirs', meetings, now);
+      expect(current).toEqual({ start: '2026-06-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' });
+      expect(comparison).toEqual({ start: '2026-05-01T00:00:00.000Z', end: '2026-06-01T00:00:00.000Z' });
+    });
+
+    it('month: current is month-to-date, comparison is the full previous month', () => {
+      const { current, comparison } = computePeriodWindows('month', [], now);
+      expect(current.start).toBe('2026-07-01T00:00:00.000Z');
+      expect(current.end).toBe(now.toISOString());
+      expect(comparison.start).toBe('2026-06-01T00:00:00.000Z');
+      expect(new Date(comparison.end).getUTCMonth()).toBe(5); // June
+    });
+
+    it('quarter: current quarter start is the 1st of the quarter month', () => {
+      const { current } = computePeriodWindows('quarter', [], now);
+      expect(current.start).toBe('2026-07-01T00:00:00.000Z');
+    });
+
+    it('year: current year start is Jan 1st', () => {
+      const { current, comparison } = computePeriodWindows('year', [], now);
+      expect(current.start).toBe('2026-01-01T00:00:00.000Z');
+      expect(comparison.start).toBe('2025-01-01T00:00:00.000Z');
+    });
+
+    it('custom: comparison window is an equal-length window immediately before start', () => {
+      const { current, comparison } = computePeriodWindows('custom', [], now, {
+        start: '2026-07-01T00:00:00.000Z',
+        end: '2026-07-15T00:00:00.000Z',
+      });
+      expect(current).toEqual({ start: '2026-07-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' });
+      expect(comparison.end).toBe('2026-06-30T23:59:59.999Z');
+      // 14-day span before the start
+      expect(comparison.start).toBe('2026-06-17T00:00:00.000Z');
+    });
+  });
+
+  describe('isWithinWindow', () => {
+    it('returns true for a date inside the window', () => {
+      expect(isWithinWindow('2026-07-10T00:00:00.000Z', { start: '2026-07-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' })).toBe(true);
+    });
+
+    it('returns false for a date outside the window', () => {
+      expect(isWithinWindow('2026-08-01T00:00:00.000Z', { start: '2026-07-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' })).toBe(false);
+    });
+
+    it('returns false for an invalid date string', () => {
+      expect(isWithinWindow('not-a-date', { start: '2026-07-01T00:00:00.000Z', end: '2026-07-15T00:00:00.000Z' })).toBe(false);
+    });
+  });
+
+  describe('reconstructStageSnapshot', () => {
+    it('picks the latest transition at or before the target date per lead', () => {
+      const history = [
+        { lead_id: 'l1', to_stage_id: 'prospect', changed_at: '2026-07-01T00:00:00.000Z' },
+        { lead_id: 'l1', to_stage_id: 'demo', changed_at: '2026-07-10T00:00:00.000Z' },
+        { lead_id: 'l1', to_stage_id: 'won', changed_at: '2026-07-25T00:00:00.000Z' },
+        { lead_id: 'l2', to_stage_id: 'prospect', changed_at: '2026-07-05T00:00:00.000Z' },
+      ];
+      const snapshot = reconstructStageSnapshot(history, '2026-07-15T00:00:00.000Z');
+      expect(snapshot).toEqual({ l1: 'demo', l2: 'prospect' });
+    });
+
+    it('excludes leads with no transition at or before the target date', () => {
+      const history = [{ lead_id: 'l1', to_stage_id: 'prospect', changed_at: '2026-08-01T00:00:00.000Z' }];
+      const snapshot = reconstructStageSnapshot(history, '2026-07-15T00:00:00.000Z');
+      expect(snapshot).toEqual({});
+    });
+  });
+
+  describe('countByStage', () => {
+    it('counts leads per stage from a snapshot', () => {
+      const counts = countByStage({ l1: 'demo', l2: 'prospect', l3: 'demo' });
+      expect(counts).toEqual({ demo: 2, prospect: 1 });
+    });
+  });
+
+  describe('computeCohortMatrix', () => {
+    const stages = [
+      { id: 'prospect', name: 'Prospect', position: 1 },
+      { id: 'demo', name: 'Démo', position: 2 },
+      { id: 'won', name: 'Gagné', position: 3 },
+    ];
+
+    it('groups leads by creation month and computes reach percent per stage', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-05-03T00:00:00.000Z' },
+        { id: 'l2', created_at: '2026-05-20T00:00:00.000Z' },
+      ];
+      const history = [
+        { lead_id: 'l1', to_stage_id: 'prospect', changed_at: '2026-05-03T00:00:00.000Z' },
+        { lead_id: 'l1', to_stage_id: 'demo', changed_at: '2026-05-10T00:00:00.000Z' },
+        { lead_id: 'l2', to_stage_id: 'prospect', changed_at: '2026-05-20T00:00:00.000Z' },
+      ];
+      const rows = computeCohortMatrix(leads, history, stages);
+      expect(rows).toHaveLength(1);
+      expect(rows[0].monthKey).toBe('2026-05');
+      expect(rows[0].totalLeads).toBe(2);
+      const demoCell = rows[0].cells.find((c) => c.stageId === 'demo')!;
+      expect(demoCell.reachedCount).toBe(1);
+      expect(demoCell.percent).toBe(50);
+      expect(demoCell.leadIds).toEqual(['l1']);
+    });
+
+    it('excludes disqualified leads from cohort membership and denominator', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-05-03T00:00:00.000Z', is_disqualified: false },
+        { id: 'l2', created_at: '2026-05-20T00:00:00.000Z', is_disqualified: true },
+      ];
+      const rows = computeCohortMatrix(leads, [], stages);
+      expect(rows[0].totalLeads).toBe(1);
+    });
+  });
+
+  describe('computeVelocityDays', () => {
+    const wonStageId = 'won';
+
+    it('averages days from created_at to the won transition found in history', () => {
+      const leads = [{ id: 'l1', created_at: '2026-07-01T00:00:00.000Z', stage_id: 'won', stage_changed_at: '2026-07-11T00:00:00.000Z' }];
+      const history = [{ lead_id: 'l1', to_stage_id: 'won', changed_at: '2026-07-11T00:00:00.000Z' }];
+      expect(computeVelocityDays(leads, history, wonStageId)).toBe(10);
+    });
+
+    it('falls back to stage_changed_at when no history entry exists but the lead is currently won', () => {
+      const leads = [{ id: 'l1', created_at: '2026-07-01T00:00:00.000Z', stage_id: 'won', stage_changed_at: '2026-07-06T00:00:00.000Z' }];
+      expect(computeVelocityDays(leads, [], wonStageId)).toBe(5);
+    });
+
+    it('ignores leads that never reached the won stage', () => {
+      const leads = [{ id: 'l1', created_at: '2026-07-01T00:00:00.000Z', stage_id: 'demo', stage_changed_at: '2026-07-06T00:00:00.000Z' }];
+      expect(computeVelocityDays(leads, [], wonStageId)).toBe(0);
     });
   });
 });
