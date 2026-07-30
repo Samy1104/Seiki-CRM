@@ -235,6 +235,9 @@ export const Dashboard: React.FC = () => {
             stages={stages}
             historyA={historyA}
             historyB={historyB}
+            stageHistory={stageHistory}
+            comparisonEndDate={endDateB}
+            deployedAtIso="2026-07-30T00:00:00.000Z"
           />
         )}
 

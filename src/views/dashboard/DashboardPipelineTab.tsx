@@ -1,8 +1,10 @@
-import React from 'react';
-import { GitCommit, Layers, PieChart, Share2, Clock, ArrowUpRight, ArrowDownRight, DollarSign } from 'lucide-react';
+import React, { useState } from 'react';
+import { GitCommit, Layers, PieChart, Share2, Clock, ArrowUpRight, ArrowDownRight, DollarSign, Hash, Euro } from 'lucide-react';
 import type { Lead, LeadHistoryItem } from '../../services/leadsService';
 import type { PipelineStage } from '../../services/settingsService';
-import { computeLeadsProgression, computeDelta, type DeltaResult } from '../../utils/dashboardCalculations';
+import type { LeadStageHistoryEntry } from '../../services/pipelineHistoryService';
+import { computeLeadsProgression, computeDelta, reconstructStageSnapshot, countByStage, type DeltaResult } from '../../utils/dashboardCalculations';
+import { Drawer } from '../../components/ui/Drawer';
 
 export interface DashboardPipelineTabProps {
   leadsA: Lead[];
@@ -10,6 +12,9 @@ export interface DashboardPipelineTabProps {
   stages: PipelineStage[];
   historyA: LeadHistoryItem[];
   historyB: LeadHistoryItem[];
+  stageHistory: LeadStageHistoryEntry[];
+  comparisonEndDate: string;
+  deployedAtIso?: string;
 }
 
 const DeltaBadge: React.FC<{ delta: DeltaResult }> = ({ delta }) => {
@@ -47,7 +52,14 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
   stages,
   historyA,
   historyB,
+  stageHistory,
+  comparisonEndDate,
+  deployedAtIso: _deployedAtIso = '2026-07-30T00:00:00.000Z',
 }) => {
+  const [displayMode, setDisplayMode] = useState<'volume' | 'valeur'>('volume');
+  const [hideClosed, setHideClosed] = useState(false);
+  const [drilldown, setDrilldown] = useState<{ title: string; leads: Lead[] } | null>(null);
+
   // 1. Progression of Leads (Stage Changes) Metric
   const progressionA = computeLeadsProgression(historyA, '1970-01-01', '2099-12-31');
   const progressionB = computeLeadsProgression(historyB, '1970-01-01', '2099-12-31');
@@ -73,17 +85,24 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
   );
 
   // 3. Funnel / Per Stage Metrics
+  const comparisonSnapshot = reconstructStageSnapshot(stageHistory, comparisonEndDate);
+  const comparisonCounts = countByStage(comparisonSnapshot);
+
   const totalLeadsCount = leadsA.length || 1;
-  const stageStats = sortedStages.map((stage) => {
+  const visibleStages = hideClosed ? sortedStages.filter((s) => !s.is_closed_won && !s.is_closed_lost) : sortedStages;
+  const stageStats = visibleStages.map((stage) => {
     const stageLeads = leadsA.filter((l) => l.stage_id === stage.id);
     const count = stageLeads.length;
     const totalVal = stageLeads.reduce((sum, l) => sum + (l.deal_value || 0), 0);
     const percent = Math.round((count / totalLeadsCount) * 100);
+    const previousCount = comparisonCounts[stage.id] || 0;
     return {
       stage,
       count,
       totalVal,
       percent,
+      leads: stageLeads,
+      delta: count - previousCount,
     };
   });
 
@@ -181,40 +200,76 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
 
       {/* Funnel Chart Card */}
       <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-4">
-        <div className="flex items-center gap-2 border-b border-line/60 pb-3">
-          <Layers className="w-4 h-4 text-[#D4C4A8]" />
-          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Entonnoir de Conversion par Étape</h3>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line/60 pb-3">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#D4C4A8]" />
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Vue par Statut (Entonnoir & Deltas)</h3>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-[11px] text-ink-soft cursor-pointer">
+              <input
+                type="checkbox"
+                aria-label="Masquer les deals fermés"
+                checked={hideClosed}
+                onChange={(e) => setHideClosed(e.target.checked)}
+              />
+              Masquer les deals fermés
+            </label>
+
+            <div className="flex items-center gap-1 bg-[#1e1e1e] border border-line rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setDisplayMode('volume')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors ${displayMode === 'volume' ? 'bg-[#D4C4A8] text-[#0d0d0d]' : 'text-ink-soft'}`}
+              >
+                <Hash className="w-3 h-3" /> Volume
+              </button>
+              <button
+                type="button"
+                onClick={() => setDisplayMode('valeur')}
+                className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-semibold transition-colors ${displayMode === 'valeur' ? 'bg-[#D4C4A8] text-[#0d0d0d]' : 'text-ink-soft'}`}
+              >
+                <Euro className="w-3 h-3" /> Valeur
+              </button>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-3">
-          {stageStats.map(({ stage, count, totalVal, percent }) => {
+          {stageStats.map(({ stage, count, totalVal, percent, leads, delta }) => {
             const barWidth = Math.max(5, percent);
             return (
-              <div key={stage.id} className="space-y-1">
+              <button
+                type="button"
+                key={stage.id}
+                onClick={() => setDrilldown({ title: `Leads en étape ${stage.name} (${count})`, leads })}
+                className="w-full text-left space-y-1 cursor-pointer group"
+              >
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: stage.color || '#D4C4A8' }}
-                    />
-                    <span className="font-bold text-[#f2ede4]">{stage.name}</span>
+                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: stage.color || '#D4C4A8' }} />
+                    <span className="font-bold text-[#f2ede4] group-hover:text-[#D4C4A8] transition-colors">{stage.name}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-ink-soft">
-                    <span>{count} leads ({percent}%)</span>
-                    <span className="font-semibold text-[#D4C4A8]">{totalVal.toLocaleString('fr-FR')} €</span>
+                  <div className="flex items-center gap-3 text-ink-soft">
+                    {displayMode === 'volume' ? (
+                      <span>{count} leads ({percent}%)</span>
+                    ) : (
+                      <span className="font-semibold text-[#D4C4A8]">{totalVal.toLocaleString('fr-FR')} €</span>
+                    )}
+                    <span className={delta > 0 ? 'text-emerald-400' : delta < 0 ? 'text-rose-400' : 'text-ink-faint'}>
+                      ({delta > 0 ? '+' : ''}{delta})
+                    </span>
                   </div>
                 </div>
 
                 <div className="w-full bg-[#1e1e1e] h-3 rounded-full overflow-hidden border border-line/40">
                   <div
                     className="h-full rounded-full transition-all duration-500"
-                    style={{
-                      width: `${barWidth}%`,
-                      backgroundColor: stage.color || '#D4C4A8',
-                    }}
+                    style={{ width: `${barWidth}%`, backgroundColor: stage.color || '#D4C4A8' }}
                   />
                 </div>
-              </div>
+              </button>
             );
           })}
         </div>
@@ -292,6 +347,20 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
           )}
         </div>
       </div>
+
+      <Drawer open={drilldown !== null} onClose={() => setDrilldown(null)} title={drilldown?.title || ''}>
+        <div className="p-6 space-y-2">
+          {(drilldown?.leads || []).map((lead) => (
+            <div key={lead.id} className="p-3 bg-[#1e1e1e] border border-line/60 rounded-xl text-xs space-y-1">
+              <div className="font-bold text-[#f2ede4]">{lead.company_name}</div>
+              <div className="text-ink-soft">{(lead.deal_value || 0).toLocaleString('fr-FR')} € · {lead.stage?.name || 'Inconnue'}</div>
+            </div>
+          ))}
+          {(drilldown?.leads || []).length === 0 && (
+            <p className="text-xs text-ink-faint italic">Aucun lead sur cette étape.</p>
+          )}
+        </div>
+      </Drawer>
     </div>
   );
 };
