@@ -40,6 +40,63 @@ export interface RawImportRow {
   note: string;
 }
 
+export interface RowError {
+  rowNumber: number;
+  reason: string;
+}
+
+export interface ExistingLeadRecord {
+  id: string;
+  contact_name: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
+  website: string | null;
+  deal_value: number | null;
+  note: string | null;
+}
+
+export interface NewLeadPayload {
+  company_name: string;
+  segment: LeadSegment;
+  contact_name: string;
+  email: string | null;
+  phone: string | null;
+  linkedin_url: string | null;
+  website: string | null;
+  source: string;
+  deal_value: number;
+  note: string | null;
+  stage_id: string;
+  owner_id: null;
+  score: number;
+  is_archived: boolean;
+  email_verified: boolean;
+  custom_fields: Record<string, string>;
+}
+
+export interface NewLeadRow {
+  rowNumber: number;
+  payload: NewLeadPayload;
+}
+
+export interface UpdateLeadRow {
+  rowNumber: number;
+  existingLeadId: string;
+  fieldsToFill: Partial<
+    Record<'contact_name' | 'phone' | 'linkedin_url' | 'website' | 'note' | 'deal_value', string | number>
+  >;
+}
+
+export interface ImportValidationResult {
+  toCreate: NewLeadRow[];
+  toUpdate: UpdateLeadRow[];
+  errors: RowError[];
+}
+
+function isBlank(value: string | null | undefined): boolean {
+  return !value || value.trim() === '' || value.trim() === '—';
+}
+
 const COLUMN_COUNT = LEAD_IMPORT_HEADERS.length;
 
 function cellText(row: ExcelJS.Row, col: number): string {
@@ -92,5 +149,113 @@ export const leadImportService = {
     });
 
     return rows;
+  },
+
+  validateRows(
+    rows: RawImportRow[],
+    existingLeadsByEmail: Map<string, ExistingLeadRecord>,
+    prospectStageId: string
+  ): ImportValidationResult {
+    const toCreate: NewLeadRow[] = [];
+    const toUpdate: UpdateLeadRow[] = [];
+    const errors: RowError[] = [];
+    const seenEmails = new Set<string>();
+
+    for (const raw of rows) {
+      const companyName = raw.companyName.trim();
+      if (!companyName) {
+        errors.push({ rowNumber: raw.rowNumber, reason: 'Nom de société manquant' });
+        continue;
+      }
+
+      const segment = raw.segment.trim();
+      if (!ALLOWED_SEGMENTS.includes(segment as LeadSegment)) {
+        errors.push({
+          rowNumber: raw.rowNumber,
+          reason: `Segment invalide ou manquant (attendu : ${ALLOWED_SEGMENTS.join(', ')})`,
+        });
+        continue;
+      }
+
+      const rawSource = raw.source.trim();
+      if (rawSource && !ALLOWED_SOURCES.includes(rawSource as (typeof ALLOWED_SOURCES)[number])) {
+        errors.push({
+          rowNumber: raw.rowNumber,
+          reason: `Source invalide (attendu : ${ALLOWED_SOURCES.join(', ')})`,
+        });
+        continue;
+      }
+      const source = rawSource || 'Autre';
+
+      const email = raw.email.trim();
+      if (email && !email.includes('@')) {
+        errors.push({ rowNumber: raw.rowNumber, reason: 'Adresse email invalide' });
+        continue;
+      }
+      const emailKey = email.toLowerCase();
+
+      if (emailKey) {
+        if (seenEmails.has(emailKey)) {
+          errors.push({
+            rowNumber: raw.rowNumber,
+            reason: 'Email en doublon dans le fichier (déjà vu ligne précédente)',
+          });
+          continue;
+        }
+        seenEmails.add(emailKey);
+      }
+
+      const dealValue = parseInt(raw.dealValue, 10) || 0;
+      const existing = emailKey ? existingLeadsByEmail.get(emailKey) : undefined;
+
+      if (existing) {
+        const fieldsToFill: UpdateLeadRow['fieldsToFill'] = {};
+        if (isBlank(existing.contact_name) && raw.contactName.trim()) {
+          fieldsToFill.contact_name = raw.contactName.trim();
+        }
+        if (isBlank(existing.phone) && raw.phone.trim()) {
+          fieldsToFill.phone = raw.phone.trim();
+        }
+        if (isBlank(existing.linkedin_url) && raw.linkedinUrl.trim()) {
+          fieldsToFill.linkedin_url = raw.linkedinUrl.trim();
+        }
+        if (isBlank(existing.website) && raw.website.trim()) {
+          fieldsToFill.website = raw.website.trim();
+        }
+        if (isBlank(existing.note) && raw.note.trim()) {
+          fieldsToFill.note = raw.note.trim();
+        }
+        if (!existing.deal_value && dealValue) {
+          fieldsToFill.deal_value = dealValue;
+        }
+
+        toUpdate.push({ rowNumber: raw.rowNumber, existingLeadId: existing.id, fieldsToFill });
+        continue;
+      }
+
+      toCreate.push({
+        rowNumber: raw.rowNumber,
+        payload: {
+          company_name: companyName,
+          segment: segment as LeadSegment,
+          contact_name: raw.contactName.trim() || '—',
+          email: email || null,
+          phone: raw.phone.trim() || null,
+          linkedin_url: raw.linkedinUrl.trim() || null,
+          website: raw.website.trim() || null,
+          source,
+          deal_value: dealValue,
+          note: raw.note.trim() || null,
+          stage_id: prospectStageId,
+          owner_id: null,
+          score: 0,
+          is_archived: false,
+          email_verified: false,
+          custom_fields: {},
+        },
+      });
+    }
+
+    return { toCreate, toUpdate, errors };
   },
 };
