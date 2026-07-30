@@ -120,7 +120,8 @@ export const leadImportService = {
       throw new Error('Le fichier ne contient aucune feuille de calcul.');
     }
 
-    const headerRow = sheet.getRow(1);
+    const HEADER_ROW_NUMBER = 2;
+    const headerRow = sheet.getRow(HEADER_ROW_NUMBER);
     const actualHeaders = LEAD_IMPORT_HEADERS.map((_, i) => cellText(headerRow, i + 1));
     const headersMatch = LEAD_IMPORT_HEADERS.every((h, i) => actualHeaders[i] === h);
     if (!headersMatch) {
@@ -131,7 +132,7 @@ export const leadImportService = {
 
     const rows: RawImportRow[] = [];
     sheet.eachRow((row, rowNumber) => {
-      if (rowNumber === 1) return;
+      if (rowNumber <= HEADER_ROW_NUMBER) return;
       const values = Array.from({ length: COLUMN_COUNT }, (_, i) => cellText(row, i + 1));
       if (values.every((v) => v === '')) return;
 

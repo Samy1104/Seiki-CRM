@@ -37,13 +37,27 @@ async function main() {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Leads');
 
-  sheet.addRow(HEADERS);
-  sheet.getRow(1).font = { bold: true };
   sheet.columns = HEADERS.map(() => ({ width: 24 }));
-  sheet.addRow(EXAMPLE_ROW);
+
+  // Row 1: decorative title banner spanning all columns.
+  const lastCol = String.fromCharCode('A'.charCodeAt(0) + HEADERS.length - 1);
+  sheet.mergeCells(`A1:${lastCol}1`);
+  const bannerCell = sheet.getCell('A1');
+  bannerCell.value = "SEIKI — Modèle d'import de leads";
+  bannerCell.font = { bold: true, size: 14, color: { argb: 'FFD4C4A8' } };
+  bannerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF141414' } };
+  bannerCell.alignment = { vertical: 'middle', horizontal: 'center' };
+  sheet.getRow(1).height = 28;
+
+  // Row 2: headers.
+  sheet.getRow(2).values = HEADERS;
+  sheet.getRow(2).font = { bold: true };
+
+  // Row 3+: example data.
+  sheet.getRow(3).values = EXAMPLE_ROW;
 
   // Segment column (B) restricted to the DB's CHECK constraint values.
-  sheet.dataValidations.add('B2:B1000', {
+  sheet.dataValidations.add('B3:B1000', {
     type: 'list',
     allowBlank: false,
     formulae: ['"Media,Retail,Instit"'],

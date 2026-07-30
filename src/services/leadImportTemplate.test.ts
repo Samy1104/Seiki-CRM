@@ -12,22 +12,31 @@ import { LEAD_IMPORT_HEADERS } from './leadImportService';
 const TEMPLATE_PATH = path.resolve(__dirname, '../../public/templates/leads-import-template.xlsx');
 
 describe('lead import template file', () => {
-  it('has the exact expected header row', async () => {
+  it('has a decorative title banner on row 1', async () => {
     const buffer = readFileSync(TEMPLATE_PATH);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
     const sheet = workbook.worksheets[0];
-    const headerRow = sheet.getRow(1);
+    const bannerCell = sheet.getCell('A1');
+    expect(String(bannerCell.value)).toContain("Modèle d'import de leads");
+  });
+
+  it('has the exact expected header row on row 2', async () => {
+    const buffer = readFileSync(TEMPLATE_PATH);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+    const sheet = workbook.worksheets[0];
+    const headerRow = sheet.getRow(2);
     const headers = LEAD_IMPORT_HEADERS.map((_, i) => String(headerRow.getCell(i + 1).value));
     expect(headers).toEqual([...LEAD_IMPORT_HEADERS]);
   });
 
-  it('restricts the Segment column to a Media/Retail/Instit dropdown', async () => {
+  it('restricts the Segment column to a Media/Retail/Instit dropdown starting at the first data row', async () => {
     const buffer = readFileSync(TEMPLATE_PATH);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
     const sheet = workbook.worksheets[0];
-    const cell = sheet.getCell('B2');
+    const cell = sheet.getCell('B3');
     expect(cell.dataValidation?.type).toBe('list');
     expect(cell.dataValidation?.formulae?.[0]).toContain('Media');
   });

@@ -13,8 +13,9 @@ async function buildXlsxFile(
 ): Promise<File> {
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet('Leads');
-  sheet.addRow([...headers]);
-  rows.forEach((row) => sheet.addRow(row));
+  sheet.addRow(['Bannière décorative']); // row 1: decorative banner, skipped by parseFile
+  sheet.addRow([...headers]); // row 2: headers
+  rows.forEach((row) => sheet.addRow(row)); // row 3+: data
   const buffer = await workbook.xlsx.writeBuffer();
   return new File([buffer], 'test.xlsx', {
     type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -22,7 +23,7 @@ async function buildXlsxFile(
 }
 
 describe('leadImportService.parseFile', () => {
-  it('parses valid rows into RawImportRow objects with 1-based Excel row numbers', async () => {
+  it('parses valid rows into RawImportRow objects with 1-based Excel row numbers, skipping the banner and header rows', async () => {
     const file = await buildXlsxFile([
       ['Acme Corp', 'Retail', 'Jean Dupont', 'jean@acme.com', '0600000000', 'https://li.com/jean', 'https://acme.com', 'LinkedIn', '50', 'note'],
       ['Beta SA', 'Media', '', '', '', '', '', '', '', ''],
@@ -32,7 +33,7 @@ describe('leadImportService.parseFile', () => {
 
     expect(rows).toHaveLength(2);
     expect(rows[0]).toEqual({
-      rowNumber: 2,
+      rowNumber: 3,
       companyName: 'Acme Corp',
       segment: 'Retail',
       contactName: 'Jean Dupont',
@@ -44,7 +45,7 @@ describe('leadImportService.parseFile', () => {
       dealValue: '50',
       note: 'note',
     });
-    expect(rows[1].rowNumber).toBe(3);
+    expect(rows[1].rowNumber).toBe(4);
     expect(rows[1].companyName).toBe('Beta SA');
   });
 
