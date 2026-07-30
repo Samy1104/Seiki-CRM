@@ -278,6 +278,7 @@ export const leadImportService = {
         .not('email', 'is', null)
         .is('merged_into_id', null)
         .eq('is_archived', false)
+        .order('id', { ascending: true })
         .range(offset, offset + PAGE_SIZE - 1);
 
       if (error) throw error;

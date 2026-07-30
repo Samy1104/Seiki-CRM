@@ -67,6 +67,7 @@ describe('leadImportService.fetchExistingLeadsByEmail', () => {
     expect(mockQueryChain.not).toHaveBeenCalledWith('email', 'is', null);
     expect(mockQueryChain.is).toHaveBeenCalledWith('merged_into_id', null);
     expect(mockQueryChain.eq).toHaveBeenCalledWith('is_archived', false);
+    expect(mockQueryChain.order).toHaveBeenCalledWith('id', { ascending: true });
     expect(mockQueryChain.range).toHaveBeenCalledWith(0, 999);
   });
 
@@ -95,7 +96,7 @@ describe('leadImportService.fetchExistingLeadsByEmail', () => {
       },
     ];
 
-    const chainMethods = ['select', 'not', 'is', 'eq'];
+    const chainMethods = ['select', 'not', 'is', 'eq', 'order'];
     const mockQueryChain: any = {};
     chainMethods.forEach((method) => {
       mockQueryChain[method] = vi.fn(() => mockQueryChain);
