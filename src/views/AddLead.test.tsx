@@ -178,7 +178,7 @@ describe('AddLead View', () => {
     expect(screen.getByPlaceholderText('ex : LVMH')).toBeInTheDocument();
     expect(screen.queryByTestId('bulk-import-panel')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /import en masse/i }));
+    fireEvent.click(screen.getByRole('button', { name: /import excel/i }));
 
     expect(screen.getByTestId('bulk-import-panel')).toBeInTheDocument();
     expect(screen.queryByPlaceholderText('ex : LVMH')).not.toBeInTheDocument();

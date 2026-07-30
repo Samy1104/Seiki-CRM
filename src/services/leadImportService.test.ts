@@ -122,6 +122,23 @@ describe('leadImportService.validateRows', () => {
     expect(result.errors[0].reason).toMatch(/Segment/);
   });
 
+  it('rejects an invalid genre but accepts a blank genre', () => {
+    const bad = leadImportService.validateRows([row({ genre: 'Bogus' })], new Map(), stageId);
+    expect(bad.errors[0].reason).toMatch(/Genre/);
+
+    const blank = leadImportService.validateRows([row({ genre: '' })], new Map(), stageId);
+    expect(blank.errors).toEqual([]);
+    expect(blank.toCreate[0].payload.contact_name).toBe('Jean DUPONT');
+  });
+
+  it('accepts each allowed genre value', () => {
+    for (const genre of ['M.', 'Mme', 'Autre']) {
+      const result = leadImportService.validateRows([row({ genre })], new Map(), stageId);
+      expect(result.errors).toEqual([]);
+      expect(result.toCreate[0].payload.contact_name).toBe(`${genre} Jean DUPONT`);
+    }
+  });
+
   it('rejects an invalid source but accepts a blank source as Autre', () => {
     const bad = leadImportService.validateRows([row({ source: 'Bogus' })], new Map(), stageId);
     expect(bad.errors[0].reason).toMatch(/Source/);

@@ -39,7 +39,7 @@ export const AddLead: React.FC<AddLeadProps> = ({ setView }) => {
           onChange={setMode}
           options={[
             { value: 'single', label: 'Lead unique' },
-            { value: 'bulk', label: 'Import en masse' },
+            { value: 'bulk', label: 'Import Excel' },
           ]}
         />
       </div>

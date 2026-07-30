@@ -60,6 +60,16 @@ async function main() {
   // Row 3+: example data.
   sheet.getRow(3).values = EXAMPLE_ROW;
 
+  // Genre column (B) — optional, restricted to M. / Mme / Autre when filled.
+  sheet.dataValidations.add('B3:B1000', {
+    type: 'list',
+    allowBlank: true,
+    formulae: ['"M.,Mme,Autre"'],
+    showErrorMessage: true,
+    errorTitle: 'Genre invalide',
+    error: 'Merci de choisir M., Mme ou Autre (ou laisser vide).',
+  });
+
   // Segment column (E) restricted to the DB's CHECK constraint values.
   sheet.dataValidations.add('E3:E1000', {
     type: 'list',

@@ -20,6 +20,8 @@ export const LEAD_IMPORT_HEADERS = [
 export const ALLOWED_SEGMENTS = ['Media', 'Retail', 'Instit'] as const;
 export type LeadSegment = (typeof ALLOWED_SEGMENTS)[number];
 
+export const ALLOWED_GENRES = ['M.', 'Mme', 'Autre'] as const;
+
 export const ALLOWED_SOURCES = [
   'LinkedIn',
   'Événement',
@@ -181,6 +183,15 @@ export const leadImportService = {
       const companyName = raw.companyName.trim();
       if (!companyName) {
         errors.push({ rowNumber: raw.rowNumber, reason: 'Nom de société manquant' });
+        continue;
+      }
+
+      const genre = raw.genre.trim();
+      if (genre && !ALLOWED_GENRES.includes(genre as (typeof ALLOWED_GENRES)[number])) {
+        errors.push({
+          rowNumber: raw.rowNumber,
+          reason: `Genre invalide (attendu : ${ALLOWED_GENRES.join(', ')}, ou vide)`,
+        });
         continue;
       }
 
