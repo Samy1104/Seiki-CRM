@@ -82,7 +82,7 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
     } catch (err) {
       console.error('Unexpected error during import:', err);
       showToast(
-        'Une erreur inattendue sest produite lors de l\'import. Veuillez réessayer.',
+        "Une erreur inattendue s'est produite lors de l'import. Veuillez réessayer.",
         'error'
       );
       handleReset();
