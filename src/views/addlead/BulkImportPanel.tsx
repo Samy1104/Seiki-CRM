@@ -53,10 +53,16 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
     setLoading(true);
     try {
       const summary = await leadImportService.commitImport(toCreate, toUpdate);
+      if (summary.error) {
+        showToast(
+          `Import interrompu après ${summary.created} création(s) et ${summary.updated} mise(s) à jour — vérifiez le pipeline avant de réessayer.`,
+          'error'
+        );
+        handleReset();
+        return;
+      }
       setResult(summary);
       setStep('done');
-    } catch (err) {
-      showToast("Erreur lors de l'import des leads", 'error');
     } finally {
       setLoading(false);
     }

@@ -242,4 +242,64 @@ describe('leadImportService.commitImport', () => {
     expect(updatedLeadHistory[0]?.action_type).toBe('note');
     expect(updatedLeadHistory[0]?.content).toBe('Lead mis à jour (import en masse)');
   });
+
+  it('returns the completed counts plus an error, rather than throwing, on a mid-loop failure', async () => {
+    // 250 rows to create -> 3 chunks of CHUNK_SIZE=100 (100, 100, 50). The 3rd chunk insert fails.
+    const toCreate: NewLeadRow[] = Array.from({ length: 250 }, (_, i) => ({
+      rowNumber: i + 2,
+      payload: {
+        company_name: `Company ${i}`,
+        segment: 'Retail',
+        contact_name: 'Jean Dupont',
+        email: `lead${i}@acme.com`,
+        phone: null,
+        linkedin_url: null,
+        website: null,
+        source: 'Autre',
+        deal_value: 50,
+        note: null,
+        stage_id: 'stage-1',
+        owner_id: null,
+        score: 0,
+        is_archived: false,
+        email_verified: false,
+        custom_fields: {},
+      },
+    }));
+    const toUpdate: UpdateLeadRow[] = [];
+
+    const historyQuery = queryResult([]);
+    let leadsInsertCallCount = 0;
+    const leadsQuery: any = {
+      insert: vi.fn(() => {
+        leadsInsertCallCount += 1;
+        return leadsQuery;
+      }),
+      select: vi.fn(() => {
+        // First two chunks (100 rows each) succeed; the third (chunk 3 of 3) fails.
+        if (leadsInsertCallCount < 3) {
+          const created = leadsInsertCallCount === 1 ? 100 : 100;
+          return Promise.resolve({
+            data: Array.from({ length: created }, (_, i) => ({ id: `new-${leadsInsertCallCount}-${i}` })),
+            error: null,
+          });
+        }
+        return Promise.resolve({ data: null, error: { message: 'insert failed: constraint violation' } });
+      }),
+    };
+
+    mockedFrom.mockImplementation((table: string) => {
+      if (table === 'leads') return leadsQuery;
+      if (table === 'history') return historyQuery;
+      throw new Error(`unexpected table ${table}`);
+    });
+
+    const summary = await leadImportService.commitImport(toCreate, toUpdate);
+
+    expect(summary.error).toBeDefined();
+    expect(summary.error).toContain('insert failed');
+    expect(summary.created).toBe(200);
+    expect(summary.updated).toBe(0);
+    expect(leadsQuery.insert).toHaveBeenCalledTimes(3);
+  });
 });

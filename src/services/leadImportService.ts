@@ -309,7 +309,7 @@ export const leadImportService = {
   async commitImport(
     toCreate: NewLeadRow[],
     toUpdate: UpdateLeadRow[]
-  ): Promise<{ created: number; updated: number }> {
+  ): Promise<{ created: number; updated: number; error?: string }> {
     const CHUNK_SIZE = 100;
     let created = 0;
 
@@ -319,7 +319,9 @@ export const leadImportService = {
         .from('leads')
         .insert(chunk.map((r) => r.payload))
         .select('id');
-      if (error) throw error;
+      if (error) {
+        return { created, updated: 0, error: error.message };
+      }
 
       created += data?.length || 0;
 
@@ -331,7 +333,9 @@ export const leadImportService = {
           metadata: {},
         }));
         const { error: histError } = await supabase.from('history').insert(historyRows);
-        if (histError) throw histError;
+        if (histError) {
+          return { created, updated: 0, error: histError.message };
+        }
       }
     }
 
@@ -343,7 +347,9 @@ export const leadImportService = {
         .from('leads')
         .update({ ...row.fieldsToFill, updated_at: new Date().toISOString() })
         .eq('id', row.existingLeadId);
-      if (error) throw error;
+      if (error) {
+        return { created, updated, error: error.message };
+      }
 
       const { error: histError } = await supabase.from('history').insert([
         {
@@ -353,7 +359,9 @@ export const leadImportService = {
           metadata: { updates: row.fieldsToFill },
         },
       ]);
-      if (histError) throw histError;
+      if (histError) {
+        return { created, updated, error: histError.message };
+      }
 
       updated += 1;
     }

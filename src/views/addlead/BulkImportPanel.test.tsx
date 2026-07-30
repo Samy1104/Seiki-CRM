@@ -64,4 +64,42 @@ describe('BulkImportPanel', () => {
     );
     expect(await screen.findByText('1 lead(s) créé(s), 0 mis à jour')).toBeInTheDocument();
   });
+
+  it('shows an error toast and returns to the select step when commitImport reports a mid-loop failure', async () => {
+    vi.mocked(leadImportService.parseFile).mockResolvedValue([{ rowNumber: 2 } as any]);
+    vi.mocked(leadImportService.fetchExistingLeadsByEmail).mockResolvedValue(new Map());
+    vi.mocked(leadImportService.getProspectStageId).mockResolvedValue('stage-1');
+    vi.mocked(leadImportService.validateRows).mockReturnValue({
+      toCreate: [{ rowNumber: 2, payload: {} as any }],
+      toUpdate: [],
+      errors: [],
+    });
+    vi.mocked(leadImportService.commitImport).mockResolvedValue({
+      created: 2,
+      updated: 1,
+      error: 'insert failed: constraint violation',
+    });
+
+    renderPanel();
+
+    const file = new File(['dummy'], 'leads.xlsx', {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    fireEvent.change(screen.getByLabelText(/importer un fichier/i), { target: { files: [file] } });
+
+    await waitFor(() => expect(leadImportService.validateRows).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: "Confirmer l'import" }));
+
+    await waitFor(() => expect(leadImportService.commitImport).toHaveBeenCalled());
+
+    expect(
+      await screen.findByText(
+        "Import interrompu après 2 création(s) et 1 mise(s) à jour — vérifiez le pipeline avant de réessayer."
+      )
+    ).toBeInTheDocument();
+
+    // Returned to the select step (stale toCreate/toUpdate can't be replayed) rather than showing 'done'.
+    expect(screen.queryByText(/lead\(s\) créé\(s\), \d+ mis à jour/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText(/importer un fichier/i)).toBeInTheDocument();
+  });
 });
