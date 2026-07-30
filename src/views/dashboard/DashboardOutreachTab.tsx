@@ -203,7 +203,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#f2ede4]">Analyse de Sentiment IA (Gemini / Claude)</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Analyse de Sentiment IA (Gemini / Claude)</h3>
               <p className="text-[11px] text-ink-soft">Répartition de la tonalité des réponses obtenues</p>
             </div>
           </div>
@@ -277,7 +277,7 @@ export const DashboardOutreachTab: React.FC<DashboardOutreachTabProps> = ({
               <ListOrdered className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#f2ede4]">Performance des Séquences de Prospection</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Performance des Séquences de Prospection</h3>
               <p className="text-[11px] text-ink-soft">Volume d'envois et taux de réponse par séquence</p>
             </div>
           </div>

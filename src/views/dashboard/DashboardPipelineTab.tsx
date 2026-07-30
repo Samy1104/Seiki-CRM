@@ -179,11 +179,11 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
         </div>
       </div>
 
-      {/* Funnel Chart / Stage Breakdown */}
+      {/* Funnel Chart Card */}
       <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-4">
         <div className="flex items-center gap-2 border-b border-line/60 pb-3">
           <Layers className="w-4 h-4 text-[#D4C4A8]" />
-          <h3 className="text-sm font-bold text-[#f2ede4]">Entonnoir de Conversion par Étape</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Entonnoir de Conversion par Étape</h3>
         </div>
 
         <div className="space-y-3">
@@ -229,7 +229,7 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
               <PieChart className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#f2ede4]">Répartition par Segment Métier</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Répartition par Segment Métier</h3>
               <p className="text-[11px] text-ink-soft">Media, Retail et Institutionnel</p>
             </div>
           </div>
@@ -262,7 +262,7 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
               <Share2 className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-[#f2ede4]">Répartition par Canaux d'Acquisition</h3>
+              <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Répartition par Canaux d'Acquisition</h3>
               <p className="text-[11px] text-ink-soft">Origine des leads dans le pipeline</p>
             </div>
           </div>

@@ -235,7 +235,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
                 <Flame className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#f2ede4]">Hot Deals (Top 5 Opportunités)</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Hot Deals (Top 5 Opportunités)</h3>
                 <p className="text-[11px] text-ink-soft">Leads actifs avec la plus haute valeur financière</p>
               </div>
             </div>
@@ -295,7 +295,7 @@ export const DashboardCodirTab: React.FC<DashboardCodirTabProps> = ({
                 <ShieldAlert className="w-4 h-4" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-[#f2ede4]">Alertes Dépassement SLA</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Alertes Dépassement SLA</h3>
                 <p className="text-[11px] text-ink-soft">Leads stagnants dans une étape au-delà de la limite tolérée</p>
               </div>
             </div>

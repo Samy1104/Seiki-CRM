@@ -64,7 +64,7 @@ export const DashboardTasksTab: React.FC<DashboardTasksTabProps> = ({
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-[#f2ede4]">Répartition des Tâches par Membre d'Équipe</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Répartition des Tâches par Membre d'Équipe</h3>
             <p className="text-xs text-ink-soft">
               Suivi individuel des réalisations et des tâches en attente prioritaires
             </p>

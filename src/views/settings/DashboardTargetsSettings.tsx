@@ -68,7 +68,7 @@ export const DashboardTargetsSettings: React.FC = () => {
             <Target className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="text-base font-bold text-[#f2ede4]">Objectifs Commercial & Dates CODIR</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Objectifs Commercial & Dates CODIR</h3>
             <p className="text-xs text-ink-soft">Définissez vos objectifs cibles et enregistrez les dates de vos réunions CODIR</p>
           </div>
         </div>

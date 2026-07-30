@@ -56,17 +56,19 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
         </AccentButton>
       </div>
 
-      {/* Comparative Period Controls Card (Compact Height) */}
+      {/* Comparative Period Controls Card (Compact & Fullcaps Title) */}
       <div className="bg-[#141414] border border-line rounded-xl px-3.5 py-2.5 space-y-2.5 transition-all">
         <div className={`flex flex-col md:flex-row md:items-center justify-between gap-2.5 ${!isCollapsed ? 'border-b border-line/50 pb-2' : ''}`}>
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="flex items-center gap-2 text-sm font-bold text-[#f2ede4] hover:text-[#D4C4A8] transition-colors cursor-pointer text-left py-0.5"
+            className="flex items-center gap-2 text-left hover:opacity-80 transition-opacity cursor-pointer py-0.5"
           >
             <ChevronDown className={`w-4 h-4 text-[#D4C4A8] transition-transform duration-200 ${isCollapsed ? '-rotate-90' : ''}`} />
             <Calendar className="w-4 h-4 text-[#D4C4A8]" />
-            <span className="text-sm font-bold tracking-tight">Mode de Comparaison temporelle</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">
+              Mode de Comparaison temporelle
+            </span>
           </button>
 
           {/* SegmentedToggle Component */}
@@ -94,7 +96,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             {comparisonMode === 'codir' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-medium text-ink-soft mb-0.5">
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft mb-1">
                     CODIR Actuel (Période A)
                   </label>
                   <select
@@ -111,7 +113,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-medium text-ink-soft mb-0.5">
+                  <label className="block text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft mb-1">
                     CODIR Référence (Période B)
                   </label>
                   <select
@@ -131,10 +133,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* Custom Date Range A */}
                 <div className="space-y-1.5 bg-[#1e1e1e]/60 border border-line/80 rounded-lg p-2.5">
-                  <span className="text-[11px] font-bold text-[#D4C4A8] block">Période Actuelle (A)</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#D4C4A8] block">
+                    Période Actuelle (A)
+                  </span>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] text-ink-soft mb-0.5">Début</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Début</label>
                       <input
                         type="date"
                         value={customDateA.start}
@@ -143,7 +147,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-ink-soft mb-0.5">Fin</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Fin</label>
                       <input
                         type="date"
                         value={customDateA.end}
@@ -156,10 +160,12 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
 
                 {/* Custom Date Range B */}
                 <div className="space-y-1.5 bg-[#1e1e1e]/60 border border-line/80 rounded-lg p-2.5">
-                  <span className="text-[11px] font-bold text-ink-soft block">Période de Référence (B)</span>
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-soft block">
+                    Période de Référence (B)
+                  </span>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="block text-[10px] text-ink-soft mb-0.5">Début</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Début</label>
                       <input
                         type="date"
                         value={customDateB.start}
@@ -168,7 +174,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-ink-soft mb-0.5">Fin</label>
+                      <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-soft mb-0.5">Fin</label>
                       <input
                         type="date"
                         value={customDateB.end}
