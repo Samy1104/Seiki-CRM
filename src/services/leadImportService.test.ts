@@ -25,8 +25,8 @@ async function buildXlsxFile(
 describe('leadImportService.parseFile', () => {
   it('parses valid rows into RawImportRow objects with 1-based Excel row numbers, skipping the banner and header rows', async () => {
     const file = await buildXlsxFile([
-      ['Acme Corp', 'Retail', 'Jean Dupont', 'jean@acme.com', '0600000000', 'https://li.com/jean', 'https://acme.com', 'LinkedIn', '50', 'note'],
-      ['Beta SA', 'Media', '', '', '', '', '', '', '', ''],
+      ['Acme Corp', 'M.', 'Jean', 'Dupont', 'Retail', 'jean@acme.com', '0600000000', 'https://li.com/jean', 'https://acme.com', 'LinkedIn', '50', 'note'],
+      ['Beta SA', '', '', '', 'Media', '', '', '', '', '', '', ''],
     ]);
 
     const rows = await leadImportService.parseFile(file);
@@ -35,8 +35,10 @@ describe('leadImportService.parseFile', () => {
     expect(rows[0]).toEqual({
       rowNumber: 3,
       companyName: 'Acme Corp',
+      genre: 'M.',
+      prenom: 'Jean',
+      nom: 'Dupont',
       segment: 'Retail',
-      contactName: 'Jean Dupont',
       email: 'jean@acme.com',
       phone: '0600000000',
       linkedinUrl: 'https://li.com/jean',
@@ -51,8 +53,8 @@ describe('leadImportService.parseFile', () => {
 
   it('skips fully blank rows', async () => {
     const file = await buildXlsxFile([
-      ['Acme Corp', 'Retail', '', '', '', '', '', '', '', ''],
-      ['', '', '', '', '', '', '', '', '', ''],
+      ['Acme Corp', '', '', '', 'Retail', '', '', '', '', '', '', ''],
+      ['', '', '', '', '', '', '', '', '', '', '', ''],
     ]);
 
     const rows = await leadImportService.parseFile(file);
@@ -76,8 +78,10 @@ describe('leadImportService.validateRows', () => {
     return {
       rowNumber,
       companyName: 'Acme Corp',
+      genre: '',
+      prenom: 'Jean',
+      nom: 'Dupont',
       segment: 'Retail',
-      contactName: 'Jean Dupont',
       email: 'jean@acme.com',
       phone: '0600000000',
       linkedinUrl: '',
@@ -97,7 +101,7 @@ describe('leadImportService.validateRows', () => {
     expect(result.toCreate[0].payload).toMatchObject({
       company_name: 'Acme Corp',
       segment: 'Retail',
-      contact_name: 'Jean Dupont',
+      contact_name: 'Jean DUPONT',
       email: 'jean@acme.com',
       source: 'Autre',
       deal_value: 50,
@@ -165,7 +169,7 @@ describe('leadImportService.validateRows', () => {
         rowNumber: 2,
         existingLeadId: 'lead-1',
         fieldsToFill: {
-          contact_name: 'Jean Dupont',
+          contact_name: 'Jean DUPONT',
           deal_value: 50,
         },
       },
@@ -199,7 +203,7 @@ describe('leadImportService.validateRows', () => {
       rowNumber: 2,
       existingLeadId: 'lead-1',
       fieldsToFill: {
-        contact_name: 'Jean Dupont',
+        contact_name: 'Jean DUPONT',
         deal_value: 50,
       },
     });

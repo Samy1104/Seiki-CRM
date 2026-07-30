@@ -36,7 +36,7 @@ describe('lead import template file', () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
     const sheet = workbook.worksheets[0];
-    const cell = sheet.getCell('B3');
+    const cell = sheet.getCell('E3');
     expect(cell.dataValidation?.type).toBe('list');
     expect(cell.dataValidation?.formulae?.[0]).toContain('Media');
   });

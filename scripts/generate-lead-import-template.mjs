@@ -9,8 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Drift is caught by src/services/leadImportTemplate.test.ts.
 const HEADERS = [
   'Nom de la société',
+  'Genre',
+  'Prénom',
+  'Nom',
   'Segment',
-  'Nom du contact',
   'Email',
   'Téléphone',
   'URL LinkedIn',
@@ -22,8 +24,10 @@ const HEADERS = [
 
 const EXAMPLE_ROW = [
   'Acme Corp',
+  'M.',
+  'Jean',
+  'DUPONT',
   'Retail',
-  'Jean Dupont',
   'jean.dupont@acme.com',
   '+33612345678',
   'https://linkedin.com/in/jeandupont',
@@ -56,8 +60,8 @@ async function main() {
   // Row 3+: example data.
   sheet.getRow(3).values = EXAMPLE_ROW;
 
-  // Segment column (B) restricted to the DB's CHECK constraint values.
-  sheet.dataValidations.add('B3:B1000', {
+  // Segment column (E) restricted to the DB's CHECK constraint values.
+  sheet.dataValidations.add('E3:E1000', {
     type: 'list',
     allowBlank: false,
     formulae: ['"Media,Retail,Instit"'],

@@ -1,10 +1,13 @@
 import type ExcelJS from 'exceljs';
 import { supabase } from './supabaseClient';
+import { formatContactName } from '../utils/contactUtils';
 
 export const LEAD_IMPORT_HEADERS = [
   'Nom de la société',
+  'Genre',
+  'Prénom',
+  'Nom',
   'Segment',
-  'Nom du contact',
   'Email',
   'Téléphone',
   'URL LinkedIn',
@@ -30,8 +33,10 @@ export const ALLOWED_SOURCES = [
 export interface RawImportRow {
   rowNumber: number;
   companyName: string;
+  genre: string;
+  prenom: string;
+  nom: string;
   segment: string;
-  contactName: string;
   email: string;
   phone: string;
   linkedinUrl: string;
@@ -139,15 +144,17 @@ export const leadImportService = {
       rows.push({
         rowNumber,
         companyName: values[0],
-        segment: values[1],
-        contactName: values[2],
-        email: values[3],
-        phone: values[4],
-        linkedinUrl: values[5],
-        website: values[6],
-        source: values[7],
-        dealValue: values[8],
-        note: values[9],
+        genre: values[1],
+        prenom: values[2],
+        nom: values[3],
+        segment: values[4],
+        email: values[5],
+        phone: values[6],
+        linkedinUrl: values[7],
+        website: values[8],
+        source: values[9],
+        dealValue: values[10],
+        note: values[11],
       });
     });
 
@@ -215,12 +222,13 @@ export const leadImportService = {
       }
 
       const dealValue = parseInt(raw.dealValue, 10) || 0;
+      const contactName = formatContactName(raw.genre, raw.prenom, raw.nom);
       const existing = emailKey ? normalizedExistingLeads.get(emailKey) : undefined;
 
       if (existing) {
         const fieldsToFill: UpdateLeadRow['fieldsToFill'] = {};
-        if (isBlank(existing.contact_name) && raw.contactName.trim()) {
-          fieldsToFill.contact_name = raw.contactName.trim();
+        if (isBlank(existing.contact_name) && !isBlank(contactName)) {
+          fieldsToFill.contact_name = contactName;
         }
         if (isBlank(existing.phone) && raw.phone.trim()) {
           fieldsToFill.phone = raw.phone.trim();
@@ -247,7 +255,7 @@ export const leadImportService = {
         payload: {
           company_name: companyName,
           segment: segment as LeadSegment,
-          contact_name: raw.contactName.trim() || '—',
+          contact_name: contactName,
           email: email || null,
           phone: raw.phone.trim() || null,
           linkedin_url: raw.linkedinUrl.trim() || null,
