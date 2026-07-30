@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs';
+import { supabase } from './supabaseClient';
 
 export const LEAD_IMPORT_HEADERS = [
   'Nom de la société',
@@ -263,5 +264,90 @@ export const leadImportService = {
     }
 
     return { toCreate, toUpdate, errors };
+  },
+
+  async fetchExistingLeadsByEmail(): Promise<Map<string, ExistingLeadRecord>> {
+    const { data, error } = await supabase
+      .from('leads')
+      .select('id, email, contact_name, phone, linkedin_url, website, deal_value, note')
+      .not('email', 'is', null)
+      .is('merged_into_id', null);
+
+    if (error) throw error;
+
+    const map = new Map<string, ExistingLeadRecord>();
+    for (const lead of data || []) {
+      if (lead.email) {
+        map.set(lead.email.toLowerCase(), lead);
+      }
+    }
+    return map;
+  },
+
+  async getProspectStageId(): Promise<string> {
+    const { data, error } = await supabase
+      .from('pipeline_stages')
+      .select('id')
+      .eq('name', 'Prospect')
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Étape "Prospect" introuvable dans le pipeline.');
+    return data.id;
+  },
+
+  async commitImport(
+    toCreate: NewLeadRow[],
+    toUpdate: UpdateLeadRow[]
+  ): Promise<{ created: number; updated: number }> {
+    const CHUNK_SIZE = 100;
+    let created = 0;
+
+    for (let i = 0; i < toCreate.length; i += CHUNK_SIZE) {
+      const chunk = toCreate.slice(i, i + CHUNK_SIZE);
+      const { data, error } = await supabase
+        .from('leads')
+        .insert(chunk.map((r) => r.payload))
+        .select('id');
+      if (error) throw error;
+
+      created += data?.length || 0;
+
+      if (data && data.length > 0) {
+        const historyRows = data.map((lead: { id: string }) => ({
+          lead_id: lead.id,
+          action_type: 'note',
+          content: 'Lead créé (import en masse)',
+          metadata: {},
+        }));
+        const { error: histError } = await supabase.from('history').insert(historyRows);
+        if (histError) throw histError;
+      }
+    }
+
+    let updated = 0;
+    for (const row of toUpdate) {
+      if (Object.keys(row.fieldsToFill).length === 0) continue;
+
+      const { error } = await supabase
+        .from('leads')
+        .update({ ...row.fieldsToFill, updated_at: new Date().toISOString() })
+        .eq('id', row.existingLeadId);
+      if (error) throw error;
+
+      const { error: histError } = await supabase.from('history').insert([
+        {
+          lead_id: row.existingLeadId,
+          action_type: 'note',
+          content: 'Lead mis à jour (import en masse)',
+          metadata: { updates: row.fieldsToFill },
+        },
+      ]);
+      if (histError) throw histError;
+
+      updated += 1;
+    }
+
+    return { created, updated };
   },
 };

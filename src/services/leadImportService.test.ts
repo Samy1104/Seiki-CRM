@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import ExcelJS from 'exceljs';
+
+vi.mock('./supabaseClient', () => ({
+  supabase: { from: vi.fn() },
+}));
+
 import { leadImportService, LEAD_IMPORT_HEADERS, type RawImportRow } from './leadImportService';
 
 async function buildXlsxFile(
