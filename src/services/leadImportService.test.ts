@@ -165,4 +165,38 @@ describe('leadImportService.validateRows', () => {
       },
     ]);
   });
+
+  it('handles mixed-case keys in existingLeadsByEmail map and correctly matches emails case-insensitively', () => {
+    // Pass a map with mixed-case key (not lowercased by caller)
+    const existing = new Map([
+      [
+        'Jean@Acme.com', // Mixed case in the map
+        {
+          id: 'lead-1',
+          contact_name: '—',
+          phone: '0699999999',
+          linkedin_url: null,
+          website: null,
+          deal_value: 0,
+          note: null,
+        },
+      ],
+    ]);
+
+    // Row has lowercase email (as it does in real parsing)
+    const result = leadImportService.validateRows([row()], existing, stageId);
+
+    // Should still match and route to toUpdate, not toCreate
+    expect(result.toCreate).toEqual([]);
+    expect(result.toUpdate).toHaveLength(1);
+    expect(result.toUpdate[0]).toEqual({
+      rowNumber: 2,
+      existingLeadId: 'lead-1',
+      fieldsToFill: {
+        contact_name: 'Jean Dupont',
+        deal_value: 50,
+      },
+    });
+    expect(result.errors).toEqual([]);
+  });
 });

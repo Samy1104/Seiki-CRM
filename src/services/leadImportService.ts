@@ -161,6 +161,12 @@ export const leadImportService = {
     const errors: RowError[] = [];
     const seenEmails = new Set<string>();
 
+    // Normalize the existingLeadsByEmail map keys to lowercase for case-insensitive matching
+    const normalizedExistingLeads = new Map<string, ExistingLeadRecord>();
+    for (const [key, record] of existingLeadsByEmail.entries()) {
+      normalizedExistingLeads.set(key.toLowerCase(), record);
+    }
+
     for (const raw of rows) {
       const companyName = raw.companyName.trim();
       if (!companyName) {
@@ -206,7 +212,7 @@ export const leadImportService = {
       }
 
       const dealValue = parseInt(raw.dealValue, 10) || 0;
-      const existing = emailKey ? existingLeadsByEmail.get(emailKey) : undefined;
+      const existing = emailKey ? normalizedExistingLeads.get(emailKey) : undefined;
 
       if (existing) {
         const fieldsToFill: UpdateLeadRow['fieldsToFill'] = {};
