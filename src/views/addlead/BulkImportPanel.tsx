@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Download, Upload, CheckCircle2, FileSpreadsheet } from 'lucide-react';
+import { Download, CheckCircle2, FileSpreadsheet } from 'lucide-react';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Button } from '../../components/ui/Button';
 import { useToast } from '../../context/ToastContext';

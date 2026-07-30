@@ -15,7 +15,6 @@ import {
   History,
   CheckSquare,
   Plus,
-  Save,
   X,
   Phone,
   Mail,
@@ -26,7 +25,6 @@ import {
   CheckCircle2,
   Circle,
   Calendar,
-  Loader2,
 } from 'lucide-react';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 import { Modal } from '../../components/ui/Modal';
@@ -136,7 +134,7 @@ export const LeadDetailModal: React.FC<LeadDetailModalProps> = ({
     setLead(leadDetails);
   };
 
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [_saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const isFirstRender = useRef(true);
   const prevLeadIdRef = useRef(initialLead.id);
 

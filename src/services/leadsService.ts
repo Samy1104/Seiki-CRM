@@ -1,5 +1,4 @@
 import { supabase } from './supabaseClient';
-import { settingsService } from './settingsService';
 import type { TeamMember, PipelineStage } from './settingsService';
 
 export interface LeadScoreDetail {
@@ -124,13 +123,13 @@ export const leadsService = {
   },
 
   async createLead(
-    lead: Omit<Lead, 'id' | 'score' | 'days_in_stage' | 'stage_changed_at' | 'is_archived' | 'merged_into_id' | 'sequence_id' | 'sequence_status' | 'created_at' | 'updated_at' | 'owner' | 'stage' | 'scores' | 'history'>,
+    lead: Omit<Lead, 'id' | 'score' | 'days_in_stage' | 'stage_changed_at' | 'is_archived' | 'is_disqualified' | 'merged_into_id' | 'sequence_id' | 'sequence_status' | 'created_at' | 'updated_at' | 'owner' | 'stage' | 'scores' | 'history'>,
     scores: Omit<LeadScoreDetail, 'id' | 'lead_id'>[]
   ): Promise<Lead> {
     // 1. Insert Lead
     const { data: newLead, error: leadError } = await supabase
       .from('leads')
-      .insert([lead])
+      .insert([{ is_disqualified: false, ...lead }])
       .select()
       .single();
 

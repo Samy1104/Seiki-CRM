@@ -23,6 +23,7 @@ describe('templatesService.renderTemplate', () => {
     days_in_stage: 2,
     stage_changed_at: new Date().toISOString(),
     is_archived: false,
+    is_disqualified: false,
     merged_into_id: null,
     sequence_id: null,
     sequence_status: 'idle',
