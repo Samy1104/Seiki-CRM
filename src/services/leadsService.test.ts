@@ -4,6 +4,7 @@ const { fromMock, builder, rpcMock } = vi.hoisted(() => {
   const builder: any = {};
   builder.select = vi.fn(() => builder);
   builder.eq = vi.fn(() => builder);
+  builder.is = vi.fn(() => builder);
   builder.order = vi.fn(() => builder);
   builder.single = vi.fn();
   const fromMock = vi.fn(() => builder);
@@ -105,3 +106,31 @@ describe('leadsService.resolveMergeProposal', () => {
     await expect(leadsService.resolveMergeProposal('proposal-3', 'approved')).rejects.toThrow('db exploded');
   });
 });
+
+describe('leadsService.getLeads', () => {
+  beforeEach(() => {
+    fromMock.mockClear();
+    builder.select.mockClear();
+    builder.eq.mockClear();
+    builder.order.mockClear();
+  });
+
+  it('excludes disqualified leads by default', async () => {
+    builder.then = undefined;
+    builder.order.mockReturnValue(Promise.resolve({ data: [], error: null }));
+
+    await leadsService.getLeads();
+
+    expect(builder.eq).toHaveBeenCalledWith('is_archived', false);
+    expect(builder.eq).toHaveBeenCalledWith('is_disqualified', false);
+  });
+
+  it('includes disqualified leads when includeDisqualified is true', async () => {
+    builder.order.mockReturnValue(Promise.resolve({ data: [], error: null }));
+
+    await leadsService.getLeads(false, true);
+
+    expect(builder.eq).not.toHaveBeenCalledWith('is_disqualified', false);
+  });
+});
+

@@ -49,6 +49,7 @@ export interface Lead {
   days_in_stage: number;
   stage_changed_at: string;
   is_archived: boolean;
+  is_disqualified: boolean;
   merged_into_id: string | null;
   sequence_id: string | null;
   sequence_status: 'idle' | 'active' | 'paused' | 'completed' | 'replied';
@@ -74,8 +75,8 @@ export interface MergeProposal {
 }
 
 export const leadsService = {
-  async getLeads(archived = false): Promise<Lead[]> {
-    const { data, error } = await supabase
+  async getLeads(archived = false, includeDisqualified = false): Promise<Lead[]> {
+    let query = supabase
       .from('leads')
       .select(`
         *,
@@ -83,8 +84,13 @@ export const leadsService = {
         stage:pipeline_stages!stage_id(*)
       `)
       .eq('is_archived', archived)
-      .is('merged_into_id', null)
-      .order('score', { ascending: false });
+      .is('merged_into_id', null);
+
+    if (!includeDisqualified) {
+      query = query.eq('is_disqualified', false);
+    }
+
+    const { data, error } = await query.order('score', { ascending: false });
 
     if (error) throw error;
     return data || [];
