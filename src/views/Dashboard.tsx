@@ -223,7 +223,7 @@ export const Dashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all cursor-pointer whitespace-nowrap ${
+              className={`flex-1 min-w-[210px] flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl transition-all cursor-pointer whitespace-nowrap ${
                 isActive
                   ? 'bg-[#141414] text-[#D4C4A8] border-t-2 border-t-[#D4C4A8] border-x border-line shadow-xs'
                   : 'text-ink-soft hover:text-[#f2ede4] hover:bg-[#1a1a1a]/50'
