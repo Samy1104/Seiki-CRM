@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Download, Upload, CheckCircle2 } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { AccentButton } from '../../components/ui/AccentButton';
 import { useToast } from '../../context/ToastContext';
 import {
   leadImportService,
@@ -109,7 +109,7 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
         <a
           href="/templates/leads-import-template.xlsx"
           download
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber hover:underline"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-beige hover:underline"
         >
           <Download size={14} />
           Télécharger le modèle
@@ -122,7 +122,7 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
             htmlFor="bulk-import-file"
             onDragOver={handleDragOver}
             onDrop={handleDrop}
-            className="flex cursor-pointer flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-6 py-10 text-center text-ink-soft hover:border-amber/60"
+            className="flex cursor-pointer flex-col items-center gap-2 rounded-control border border-dashed border-line-strong px-6 py-10 text-center text-ink-soft hover:border-beige/60"
           >
             <Upload size={20} />
             <span className="text-sm">Importer un fichier (.xlsx)</span>
@@ -161,16 +161,16 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
           )}
 
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={handleReset}>
+            <AccentButton variant="secondary" onClick={handleReset}>
               Annuler
-            </Button>
-            <Button
+            </AccentButton>
+            <AccentButton
               variant="primary"
               onClick={handleConfirm}
               disabled={loading || (toCreate.length === 0 && toUpdate.length === 0)}
             >
               Confirmer l'import
-            </Button>
+            </AccentButton>
           </div>
         </div>
       )}
@@ -182,12 +182,12 @@ export const BulkImportPanel: React.FC<BulkImportPanelProps> = ({ setView }) => 
             {result.created} lead(s) créé(s), {result.updated} mis à jour
           </p>
           <div className="flex gap-3">
-            <Button variant="ghost" onClick={handleReset}>
+            <AccentButton variant="secondary" onClick={handleReset}>
               Importer un autre fichier
-            </Button>
-            <Button variant="primary" onClick={() => setView('pipeline')}>
+            </AccentButton>
+            <AccentButton variant="primary" onClick={() => setView('pipeline')}>
               Voir le pipeline
-            </Button>
+            </AccentButton>
           </div>
         </div>
       )}
