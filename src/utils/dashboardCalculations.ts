@@ -269,6 +269,7 @@ export function computeCohortMatrix(
 
   const monthGroups: Record<string, CohortLeadInput[]> = {};
   for (const lead of qualifyingLeads) {
+    if (!lead.created_at) continue;
     const monthKey = lead.created_at.slice(0, 7);
     if (!monthGroups[monthKey]) monthGroups[monthKey] = [];
     monthGroups[monthKey].push(lead);

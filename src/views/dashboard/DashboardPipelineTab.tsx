@@ -5,6 +5,7 @@ import type { PipelineStage } from '../../services/settingsService';
 import type { LeadStageHistoryEntry } from '../../services/pipelineHistoryService';
 import { computeLeadsProgression, computeDelta, reconstructStageSnapshot, countByStage, type DeltaResult } from '../../utils/dashboardCalculations';
 import { Drawer } from '../../components/ui/Drawer';
+import { CohortHeatmap } from './CohortHeatmap';
 
 export interface DashboardPipelineTabProps {
   leadsA: Lead[];
@@ -54,7 +55,7 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
   historyB,
   stageHistory,
   comparisonEndDate,
-  deployedAtIso: _deployedAtIso = '2026-07-30T00:00:00.000Z',
+  deployedAtIso = '2026-07-30T00:00:00.000Z',
 }) => {
   const [displayMode, setDisplayMode] = useState<'volume' | 'valeur'>('volume');
   const [hideClosed, setHideClosed] = useState(false);
@@ -347,6 +348,8 @@ export const DashboardPipelineTab: React.FC<DashboardPipelineTabProps> = ({
           )}
         </div>
       </div>
+
+      <CohortHeatmap leads={leadsA} stageHistory={stageHistory} stages={stages} deployedAtIso={deployedAtIso} />
 
       <Drawer open={drilldown !== null} onClose={() => setDrilldown(null)} title={drilldown?.title || ''}>
         <div className="p-6 space-y-2">
