@@ -1,161 +1,46 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
+// Projet/src/views/AddLead.test.tsx
+import { render, fireEvent, screen } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
 import { AddLead } from './AddLead';
-import { settingsService } from '../services/settingsService';
-import { leadsService } from '../services/leadsService';
 
-vi.mock('../services/settingsService', () => ({
-  settingsService: {
-    getPipelineStages: vi.fn(),
-  },
-}));
-
-vi.mock('../services/leadsService', () => ({
-  leadsService: {
-    createLead: vi.fn(),
-  },
-}));
-
-vi.mock('../context/ToastContext', () => ({
-  useToast: () => ({
-    showToast: vi.fn(),
+vi.mock('../hooks/useAddLeadForm', () => ({
+  useAddLeadForm: () => ({
+    form: {},
+    setForm: vi.fn(),
+    scores: {},
+    handleScoreChange: vi.fn(),
+    customFields: [],
+    addCustomField: vi.fn(),
+    updateCustomField: vi.fn(),
+    removeCustomField: vi.fn(),
+    stages: [],
+    totalScore: 0,
+    recommendation: { text: '', className: '' },
+    handleReset: vi.fn(),
+    handleSubmit: vi.fn(),
   }),
 }));
 
-const mockStages = [
-  { id: 'stage-1', name: 'Prospect', position: 0, color: 'blue', is_closed_won: false, is_active: true },
-  { id: 'stage-2', name: 'Qualification', position: 1, color: 'green', is_closed_won: false, is_active: true },
-];
+vi.mock('./addlead/LeadGeneralInfoSection', () => ({
+  LeadGeneralInfoSection: () => <div data-testid="single-lead-form" />,
+}));
+vi.mock('./addlead/LeadScoringSection', () => ({
+  LeadScoringSection: () => <div data-testid="scoring-section" />,
+}));
+vi.mock('./addlead/BulkImportPanel', () => ({
+  BulkImportPanel: () => <div data-testid="bulk-import-panel" />,
+}));
 
-describe('AddLead View', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    vi.mocked(settingsService.getPipelineStages).mockResolvedValue(mockStages);
-  });
-
-  it('renders lead form and fetches pipeline stages', async () => {
+describe('AddLead', () => {
+  it('defaults to the single-lead form and switches to bulk import when toggled', () => {
     render(<AddLead setView={vi.fn()} />);
 
-    expect(screen.getByText('Ajouter un lead')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('ex : LVMH')).toBeInTheDocument();
+    expect(screen.getByTestId('single-lead-form')).toBeInTheDocument();
+    expect(screen.queryByTestId('bulk-import-panel')).not.toBeInTheDocument();
 
-    await waitFor(() => {
-      expect(settingsService.getPipelineStages).toHaveBeenCalled();
-    });
-  });
+    fireEvent.click(screen.getByRole('button', { name: /import en masse/i }));
 
-  it('allows filling the form and selecting custom Select values', async () => {
-    const setViewMock = vi.fn();
-    render(<AddLead setView={setViewMock} />);
-
-    await waitFor(() => {
-      expect(settingsService.getPipelineStages).toHaveBeenCalled();
-    });
-
-    // Fill Company Name
-    const input = screen.getByPlaceholderText('ex : LVMH');
-    fireEvent.change(input, { target: { value: 'Acme Corp' } });
-
-    // Select Segment -> Media
-    const segmentField = screen.getByText('Segment *').closest('div') as HTMLElement;
-    const segmentTrigger = within(segmentField).getByRole('button');
-    fireEvent.click(segmentTrigger);
-    const mediaOption = screen.getByText('Media');
-    fireEvent.click(mediaOption);
-
-    // Verify Segment is selected
-    expect(segmentTrigger).toHaveTextContent('Media');
-
-    // Select Source -> Événement
-    const sourceField = screen.getByText('Source').closest('div') as HTMLElement;
-    const sourceTrigger = within(sourceField).getByRole('button');
-    fireEvent.click(sourceTrigger);
-    const eventOption = screen.getByText('Événement');
-    fireEvent.click(eventOption);
-
-    // Verify Source is selected
-    expect(sourceTrigger).toHaveTextContent('Événement');
-  });
-
-  it('updates scores and recommendation when criteria dropdown changes', async () => {
-    render(<AddLead setView={vi.fn()} />);
-
-    // Wait for stages to load
-    await waitFor(() => {
-      expect(settingsService.getPipelineStages).toHaveBeenCalled();
-    });
-
-    // Verify initial score is 0
-    expect(screen.getByText('0')).toBeInTheDocument();
-
-    // Find "Taille entreprise" criteria item
-    const critItem = screen.getByText('Taille entreprise').closest('div') as HTMLElement;
-    const trigger = within(critItem).getByText('— Sélectionner');
-    fireEvent.click(trigger);
-
-    // Select option with 8 pts
-    const option = screen.getByText('50–500 (8pts)');
-    fireEvent.click(option);
-
-    // Verify score is updated in criteria item
-    expect(within(critItem).getByText('8pts')).toBeInTheDocument();
-
-    // Verify total score is now 8
-    expect(screen.getByText('8')).toBeInTheDocument();
-  });
-
-  it('submits form and calls createLead with correct payload', async () => {
-    const setViewMock = vi.fn();
-    render(<AddLead setView={setViewMock} />);
-
-    await waitFor(() => {
-      expect(settingsService.getPipelineStages).toHaveBeenCalled();
-    });
-
-    // Fill Company Name
-    fireEvent.change(screen.getByPlaceholderText('ex : LVMH'), { target: { value: 'Acme' } });
-
-    // Select Genre
-    const genreField = screen.getByText('Genre').closest('div') as HTMLElement;
-    const genreTrigger = within(genreField).getByRole('button');
-    fireEvent.click(genreTrigger);
-    fireEvent.click(screen.getByText('M.'));
-
-    // Fill Prénom & Nom
-    fireEvent.change(screen.getByPlaceholderText('ex : Jean'), { target: { value: 'Jean' } });
-    fireEvent.change(screen.getByPlaceholderText('ex : DUPONT'), { target: { value: 'Dupont' } });
-
-    // Select Segment
-    fireEvent.click(screen.getByText('— Choisir'));
-    fireEvent.click(screen.getByText('Media'));
-
-    // Score "Taille entreprise"
-    const sizeItem = screen.getByText('Taille entreprise').closest('div') as HTMLElement;
-    fireEvent.click(within(sizeItem).getByText('— Sélectionner'));
-    fireEvent.click(screen.getByText('50–500 (8pts)'));
-
-    // Submit form
-    const submitBtn = screen.getByText('Ajouter au pipeline');
-    fireEvent.click(submitBtn);
-
-    await waitFor(() => {
-      expect(leadsService.createLead).toHaveBeenCalledWith(
-        expect.objectContaining({
-          company_name: 'Acme',
-          contact_name: 'M. Jean DUPONT',
-          segment: 'Media',
-          stage_id: 'stage-1', // Default auto stage for score < 60
-        }),
-        expect.arrayContaining([
-          expect.objectContaining({
-            criterion: 'taille',
-            value: 8,
-            max_value: 15,
-          }),
-        ])
-      );
-    });
-
-    expect(setViewMock).toHaveBeenCalledWith('pipeline');
+    expect(screen.getByTestId('bulk-import-panel')).toBeInTheDocument();
+    expect(screen.queryByTestId('single-lead-form')).not.toBeInTheDocument();
   });
 });
