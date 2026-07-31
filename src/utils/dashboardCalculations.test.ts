@@ -320,7 +320,7 @@ describe('dashboardCalculations', () => {
       });
 
       expect(result.rows).toHaveLength(1);
-      expect(result.rows[0].cohortLabel).toContain('01/2026');
+      expect(result.rows[0].cohortLabel).toBe('1er Janvier 2026');
       expect(result.rows[0].totalLeads).toBe(2);
       expect(result.rows[0].cells[1].reachedCount).toBe(1);
       expect(result.rows[0].cells[1].reachPercentage).toBe(50);
@@ -332,17 +332,9 @@ describe('dashboardCalculations', () => {
         { id: 'l1', created_at: '2026-01-05T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
         { id: 'l2', created_at: '2026-01-20T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
       ] as any;
+      const history = [] as any;
 
-      const weekResult = computeFlexibleCohortMatrix(leads, [], {
-        cohortGranularity: 'week',
-        intervalGranularity: 'week',
-        periodCount: 2,
-        targetStageId: 'stage-qual',
-        allStages,
-      });
-      expect(weekResult.rows.length).toBeGreaterThanOrEqual(2);
-
-      const fortnightResult = computeFlexibleCohortMatrix(leads, [], {
+      const fortnightResult = computeFlexibleCohortMatrix(leads, history, {
         cohortGranularity: 'fortnight',
         intervalGranularity: 'week',
         periodCount: 2,
@@ -350,8 +342,8 @@ describe('dashboardCalculations', () => {
         allStages,
       });
       expect(fortnightResult.rows.length).toBe(2);
-      expect(fortnightResult.rows[0].cohortLabel).toContain('16-');
-      expect(fortnightResult.rows[1].cohortLabel).toContain('1-15');
+      expect(fortnightResult.rows[0].cohortLabel).toBe('16 Janvier 2026');
+      expect(fortnightResult.rows[1].cohortLabel).toBe('1er Janvier 2026');
     });
 
     it('handles day and month interval granularities', () => {

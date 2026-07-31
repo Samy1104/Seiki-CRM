@@ -381,6 +381,14 @@ function getIsoWeekDetails(date: Date): { year: number; week: number; monday: Da
   return { year, week: weekNo, monday };
 }
 
+function formatCohortStartLabel(date: Date): string {
+  const day = date.getUTCDate();
+  const dayStr = day === 1 ? '1er' : `${day}`;
+  const monthStr = FRENCH_MONTHS[date.getUTCMonth()];
+  const year = date.getUTCFullYear();
+  return `${dayStr} ${monthStr} ${year}`;
+}
+
 function getCohortBucket(
   createdAtStr: string,
   granularity: CohortGranularity
@@ -394,8 +402,8 @@ function getCohortBucket(
 
   if (granularity === 'month') {
     const cohortId = `${year}-${monthPadded}`;
-    const cohortLabel = `${monthPadded}/${year}`;
     const cohortStart = new Date(Date.UTC(year, month, 1));
+    const cohortLabel = formatCohortStartLabel(cohortStart);
     return { cohortId, cohortLabel, cohortStart };
   }
 
@@ -403,13 +411,13 @@ function getCohortBucket(
     const day = date.getUTCDate();
     if (day <= 15) {
       const cohortId = `${year}-${monthPadded}-F1`;
-      const cohortLabel = `${monthPadded}/${year} (1-15)`;
       const cohortStart = new Date(Date.UTC(year, month, 1));
+      const cohortLabel = formatCohortStartLabel(cohortStart);
       return { cohortId, cohortLabel, cohortStart };
     } else {
       const cohortId = `${year}-${monthPadded}-F2`;
-      const cohortLabel = `${monthPadded}/${year} (16-end)`;
       const cohortStart = new Date(Date.UTC(year, month, 16));
+      const cohortLabel = formatCohortStartLabel(cohortStart);
       return { cohortId, cohortLabel, cohortStart };
     }
   }
@@ -418,7 +426,7 @@ function getCohortBucket(
     const { year: isoYear, week, monday } = getIsoWeekDetails(date);
     const weekPadded = String(week).padStart(2, '0');
     const cohortId = `${isoYear}-W${weekPadded}`;
-    const cohortLabel = `S${weekPadded} ${isoYear}`;
+    const cohortLabel = formatCohortStartLabel(monday);
     return { cohortId, cohortLabel, cohortStart: monday };
   }
 

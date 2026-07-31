@@ -31,7 +31,7 @@ describe('CohortHeatmap', () => {
     render(<CohortHeatmap leads={leads as any} stageHistory={stageHistory as any} stages={stages as any} deployedAtIso="2026-01-01T00:00:00.000Z" />);
 
     // Cohort row label
-    expect(screen.getByText(/05\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Mai 2026/)).toBeInTheDocument();
 
     // Check cells display direct percentage text
     expect(screen.getAllByText('50.0%').length).toBeGreaterThan(0);
