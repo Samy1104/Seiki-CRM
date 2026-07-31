@@ -43,6 +43,7 @@ export const DashboardTargetsSettings: React.FC = () => {
       await settingsService.updateDashboardTargets(targets);
       showToast('Objectifs sauvegardés avec succès !', 'success');
     } catch (err) {
+      console.error('Error saving dashboard targets:', err);
       showToast('Erreur lors de la sauvegarde des objectifs', 'error');
     } finally {
       setSaving(false);
@@ -55,6 +56,7 @@ export const DashboardTargetsSettings: React.FC = () => {
       setCodirMeetings(updated);
       showToast('Date de CODIR enregistrée !', 'success');
     } catch (err) {
+      console.error('Error saving CODIR date:', err);
       showToast("Erreur lors de l'enregistrement du CODIR", 'error');
     }
   };
@@ -66,6 +68,7 @@ export const DashboardTargetsSettings: React.FC = () => {
       setCodirMeetings(updated);
       showToast('Réunion CODIR supprimée !', 'success');
     } catch (err) {
+      console.error('Error deleting CODIR meeting:', err);
       showToast('Erreur lors de la suppression du CODIR', 'error');
     } finally {
       setDeletingMeeting(null);

@@ -198,7 +198,7 @@ export const leadsService = {
   },
 
   async updateLead(id: string, updates: Partial<Lead>, historyLog?: { type: string; content: string }): Promise<void> {
-    const { owner, stage, scores, history, days_in_stage, stage_changed_at, ...cleanUpdates } = updates as Lead;
+    const { owner: _owner, stage: _stage, scores: _scores, history: _history, days_in_stage: _days_in_stage, stage_changed_at: _stage_changed_at, ...cleanUpdates } = updates as Lead;
     const payload = { ...cleanUpdates, updated_at: new Date().toISOString() };
 
     let { error } = await supabase

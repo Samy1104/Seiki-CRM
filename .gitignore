@@ -31,6 +31,16 @@ test_supa.js
 .worktrees
 .superpowers
 
+# AI-assisted-dev tooling (not part of the shipped product)
+.agents
+.claude
+.codex
+.impeccable
+.planning
+.code-review-graph
+docs/superpowers
+
 
 # Local Netlify folder
 .netlify
+TECH_DEBT_AUDIT.md
