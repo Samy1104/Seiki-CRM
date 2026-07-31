@@ -10,7 +10,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildRedirectUri, exchangeCodeForToken, fetchGmailAddress, getCurrentHistoryId } from "../_shared/gmailApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -21,14 +21,13 @@ serve(async (req: Request) => {
   // connexion a été lancée. Revalidée ici aussi (défense en profondeur :
   // `state` transite par Google, pas de confiance aveugle au retour).
   const stateRaw = url.searchParams.get("state");
-  const allowedOrigins = getAllowedOrigins();
   let stateOrigin: string | null = null;
   try {
     if (stateRaw) stateOrigin = JSON.parse(atob(stateRaw)).origin ?? null;
   } catch {
     // state absent/invalide — retombe sur FRONTEND_URL ci-dessous
   }
-  const frontendUrl = (stateOrigin && allowedOrigins.includes(stateOrigin))
+  const frontendUrl = (stateOrigin && isTrustedRedirectOrigin(stateOrigin))
     ? stateOrigin
     : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
@@ -38,7 +37,7 @@ serve(async (req: Request) => {
   const redirectWithError = (message: string) =>
     new Response(null, {
       status: 302,
-      headers: { Location: `${frontendUrl}/?activeApp=prospection&gmail=error&message=${encodeURIComponent(message)}` },
+      headers: { Location: `${frontendUrl}/contenu/prospection?gmail=error&message=${encodeURIComponent(message)}` },
     });
 
   if (errorParam) return redirectWithError(`Google a refusé la connexion (${errorParam})`);
@@ -81,7 +80,7 @@ serve(async (req: Request) => {
 
     return new Response(null, {
       status: 302,
-      headers: { Location: `${frontendUrl}/?activeApp=prospection&gmail=connected&email=${encodeURIComponent(email)}` },
+      headers: { Location: `${frontendUrl}/contenu/prospection?gmail=connected&email=${encodeURIComponent(email)}` },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue";

@@ -10,21 +10,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildRedirectUri, exchangeCodeForToken, fetchCurrentUserUri } from "../_shared/calendlyApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 import { fetchWithTimeout } from "../_shared/fetchWithTimeout.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
 
   const stateRaw = url.searchParams.get("state");
-  const allowedOrigins = getAllowedOrigins();
   let stateOrigin: string | null = null;
   try {
     if (stateRaw) stateOrigin = JSON.parse(atob(stateRaw)).origin ?? null;
   } catch {
     // state absent/invalide — retombe sur FRONTEND_URL ci-dessous
   }
-  const frontendUrl = (stateOrigin && allowedOrigins.includes(stateOrigin))
+  const frontendUrl = (stateOrigin && isTrustedRedirectOrigin(stateOrigin))
     ? stateOrigin
     : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 

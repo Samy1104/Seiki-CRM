@@ -8,7 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { buildRedirectUri } from "../_shared/gmailApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 
 serve((req: Request) => {
   const clientId = Deno.env.get("GMAIL_CLIENT_ID")!;
@@ -24,12 +24,14 @@ serve((req: Request) => {
   // gmailService.oauthConnectUrl) est transportée dans `state` pour que
   // gmail-oauth-callback sache où rediriger l'utilisateur une fois la
   // connexion terminée — au lieu d'un FRONTEND_URL fixe qui ne collait
-  // qu'à un seul environnement d'hébergement. Validée contre
-  // ALLOWED_ORIGIN (même liste que le CORS) pour ne jamais rediriger
-  // vers une origine non approuvée.
+  // qu'à un seul environnement d'hébergement. Validation structurelle
+  // (isTrustedRedirectOrigin) plutôt que l'allowlist ALLOWED_ORIGIN : ce
+  // redirect ne transporte aucun token/secret, donc pas besoin de mettre
+  // à jour un secret à chaque changement de domaine d'hébergement.
   const requestedOrigin = new URL(req.url).searchParams.get("origin") ?? "";
-  const allowedOrigins = getAllowedOrigins();
-  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+  const origin = isTrustedRedirectOrigin(requestedOrigin)
+    ? requestedOrigin
+    : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
   const state = btoa(JSON.stringify({ origin }));
 
   const authorizeUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");

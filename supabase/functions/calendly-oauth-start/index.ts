@@ -8,7 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { buildRedirectUri } from "../_shared/calendlyApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 
 serve((req: Request) => {
   const clientId = Deno.env.get("CALENDLY_CLIENT_ID")!;
@@ -19,8 +19,9 @@ serve((req: Request) => {
   // `state` pour que le callback sache où rediriger, quel que soit
   // l'environnement (localhost, staging, prod).
   const requestedOrigin = new URL(req.url).searchParams.get("origin") ?? "";
-  const allowedOrigins = getAllowedOrigins();
-  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+  const origin = isTrustedRedirectOrigin(requestedOrigin)
+    ? requestedOrigin
+    : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
   const state = btoa(JSON.stringify({ origin }));
 
   // users:read pour GET /users/me (résolution du compte connecté),

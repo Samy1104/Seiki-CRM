@@ -28,3 +28,20 @@ export function corsHeaders(req: Request): Record<string, string> {
     "Vary": "Origin",
   };
 }
+
+// Post-OAuth redirect target (linkedin/gmail/calendly-oauth-start & -callback):
+// structural check only (well-formed http(s) origin, no path/query/userinfo),
+// NOT the ALLOWED_ORIGIN allowlist above. Unlike corsHeaders(), which guards
+// authenticated fetch() calls and must stay locked down, this only decides
+// which origin the browser gets bounced back to after a direct navigation —
+// the redirect carries no token/secret, just non-sensitive status flags. Using
+// the allowlist here meant every new hosting domain silently fell back to a
+// stale FRONTEND_URL instead of the page the user actually came from.
+export function isTrustedRedirectOrigin(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    return (parsed.protocol === "http:" || parsed.protocol === "https:") && parsed.origin === origin;
+  } catch {
+    return false;
+  }
+}

@@ -10,7 +10,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { exchangeCodeForToken, fetchMemberUrn, fetchAdminOrgUrn, buildRedirectUri } from "../_shared/linkedinApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
@@ -19,7 +19,6 @@ serve(async (req: Request) => {
   const code = url.searchParams.get("code");
   const errorParam = url.searchParams.get("error");
 
-  const allowedOrigins = getAllowedOrigins();
   let target: "personal" | "company" = "personal";
   let label = "Jaafar";
   let stateOrigin: string | null = null;
@@ -35,14 +34,14 @@ serve(async (req: Request) => {
     // state absent/invalide
   }
 
-  const frontendUrl = (stateOrigin && allowedOrigins.includes(stateOrigin))
+  const frontendUrl = (stateOrigin && isTrustedRedirectOrigin(stateOrigin))
     ? stateOrigin
     : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
   const redirectWithError = (message: string) =>
     new Response(null, {
       status: 302,
-      headers: { Location: `${frontendUrl}/?activeApp=contenu&linkedin=error&message=${encodeURIComponent(message)}` },
+      headers: { Location: `${frontendUrl}/contenu/linkedin?linkedin=error&message=${encodeURIComponent(message)}` },
     });
 
   if (errorParam) return redirectWithError(`LinkedIn a refusé la connexion (${errorParam})`);
@@ -79,7 +78,7 @@ serve(async (req: Request) => {
 
     return new Response(null, {
       status: 302,
-      headers: { Location: `${frontendUrl}/?activeApp=contenu&linkedin=connected&label=${encodeURIComponent(label)}` },
+      headers: { Location: `${frontendUrl}/contenu/linkedin?linkedin=connected&label=${encodeURIComponent(label)}` },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Erreur inconnue";

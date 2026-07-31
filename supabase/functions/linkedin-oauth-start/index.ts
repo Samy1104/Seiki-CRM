@@ -8,7 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { buildRedirectUri } from "../_shared/linkedinApi.ts";
-import { getAllowedOrigins } from "../_shared/cors.ts";
+import { isTrustedRedirectOrigin } from "../_shared/cors.ts";
 
 serve((req: Request) => {
   const url = new URL(req.url);
@@ -28,8 +28,9 @@ serve((req: Request) => {
     : "openid profile w_member_social";
 
   const requestedOrigin = url.searchParams.get("origin") ?? "";
-  const allowedOrigins = getAllowedOrigins();
-  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+  const origin = isTrustedRedirectOrigin(requestedOrigin)
+    ? requestedOrigin
+    : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
   // State encode la cible + le label + l'origine appelante pour que le callback
   // sache quoi faire et où rediriger l'utilisateur sans dépendre d'un FRONTEND_URL fixe.
