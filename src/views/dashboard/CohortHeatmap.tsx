@@ -1,106 +1,228 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Flame as HeatmapIcon } from 'lucide-react';
 import type { Lead } from '../../services/leadsService';
 import type { PipelineStage } from '../../services/settingsService';
 import type { LeadStageHistoryEntry } from '../../services/pipelineHistoryService';
-import { computeCohortMatrix } from '../../utils/dashboardCalculations';
+import {
+  computeFlexibleCohortMatrix,
+  type CohortGranularity,
+  type IntervalGranularity,
+} from '../../utils/dashboardCalculations';
 import { Drawer } from '../../components/ui/Drawer';
 
 export interface CohortHeatmapProps {
   leads: Lead[];
   stageHistory: LeadStageHistoryEntry[];
   stages: PipelineStage[];
-  deployedAtIso: string;
+  deployedAtIso?: string;
 }
 
-const cellBackground = (percent: number): string => {
-  // Ocre foncé (100%) -> beige clair/neutre (0%), cohérent avec l'accent #D4C4A8
-  const alpha = Math.max(0.08, percent / 100);
-  return `rgba(212, 196, 168, ${alpha})`;
-};
+export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
+  leads,
+  stageHistory,
+  stages,
+}) => {
+  const [cohortGranularity, setCohortGranularity] = useState<CohortGranularity>('month');
+  const [intervalGranularity, setIntervalGranularity] = useState<IntervalGranularity>('week');
+  const [periodCount, setPeriodCount] = useState<number>(8);
+  const [selectedTargetStageId, setSelectedTargetStageId] = useState<string>('');
 
-export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({ leads, stageHistory, stages, deployedAtIso }) => {
-  const [drilldown, setDrilldown] = useState<{ title: string; leadIds: string[] } | null>(null);
+  const [drilldown, setDrilldown] = useState<{ title: string; leads: Lead[] } | null>(null);
 
-  const sortedStages = [...stages].sort((a, b) => a.position - b.position);
-  const rows = computeCohortMatrix(leads, stageHistory, sortedStages);
-  const leadsById = new Map(leads.map((l) => [l.id, l]));
-  const currentMonthKey = new Date().toISOString().slice(0, 7);
+  const activeStages = useMemo(() => {
+    return [...stages].filter((s) => s.is_active !== false).sort((a, b) => a.position - b.position);
+  }, [stages]);
 
-  const drilldownLeads = (drilldown?.leadIds || [])
-    .map((id) => leadsById.get(id))
-    .filter((l): l is Lead => Boolean(l));
+  const defaultTargetStageId = useMemo(() => {
+    const qualStage = activeStages.find((s) => s.name.toLowerCase().includes('qualification'));
+    return qualStage?.id || activeStages[1]?.id || activeStages[0]?.id || '';
+  }, [activeStages]);
+
+  const currentTargetStageId = selectedTargetStageId || defaultTargetStageId;
+
+  const { rows, intervalHeaderLabels } = useMemo(() => {
+    return computeFlexibleCohortMatrix(leads, stageHistory, {
+      cohortGranularity,
+      intervalGranularity,
+      periodCount,
+      targetStageId: currentTargetStageId,
+      allStages: stages,
+    });
+  }, [leads, stageHistory, cohortGranularity, intervalGranularity, periodCount, currentTargetStageId, stages]);
+
+  const stagesById = useMemo(() => new Map(stages.map((s) => [s.id, s])), [stages]);
 
   return (
     <div className="bg-[#141414] border border-line rounded-2xl p-5 space-y-4">
+      {/* Header title */}
       <div className="flex items-center gap-2.5 border-b border-line/60 pb-3">
         <div className="p-2 bg-[#D4C4A8]/10 text-[#D4C4A8] rounded-xl border border-[#D4C4A8]/20">
           <HeatmapIcon className="w-4 h-4" />
         </div>
         <div>
-          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Vue Cohorte (Matrice de Performance Temporelle)</h3>
-          <p className="text-[11px] text-ink-soft">Pourcentage de chaque cohorte mensuelle ayant atteint chaque étape</p>
+          <h3 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">
+            Vue Cohorte (Matrice de Performance Temporelle)
+          </h3>
+          <p className="text-[11px] text-ink-soft">
+            Pourcentage cumulé de chaque cohorte ayant atteint l'étape cible sur plusieurs intervalles de temps
+          </p>
         </div>
       </div>
 
+      {/* Header controls bar */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-[#1a1a1a] p-3 rounded-xl border border-line/60">
+        <div>
+          <label htmlFor="cohort-granularity" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
+            Cohortes (Y)
+          </label>
+          <select
+            id="cohort-granularity"
+            aria-label="Cohortes (Y)"
+            value={cohortGranularity}
+            onChange={(e) => setCohortGranularity(e.target.value as CohortGranularity)}
+            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+          >
+            <option value="month">Mois</option>
+            <option value="fortnight">Quinzaine (15j)</option>
+            <option value="week">Semaine</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="interval-granularity" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
+            Intervalles (X)
+          </label>
+          <select
+            id="interval-granularity"
+            aria-label="Intervalles (X)"
+            value={intervalGranularity}
+            onChange={(e) => setIntervalGranularity(e.target.value as IntervalGranularity)}
+            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+          >
+            <option value="day">Jours</option>
+            <option value="week">Semaines</option>
+            <option value="month">Mois</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="period-count" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
+            Nombre de périodes
+          </label>
+          <select
+            id="period-count"
+            aria-label="Nombre de périodes"
+            value={periodCount}
+            onChange={(e) => setPeriodCount(Number(e.target.value))}
+            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+          >
+            <option value="4">4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+            <option value="12">12</option>
+            <option value="16">16</option>
+            <option value="24">24</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="target-stage" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
+            Statut Cible
+          </label>
+          <select
+            id="target-stage"
+            aria-label="Statut Cible"
+            value={currentTargetStageId}
+            onChange={(e) => setSelectedTargetStageId(e.target.value)}
+            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
+          >
+            {activeStages.map((stage) => (
+              <option key={stage.id} value={stage.id}>
+                {stage.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      {/* Cohort Matrix Table */}
       {rows.length === 0 ? (
-        <div className="text-center py-8 text-xs text-ink-faint italic">Aucune cohorte disponible.</div>
+        <div className="text-center py-8 text-xs text-ink-faint italic">
+          Aucune cohorte disponible pour la configuration sélectionnée.
+        </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-[#f2ede4]">
             <thead>
               <tr className="border-b border-line/80 text-ink-soft font-semibold text-[11px] uppercase tracking-wider">
                 <th className="pb-3 pl-2">Cohorte</th>
-                {sortedStages.map((stage) => (
-                  <th key={stage.id} className="pb-3 text-center">{stage.name}</th>
+                {intervalHeaderLabels.map((label) => (
+                  <th key={label} className="pb-3 text-center min-w-[70px]">
+                    {label}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-line/40">
-              {rows.map((row) => {
-                const isPartial = row.monthKey < deployedAtIso.slice(0, 7);
-                const isCurrent = row.monthKey === currentMonthKey;
-                return (
-                  <tr key={row.monthKey}>
-                    <td className="py-3 pl-2 font-bold text-[#f2ede4] whitespace-nowrap">
-                      {row.monthLabel} · {row.totalLeads} leads
-                      {isCurrent && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-[#D4C4A8]/10 text-[#D4C4A8]">En cours</span>}
-                      {isPartial && <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300">Historique partiel</span>}
-                    </td>
-                    {row.cells.map((cell) => (
-                      <td key={cell.stageId} className="p-1 text-center">
+              {rows.map((row) => (
+                <tr key={row.cohortId}>
+                  <td className="py-3 pl-2 font-bold text-[#f2ede4] whitespace-nowrap">
+                    {row.cohortLabel}
+                    <span className="ml-2 text-[10px] text-ink-soft font-normal">
+                      ({row.totalLeads} {row.totalLeads > 1 ? 'leads' : 'lead'})
+                    </span>
+                  </td>
+                  {row.cells.map((cell) => {
+                    const opacity = 0.08 + (cell.reachPercentage / 100) * 0.72;
+                    const bgStyle = `rgba(212, 196, 168, ${opacity.toFixed(2)})`;
+                    const textColor = opacity > 0.45 ? '#141414' : '#f2ede4';
+
+                    return (
+                      <td key={cell.intervalIndex} className="p-1 text-center">
                         <button
                           type="button"
+                          aria-label={`${cell.reachPercentage.toFixed(1)}%`}
                           onClick={() =>
                             setDrilldown({
-                              title: `Leads de la cohorte ${row.monthLabel} ayant atteint l'étape ${sortedStages.find((s) => s.id === cell.stageId)?.name} (${cell.reachedCount} leads)`,
-                              leadIds: cell.leadIds,
+                              title: `Leads cohorte ${row.cohortLabel} (${cell.intervalLabel}) — ${cell.reachedCount}/${cell.totalCount} qualifiés`,
+                              leads: cell.reachedLeads,
                             })
                           }
-                          className="w-full py-2 rounded-md font-bold cursor-pointer hover:opacity-80 transition-opacity"
-                          style={{ backgroundColor: cellBackground(cell.percent), color: '#0d0d0d' }}
+                          className="w-full py-2 px-1 rounded-md cursor-pointer hover:opacity-85 transition-opacity flex flex-col items-center justify-center gap-0.5"
+                          style={{ backgroundColor: bgStyle, color: textColor }}
                         >
-                          {cell.percent}%
+                          <span className="font-bold text-xs">{cell.reachPercentage.toFixed(1)}%</span>
+                          <span className="text-[10px] opacity-80 font-normal">
+                            {cell.reachedCount} / {cell.totalCount}
+                          </span>
                         </button>
                       </td>
-                    ))}
-                  </tr>
-                );
-              })}
+                    );
+                  })}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
       )}
 
+      {/* Drill-down Drawer */}
       <Drawer open={drilldown !== null} onClose={() => setDrilldown(null)} title={drilldown?.title || ''}>
         <div className="p-6 space-y-2">
-          {drilldownLeads.map((lead) => (
-            <div key={lead.id} className="p-3 bg-[#1e1e1e] border border-line/60 rounded-xl text-xs space-y-1">
-              <div className="font-bold text-[#f2ede4]">{lead.company_name}</div>
-              <div className="text-ink-soft">{(lead.deal_value || 0).toLocaleString('fr-FR')} € · {lead.stage?.name || 'Inconnue'}</div>
-            </div>
-          ))}
-          {drilldownLeads.length === 0 && <p className="text-xs text-ink-faint italic">Aucun lead.</p>}
+          {(drilldown?.leads || []).map((lead) => {
+            const currentStage = stagesById.get(lead.stage_id);
+            return (
+              <div key={lead.id} className="p-3 bg-[#1e1e1e] border border-line/60 rounded-xl text-xs space-y-1">
+                <div className="font-bold text-[#f2ede4]">{lead.company_name || lead.contact_name || 'Sans nom'}</div>
+                <div className="text-ink-soft">
+                  {(lead.deal_value || 0).toLocaleString('fr-FR')} € · {currentStage?.name || lead.stage?.name || 'Étape inconnue'}
+                </div>
+              </div>
+            );
+          })}
+          {(drilldown?.leads || []).length === 0 && (
+            <p className="text-xs text-ink-faint italic">Aucun lead qualifié dans ce créneau.</p>
+          )}
         </div>
       </Drawer>
     </div>
