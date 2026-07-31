@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, RotateCcw, X, Calendar, Clock } from 'lucide-react';
+import { Loader2, RotateCcw, X, Calendar, Clock, Trash2 } from 'lucide-react';
 import type { LinkedinAccount, ScheduledPost } from '../../services/linkedinService';
 import type { LinkedInPost } from '../../services/contentService';
 import { Button } from '../../components/ui/Button';
@@ -23,6 +23,7 @@ interface PostSchedulerPanelProps {
   onSchedule: () => void;
   onCancel: (id: string) => void;
   onRetry: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
 export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
@@ -40,6 +41,7 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
   onSchedule,
   onCancel,
   onRetry,
+  onDelete,
 }) => {
   const accountLabel = (id: string) => accounts.find((a) => a.id === id)?.label ?? 'Compte inconnu';
 
@@ -177,6 +179,15 @@ export const PostSchedulerPanel: React.FC<PostSchedulerPanelProps> = ({
                   onClick={() => onCancel(p.id)}
                 >
                   <X size={13} strokeWidth={2} /> Annuler
+                </Button>
+              )}
+              {(p.status === 'posted' || p.status === 'failed') && (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={() => onDelete(p.id)}
+                >
+                  <Trash2 size={13} strokeWidth={2} /> Supprimer
                 </Button>
               )}
             </div>

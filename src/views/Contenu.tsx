@@ -1,14 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useToast } from '../context/ToastContext';
 import { useLinkedInContent } from '../hooks/useLinkedInContent';
 import { useLinkedInAccounts } from '../hooks/useLinkedInAccounts';
-import { useTagBook } from '../hooks/useTagBook';
-import type { TagEntry } from '../services/contentService';
 import { ContenuHeader } from './contenu/ContenuHeader';
 import { PostGeneratorForm } from './contenu/PostGeneratorForm';
 import { PostEditorPreview } from './contenu/PostEditorPreview';
 import { PostSchedulerPanel } from './contenu/PostSchedulerPanel';
-import { TagBookPanel } from './contenu/TagBookPanel';
 
 interface ContenuProps {
   setActiveApp?: (app: 'portal' | 'crm' | 'contenu') => void;
@@ -17,7 +14,6 @@ interface ContenuProps {
 
 export const Contenu: React.FC<ContenuProps> = () => {
   const { showToast } = useToast();
-  const [selectedTags, setSelectedTags] = useState<TagEntry[]>([]);
 
   const {
     brief,
@@ -53,35 +49,12 @@ export const Contenu: React.FC<ContenuProps> = () => {
     handleSchedule,
     handleCancel,
     handleRetry,
+    handleDelete,
   } = useLinkedInAccounts();
-
-  const {
-    tagBook,
-    newTagAlias,
-    setNewTagAlias,
-    newTagName,
-    setNewTagName,
-    newTagUrn,
-    setNewTagUrn,
-    savingTag,
-    mention,
-    setMention,
-    mentionMatches,
-    loadTagBook,
-    detectMention,
-    insertMention,
-    handleAddTag,
-    handleDeleteTag,
-  } = useTagBook();
-
-  const hookRef = useRef<HTMLTextAreaElement>(null);
-  const corpsRef = useRef<HTMLTextAreaElement>(null);
-  const fieldRefs = { hook: hookRef, corps: corpsRef };
 
   useEffect(() => {
     loadAccounts();
     loadQueue();
-    loadTagBook();
 
     const params = new URLSearchParams(window.location.search);
     const linkedinStatus = params.get('linkedin');
@@ -112,25 +85,7 @@ export const Contenu: React.FC<ContenuProps> = () => {
           language={language}
           setLanguage={setLanguage}
           loading={loading}
-          onGenerate={() => handleGenerate(selectedTags)}
-          tagBook={tagBook}
-          selectedTags={selectedTags}
-          setSelectedTags={setSelectedTags}
-          onTagAdded={loadTagBook}
-        />
-
-        {/* TagBook Manager */}
-        <TagBookPanel
-          tagBook={tagBook}
-          newTagAlias={newTagAlias}
-          setNewTagAlias={setNewTagAlias}
-          newTagName={newTagName}
-          setNewTagName={setNewTagName}
-          newTagUrn={newTagUrn}
-          setNewTagUrn={setNewTagUrn}
-          savingTag={savingTag}
-          onAddTag={handleAddTag}
-          onDeleteTag={handleDeleteTag}
+          onGenerate={() => handleGenerate()}
         />
 
         {/* Live Post Editor & Preview */}
@@ -141,17 +96,8 @@ export const Contenu: React.FC<ContenuProps> = () => {
             originalPost={originalPost}
             copied={copied}
             learning={learning}
-            mention={mention}
-            setMention={setMention}
-            mentionMatches={mentionMatches}
-            hookRef={hookRef}
-            corpsRef={corpsRef}
-            detectMention={detectMention}
-            insertMention={(tag) => insertMention(tag, post, setPost, fieldRefs)}
             handleCopy={handleCopy}
             handleLearn={handleLearn}
-            tagBook={tagBook}
-            onTagAdded={loadTagBook}
           />
         )}
 
@@ -169,17 +115,14 @@ export const Contenu: React.FC<ContenuProps> = () => {
           setImageFile={setImageFile}
           scheduling={scheduling}
           onSchedule={() =>
-            handleSchedule(
-              post!,
-              () => {
-                setPost(null as any);
-                setBrief('');
-              },
-              tagBook
-            )
+            handleSchedule(post!, () => {
+              setPost(null as any);
+              setBrief('');
+            })
           }
           onCancel={handleCancel}
           onRetry={handleRetry}
+          onDelete={handleDelete}
         />
       </div>
     </div>

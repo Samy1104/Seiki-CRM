@@ -8,6 +8,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { buildRedirectUri } from "../_shared/linkedinApi.ts";
+import { getAllowedOrigins } from "../_shared/cors.ts";
 
 serve((req: Request) => {
   const url = new URL(req.url);
@@ -26,10 +27,13 @@ serve((req: Request) => {
     ? "openid profile w_member_social w_organization_social"
     : "openid profile w_member_social";
 
-  // State encode la cible + le label pour que le callback sache quoi faire
-  // sans dépendre d'un store côté serveur (outil interne mono-utilisateur —
-  // pas de vérification anti-CSRF au-delà du format attendu).
-  const state = btoa(JSON.stringify({ target, label }));
+  const requestedOrigin = url.searchParams.get("origin") ?? "";
+  const allowedOrigins = getAllowedOrigins();
+  const origin = allowedOrigins.includes(requestedOrigin) ? requestedOrigin : allowedOrigins[0];
+
+  // State encode la cible + le label + l'origine appelante pour que le callback
+  // sache quoi faire et où rediriger l'utilisateur sans dépendre d'un FRONTEND_URL fixe.
+  const state = btoa(JSON.stringify({ target, label, origin }));
 
   const authorizeUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
   authorizeUrl.searchParams.set("response_type", "code");

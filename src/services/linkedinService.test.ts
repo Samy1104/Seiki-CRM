@@ -63,10 +63,11 @@ describe('linkedinService.cancelScheduledPost', () => {
 });
 
 describe('linkedinService.oauthConnectUrl', () => {
-  it('builds the edge function URL with target and label', () => {
+  it('builds the edge function URL with target, label, and origin', () => {
     const url = linkedinService.oauthConnectUrl('personal', 'Jaafar');
     expect(url).toContain('/functions/v1/linkedin-oauth-start');
     expect(url).toContain('target=personal');
     expect(url).toContain('label=Jaafar');
+    expect(url).toContain('origin=');
   });
 });

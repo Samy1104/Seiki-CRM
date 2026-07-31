@@ -10,14 +10,34 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { exchangeCodeForToken, fetchMemberUrn, fetchAdminOrgUrn, buildRedirectUri } from "../_shared/linkedinApi.ts";
+import { getAllowedOrigins } from "../_shared/cors.ts";
 
 serve(async (req: Request) => {
   const url = new URL(req.url);
-  const frontendUrl = Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
-  const code = url.searchParams.get("code");
   const stateRaw = url.searchParams.get("state");
+  const code = url.searchParams.get("code");
   const errorParam = url.searchParams.get("error");
+
+  const allowedOrigins = getAllowedOrigins();
+  let target: "personal" | "company" = "personal";
+  let label = "Jaafar";
+  let stateOrigin: string | null = null;
+
+  try {
+    if (stateRaw) {
+      const state = JSON.parse(atob(stateRaw));
+      target = state.target ?? "personal";
+      label = state.label ?? (target === "company" ? "Seiki" : "Jaafar");
+      stateOrigin = state.origin ?? null;
+    }
+  } catch {
+    // state absent/invalide
+  }
+
+  const frontendUrl = (stateOrigin && allowedOrigins.includes(stateOrigin))
+    ? stateOrigin
+    : Deno.env.get("FRONTEND_URL") || "http://localhost:5173";
 
   const redirectWithError = (message: string) =>
     new Response(null, {
@@ -27,16 +47,6 @@ serve(async (req: Request) => {
 
   if (errorParam) return redirectWithError(`LinkedIn a refusé la connexion (${errorParam})`);
   if (!code || !stateRaw) return redirectWithError("Réponse LinkedIn incomplète (code/state manquant)");
-
-  let target: "personal" | "company";
-  let label: string;
-  try {
-    const state = JSON.parse(atob(stateRaw));
-    target = state.target;
-    label = state.label;
-  } catch {
-    return redirectWithError("State OAuth invalide");
-  }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;

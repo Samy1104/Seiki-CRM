@@ -2,9 +2,7 @@ import { useState } from 'react';
 import { linkedinService, type LinkedinAccount, type ScheduledPost } from '../services/linkedinService';
 import type { LinkedInPost } from '../services/contentService';
 import { useToast } from '../context/ToastContext';
-
-import { formatPostForLinkedIn } from '../utils/linkedinMentionFormatter';
-import type { TagEntry } from '../services/contentService';
+import { confirmAction } from '../utils/confirmAction';
 
 export function useLinkedInAccounts() {
   const { showToast } = useToast();
@@ -20,7 +18,7 @@ export function useLinkedInAccounts() {
   const loadAccounts = () => linkedinService.listAccounts().then(setAccounts).catch(() => {});
   const loadQueue = () => linkedinService.listScheduledPosts().then(setQueue).catch(() => {});
 
-  const handleSchedule = async (post: LinkedInPost, onSuccess: () => void, tagBook?: TagEntry[]) => {
+  const handleSchedule = async (post: LinkedInPost, onSuccess: () => void) => {
     if (!targetAccountId) {
       showToast('Choisis un compte LinkedIn connecté.', 'error');
       return;
@@ -36,18 +34,16 @@ export function useLinkedInAccounts() {
         imagePath = await linkedinService.uploadImage(imageFile);
       }
       const scheduledDateTime = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
-      const formattedHook = tagBook ? formatPostForLinkedIn(post.hook, tagBook) : post.hook;
-      const formattedCorps = tagBook ? formatPostForLinkedIn(post.corps, tagBook) : post.corps;
 
       await linkedinService.schedulePost({
-        hook: formattedHook,
-        corps: formattedCorps,
+        hook: post.hook,
+        corps: post.corps,
         hashtags: post.hashtags,
         imagePath,
         targetAccountId,
         scheduledAt: scheduledDateTime,
       });
-      showToast('Post programmé avec succès (les tags seront créés automatiquement sur LinkedIn) !', 'success');
+      showToast('Post programmé avec succès !', 'success');
       setImageFile(null);
       setScheduledDate('');
       setScheduledTime('09:00');
@@ -78,6 +74,16 @@ export function useLinkedInAccounts() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirmAction('Supprimer ce post de l\'historique ? Cette action est irréversible.')) return;
+    try {
+      await linkedinService.cancelScheduledPost(id);
+      loadQueue();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erreur lors de la suppression', 'error');
+    }
+  };
+
   return {
     accounts,
     queue,
@@ -95,5 +101,6 @@ export function useLinkedInAccounts() {
     handleSchedule,
     handleCancel,
     handleRetry,
+    handleDelete,
   };
 }

@@ -98,21 +98,9 @@ export const linkedinService = {
   },
 
   async retryScheduledPost(id: string): Promise<void> {
-    // Fetch post details to sanitize any rejected person URNs
-    const { data: row } = await supabase
-      .from('scheduled_linkedin_posts')
-      .select('hook, corps')
-      .eq('id', id)
-      .single();
-
-    const cleanHook = row?.hook ? row.hook.replace(/@\[([^\]]+)\]\(urn:li:person:[^)]+\)/g, '@$1') : row?.hook;
-    const cleanCorps = row?.corps ? row.corps.replace(/@\[([^\]]+)\]\(urn:li:person:[^)]+\)/g, '@$1') : row?.corps;
-
     const { error } = await supabase
       .from('scheduled_linkedin_posts')
       .update({
-        hook: cleanHook,
-        corps: cleanCorps,
         status: 'scheduled',
         error_message: null,
         scheduled_at: new Date().toISOString(),
@@ -130,7 +118,8 @@ export const linkedinService = {
 
   oauthConnectUrl(target: LinkedinTargetType, label: string): string {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const params = new URLSearchParams({ target, label });
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const params = new URLSearchParams({ target, label, origin });
     return `${supabaseUrl}/functions/v1/linkedin-oauth-start?${params.toString()}`;
   },
 };
