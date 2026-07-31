@@ -198,7 +198,7 @@ export const leadsService = {
   },
 
   async updateLead(id: string, updates: Partial<Lead>, historyLog?: { type: string; content: string }): Promise<void> {
-    const { owner, stage, scores, history, ...cleanUpdates } = updates as Lead;
+    const { owner, stage, scores, history, days_in_stage, stage_changed_at, ...cleanUpdates } = updates as Lead;
     const payload = { ...cleanUpdates, updated_at: new Date().toISOString() };
 
     let { error } = await supabase
@@ -207,7 +207,7 @@ export const leadsService = {
       .eq('id', id);
 
     if (error) {
-      if ('is_disqualified' in payload && (error.code === '42703' || (error.message && error.message.includes('is_disqualified')))) {
+      if (error.code === '42703' || (error.message && (error.message.includes('is_disqualified') || error.message.includes('column')))) {
         const { is_disqualified: _, ...fallbackUpdates } = payload;
         const { error: fbError } = await supabase
           .from('leads')

@@ -132,5 +132,16 @@ describe('leadsService.getLeads', () => {
 
     expect(builder.eq).not.toHaveBeenCalledWith('is_disqualified', false);
   });
+
+  it('falls back seamlessly if is_disqualified column does not exist in DB schema', async () => {
+    builder.order
+      .mockReturnValueOnce(Promise.resolve({ data: null, error: { code: '42703', message: 'column leads.is_disqualified does not exist' } }))
+      .mockReturnValueOnce(Promise.resolve({ data: [{ id: 'lead-1', company_name: 'Acme' }], error: null }));
+
+    const leads = await leadsService.getLeads();
+
+    expect(leads).toEqual([{ id: 'lead-1', company_name: 'Acme', is_disqualified: false }]);
+  });
 });
+
 
