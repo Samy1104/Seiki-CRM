@@ -56,9 +56,9 @@ describe('CohortHeatmap', () => {
     fireEvent.click(periodTrigger);
     fireEvent.click(screen.getByText('4'));
 
-    // Verify interval header S+4 exists but S+5 does not
-    expect(screen.getByText('S+4')).toBeInTheDocument();
-    expect(screen.queryByText('S+5')).not.toBeInTheDocument();
+    // Verify interval header J22 (S4) exists but J29 (S5) does not
+    expect(screen.getByText('J22 (S4)')).toBeInTheDocument();
+    expect(screen.queryByText('J29 (S5)')).not.toBeInTheDocument();
   });
 
   it('opens drawer with lead details on cell click', () => {

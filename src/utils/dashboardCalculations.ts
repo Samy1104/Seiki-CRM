@@ -437,16 +437,16 @@ function getIntervalHeaderLabels(
   intervalGranularity: IntervalGranularity,
   periodCount: number
 ): string[] {
-  const prefix =
-    intervalGranularity === 'day'
-      ? 'J+'
-      : intervalGranularity === 'month'
-      ? 'M+'
-      : 'S+';
-
   const labels: string[] = [];
   for (let i = 0; i < periodCount; i++) {
-    labels.push(`${prefix}${i + 1}`);
+    if (intervalGranularity === 'day') {
+      labels.push(`Jour ${i + 1}`);
+    } else if (intervalGranularity === 'week') {
+      const startDay = i * 7 + 1;
+      labels.push(`J${startDay} (S${i + 1})`);
+    } else if (intervalGranularity === 'month') {
+      labels.push(`Mois ${i + 1}`);
+    }
   }
   return labels;
 }
