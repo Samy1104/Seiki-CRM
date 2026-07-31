@@ -3,6 +3,7 @@ import { Download, Calendar, Check } from 'lucide-react';
 import { PageTitle } from '../../components/ui/PageTitle';
 import { AccentButton } from '../../components/ui/AccentButton';
 import { Modal } from '../../components/ui/Modal';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '../../components/ui/Select';
 import type { PeriodPreset } from '../../utils/dashboardCalculations';
 import type { CodirMeeting } from '../../services/settingsService';
 
@@ -69,19 +70,18 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
             <span className="text-xs font-semibold uppercase tracking-[0.14em] text-[#f2ede4]">Période</span>
           </div>
 
-          <select
-            id="dashboard-period-preset"
-            aria-label="Période"
-            value={preset}
-            onChange={(e) => setPreset(e.target.value as PeriodPreset)}
-            className="bg-[#1e1e1e] border border-line rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-          >
-            {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
-              <option key={p} value={p}>
-                {PRESET_LABELS[p]}
-              </option>
-            ))}
-          </select>
+          <Select value={preset} onValueChange={(val) => setPreset(val as PeriodPreset)}>
+            <SelectTrigger id="dashboard-period-preset" aria-label="Période" className="w-[210px] text-xs h-8">
+              <SelectValue placeholder="Choisir une période" />
+            </SelectTrigger>
+            <SelectContent side="bottom">
+              {(Object.keys(PRESET_LABELS) as PeriodPreset[]).map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PRESET_LABELS[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {preset === 'custom' && (
             <div className="flex items-center gap-2">

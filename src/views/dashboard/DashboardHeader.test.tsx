@@ -15,12 +15,14 @@ const baseProps = {
 describe('DashboardHeader', () => {
   it('renders the preset selector with the current preset selected', () => {
     render(<DashboardHeader {...baseProps} />);
-    expect(screen.getByDisplayValue('Depuis le dernier CODIR')).toBeInTheDocument();
+    expect(screen.getByText('Depuis le dernier CODIR')).toBeInTheDocument();
   });
 
   it('calls setPreset when a different preset is chosen', () => {
     render(<DashboardHeader {...baseProps} />);
-    fireEvent.change(screen.getByLabelText('Période'), { target: { value: 'month' } });
+    const trigger = screen.getByLabelText('Période');
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByText('Mois en cours'));
     expect(baseProps.setPreset).toHaveBeenCalledWith('month');
   });
 
