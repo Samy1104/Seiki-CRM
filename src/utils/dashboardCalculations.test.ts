@@ -9,6 +9,7 @@ import {
   countByStage,
   computeCohortMatrix,
   computeVelocityDays,
+  computeFlexibleCohortMatrix,
 } from './dashboardCalculations';
 
 describe('dashboardCalculations', () => {
@@ -291,6 +292,109 @@ describe('dashboardCalculations', () => {
     it('ignores leads that never reached the won stage', () => {
       const leads = [{ id: 'l1', created_at: '2026-07-01T00:00:00.000Z', stage_id: 'demo', stage_changed_at: '2026-07-06T00:00:00.000Z' }];
       expect(computeVelocityDays(leads, [], wonStageId)).toBe(0);
+    });
+  });
+
+  describe('computeFlexibleCohortMatrix', () => {
+    const allStages = [
+      { id: 'stage-prospect', name: 'Prospect', position: 1, color: '#fff', is_closed_won: false, is_active: true },
+      { id: 'stage-qual', name: 'Qualification', position: 2, color: '#fff', is_closed_won: false, is_active: true },
+      { id: 'stage-won', name: 'Gagné', position: 3, color: '#fff', is_closed_won: true, is_active: true },
+    ] as any;
+
+    it('groups leads by month cohort and calculates cumulative reach % for target stage', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-01-05T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
+        { id: 'l2', created_at: '2026-01-10T10:00:00Z', stage_id: 'stage-prospect', is_disqualified: false },
+      ] as any;
+      const history = [
+        { id: 'h1', lead_id: 'l1', from_stage_id: 'stage-prospect', to_stage_id: 'stage-qual', changed_at: '2026-01-12T10:00:00Z' },
+      ] as any;
+
+      const result = computeFlexibleCohortMatrix(leads, history, {
+        cohortGranularity: 'month',
+        intervalGranularity: 'week',
+        periodCount: 4,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+
+      expect(result.rows).toHaveLength(1);
+      expect(result.rows[0].cohortLabel).toContain('01/2026');
+      expect(result.rows[0].totalLeads).toBe(2);
+      expect(result.rows[0].cells[1].reachedCount).toBe(1);
+      expect(result.rows[0].cells[1].reachPercentage).toBe(50);
+      expect(result.intervalHeaderLabels).toEqual(['S+1', 'S+2', 'S+3', 'S+4']);
+    });
+
+    it('supports week and fortnight cohort granularities', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-01-05T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
+        { id: 'l2', created_at: '2026-01-20T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
+      ] as any;
+
+      const weekResult = computeFlexibleCohortMatrix(leads, [], {
+        cohortGranularity: 'week',
+        intervalGranularity: 'week',
+        periodCount: 2,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+      expect(weekResult.rows.length).toBeGreaterThanOrEqual(2);
+
+      const fortnightResult = computeFlexibleCohortMatrix(leads, [], {
+        cohortGranularity: 'fortnight',
+        intervalGranularity: 'week',
+        periodCount: 2,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+      expect(fortnightResult.rows.length).toBe(2);
+      expect(fortnightResult.rows[0].cohortLabel).toContain('16-');
+      expect(fortnightResult.rows[1].cohortLabel).toContain('1-15');
+    });
+
+    it('handles day and month interval granularities', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-01-05T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
+      ] as any;
+
+      const dayResult = computeFlexibleCohortMatrix(leads, [], {
+        cohortGranularity: 'month',
+        intervalGranularity: 'day',
+        periodCount: 3,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+      expect(dayResult.intervalHeaderLabels).toEqual(['J+1', 'J+2', 'J+3']);
+
+      const monthResult = computeFlexibleCohortMatrix(leads, [], {
+        cohortGranularity: 'month',
+        intervalGranularity: 'month',
+        periodCount: 2,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+      expect(monthResult.intervalHeaderLabels).toEqual(['M+1', 'M+2']);
+    });
+
+    it('excludes disqualified leads from cohorts', () => {
+      const leads = [
+        { id: 'l1', created_at: '2026-01-05T10:00:00Z', stage_id: 'stage-qual', is_disqualified: false },
+        { id: 'l2', created_at: '2026-01-10T10:00:00Z', stage_id: 'stage-qual', is_disqualified: true },
+      ] as any;
+
+      const result = computeFlexibleCohortMatrix(leads, [], {
+        cohortGranularity: 'month',
+        intervalGranularity: 'week',
+        periodCount: 2,
+        targetStageId: 'stage-qual',
+        allStages,
+      });
+
+      expect(result.rows[0].totalLeads).toBe(1);
+      expect(result.rows[0].cells[0].leadsInCohort).toHaveLength(1);
+      expect(result.rows[0].cells[0].leadsInCohort[0].id).toBe('l1');
     });
   });
 });
