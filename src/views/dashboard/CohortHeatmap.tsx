@@ -21,6 +21,7 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
   leads,
   stageHistory,
   stages,
+  deployedAtIso,
 }) => {
   const [cohortGranularity, setCohortGranularity] = useState<CohortGranularity>('month');
   const [intervalGranularity, setIntervalGranularity] = useState<IntervalGranularity>('week');
@@ -164,14 +165,26 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-line/40">
-              {rows.map((row) => (
-                <tr key={row.cohortId}>
-                  <td className="py-3 pl-2 font-bold text-[#f2ede4] whitespace-nowrap">
-                    {row.cohortLabel}
-                    <span className="ml-2 text-[10px] text-ink-soft font-normal">
-                      ({row.totalLeads} {row.totalLeads > 1 ? 'leads' : 'lead'})
-                    </span>
-                  </td>
+              {rows.map((row) => {
+                const isPartial = Boolean(
+                  deployedAtIso &&
+                    row.cohortStart &&
+                    row.cohortStart.getTime() < new Date(deployedAtIso).getTime()
+                );
+
+                return (
+                  <tr key={row.cohortId}>
+                    <td className="py-3 pl-2 font-bold text-[#f2ede4] whitespace-nowrap">
+                      {row.cohortLabel}
+                      <span className="ml-2 text-[10px] text-ink-soft font-normal">
+                        ({row.totalLeads} {row.totalLeads > 1 ? 'leads' : 'lead'})
+                      </span>
+                      {isPartial && (
+                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-300">
+                          Historique partiel
+                        </span>
+                      )}
+                    </td>
                   {row.cells.map((cell) => {
                     const opacity = 0.08 + (cell.reachPercentage / 100) * 0.72;
                     const bgStyle = `rgba(212, 196, 168, ${opacity.toFixed(2)})`;
@@ -199,8 +212,9 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
                       </td>
                     );
                   })}
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

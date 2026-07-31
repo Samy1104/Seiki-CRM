@@ -352,6 +352,7 @@ export interface FlexibleCohortCell {
 export interface FlexibleCohortRow {
   cohortId: string;
   cohortLabel: string;
+  cohortStart: Date;
   totalLeads: number;
   cells: FlexibleCohortCell[];
 }
@@ -604,6 +605,7 @@ export function computeFlexibleCohortMatrix(
     return {
       cohortId: cohort.cohortId,
       cohortLabel: cohort.cohortLabel,
+      cohortStart: cohort.cohortStart,
       totalLeads,
       cells,
     };

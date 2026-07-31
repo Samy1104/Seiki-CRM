@@ -68,4 +68,10 @@ describe('CohortHeatmap', () => {
     // Drawer should open and display Acme lead
     expect(screen.getByText(/Acme/i)).toBeInTheDocument();
   });
+
+  it('displays partial history badge for cohorts prior to deployedAtIso', () => {
+    render(<CohortHeatmap leads={leads as any} stageHistory={stageHistory as any} stages={stages as any} deployedAtIso="2026-06-01T00:00:00.000Z" />);
+
+    expect(screen.getByText('Historique partiel')).toBeInTheDocument();
+  });
 });
