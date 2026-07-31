@@ -385,5 +385,42 @@ export const settingsService = {
       throw error;
     }
     return this.getCodirHistory();
+  },
+
+  async deleteCodirMeeting(id: string): Promise<CodirMeeting[]> {
+    if (id.startsWith('legacy-')) {
+      const current = await this.getCodirHistory();
+      const filtered = current.filter((m) => m.id !== id);
+      const dates = filtered.map((m) => m.meeting_date.slice(0, 10));
+      await supabase.from('app_settings').upsert({
+        key: 'codir_history',
+        value: { dates },
+        label: 'Historique des réunions CODIR',
+        category: 'general',
+      });
+      return this.getCodirHistory();
+    }
+
+    const { error } = await supabase
+      .from('codir_meetings')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      if (error.code === '42P01' || (error.message && error.message.includes('codir_meetings'))) {
+        const current = await this.getCodirHistory();
+        const filtered = current.filter((m) => m.id !== id);
+        const dates = filtered.map((m) => m.meeting_date.slice(0, 10));
+        await supabase.from('app_settings').upsert({
+          key: 'codir_history',
+          value: { dates },
+          label: 'Historique des réunions CODIR',
+          category: 'general',
+        });
+        return this.getCodirHistory();
+      }
+      throw error;
+    }
+    return this.getCodirHistory();
   }
 };

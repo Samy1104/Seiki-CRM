@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { settingsService } from '../../services/settingsService';
 import type { DashboardTargets, CodirMeeting } from '../../services/settingsService';
 import { useToast } from '../../context/ToastContext';
-import { Target, Calendar, Plus, Save } from 'lucide-react';
+import { Target, Calendar, Plus, Save, Trash2 } from 'lucide-react';
+import { ConfirmDeleteModal } from '../../components/ConfirmDeleteModal';
 
 export const DashboardTargetsSettings: React.FC = () => {
   const { showToast } = useToast();
@@ -13,6 +14,7 @@ export const DashboardTargetsSettings: React.FC = () => {
     target_prospection_positive: 10,
   });
   const [codirMeetings, setCodirMeetings] = useState<CodirMeeting[]>([]);
+  const [deletingMeeting, setDeletingMeeting] = useState<CodirMeeting | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -54,6 +56,19 @@ export const DashboardTargetsSettings: React.FC = () => {
       showToast('Date de CODIR enregistrée !', 'success');
     } catch (err) {
       showToast("Erreur lors de l'enregistrement du CODIR", 'error');
+    }
+  };
+
+  const handleConfirmDeleteCodir = async () => {
+    if (!deletingMeeting) return;
+    try {
+      const updated = await settingsService.deleteCodirMeeting(deletingMeeting.id);
+      setCodirMeetings(updated);
+      showToast('Réunion CODIR supprimée !', 'success');
+    } catch (err) {
+      showToast('Erreur lors de la suppression du CODIR', 'error');
+    } finally {
+      setDeletingMeeting(null);
     }
   };
 
@@ -142,13 +157,29 @@ export const DashboardTargetsSettings: React.FC = () => {
         ) : (
           <div className="flex flex-wrap gap-2">
             {codirMeetings.map((meeting) => (
-              <span key={meeting.id} className="px-2.5 py-1 bg-[#1e1e1e] border border-line text-xs text-[#f2ede4] rounded-md font-mono">
-                {meeting.meeting_date.slice(0, 10)}
-              </span>
+              <div key={meeting.id} className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1e1e1e] border border-line text-xs text-[#f2ede4] rounded-md font-mono">
+                <span>{meeting.meeting_date.slice(0, 10)}</span>
+                <button
+                  type="button"
+                  aria-label={`Supprimer le CODIR du ${meeting.meeting_date.slice(0, 10)}`}
+                  onClick={() => setDeletingMeeting(meeting)}
+                  className="text-ink-soft hover:text-rose-400 transition-colors cursor-pointer p-0.5 ml-0.5"
+                >
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
             ))}
           </div>
         )}
       </div>
+
+      <ConfirmDeleteModal
+        isOpen={deletingMeeting !== null}
+        title="Supprimer la réunion CODIR"
+        message={`Êtes-vous sûr de vouloir supprimer la réunion CODIR du ${deletingMeeting?.meeting_date.slice(0, 10)} ?`}
+        onConfirm={handleConfirmDeleteCodir}
+        onCancel={() => setDeletingMeeting(null)}
+      />
     </div>
   );
 };

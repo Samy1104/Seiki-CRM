@@ -71,3 +71,29 @@ describe('settingsService.addCodirDate', () => {
     expect(result).toHaveLength(1);
   });
 });
+
+describe('settingsService.deleteCodirMeeting', () => {
+  beforeEach(() => {
+    fromMock.mockClear();
+    builder.select.mockClear();
+    builder.eq.mockClear();
+    builder.order.mockClear();
+  });
+
+  it('deletes a codir_meetings row by id and returns updated history', async () => {
+    builder.delete = vi.fn(() => builder);
+    let call = 0;
+    builder.then = (resolve: (v: unknown) => void) => {
+      call += 1;
+      if (call === 1) return resolve({ data: null, error: null }); // delete operation
+      return resolve({ data: [], error: null }); // getCodirHistory refetch
+    };
+
+    const result = await settingsService.deleteCodirMeeting('m1');
+
+    expect(fromMock).toHaveBeenCalledWith('codir_meetings');
+    expect(builder.delete).toHaveBeenCalled();
+    expect(builder.eq).toHaveBeenCalledWith('id', 'm1');
+    expect(result).toEqual([]);
+  });
+});
