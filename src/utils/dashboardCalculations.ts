@@ -341,6 +341,7 @@ export type IntervalGranularity = 'day' | 'week' | 'month';
 export interface FlexibleCohortCell {
   intervalIndex: number;
   intervalLabel: string;
+  cellDateLabel: string;
   reachedCount: number;
   totalCount: number;
   reachPercentage: number;
@@ -363,6 +364,24 @@ export interface FlexibleCohortMatrixOptions {
   periodCount: number;
   targetStageId: string;
   allStages: PipelineStage[];
+}
+
+function formatDateShort(date: Date): string {
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${day}/${month}`;
+}
+
+function getCellStartDate(cohortStart: Date, intervalGranularity: IntervalGranularity, intervalIndex: number): Date {
+  const date = new Date(cohortStart.getTime());
+  if (intervalGranularity === 'day') {
+    date.setUTCDate(date.getUTCDate() + intervalIndex);
+  } else if (intervalGranularity === 'week') {
+    date.setUTCDate(date.getUTCDate() + intervalIndex * 7);
+  } else if (intervalGranularity === 'month') {
+    date.setUTCMonth(date.getUTCMonth() + intervalIndex);
+  }
+  return date;
 }
 
 function getIsoWeekDetails(date: Date): { year: number; week: number; monday: Date } {
@@ -435,17 +454,22 @@ function getCohortBucket(
 
 function getIntervalHeaderLabels(
   intervalGranularity: IntervalGranularity,
-  periodCount: number
+  periodCount: number,
+  referenceStart?: Date
 ): string[] {
   const labels: string[] = [];
   for (let i = 0; i < periodCount; i++) {
-    if (intervalGranularity === 'day') {
-      labels.push(`Jour ${i + 1}`);
-    } else if (intervalGranularity === 'week') {
-      const startDay = i * 7 + 1;
-      labels.push(`J${startDay} (S${i + 1})`);
-    } else if (intervalGranularity === 'month') {
-      labels.push(`Mois ${i + 1}`);
+    if (referenceStart) {
+      const startDate = getCellStartDate(referenceStart, intervalGranularity, i);
+      labels.push(formatDateShort(startDate));
+    } else {
+      if (intervalGranularity === 'day') {
+        labels.push(`Jour ${i + 1}`);
+      } else if (intervalGranularity === 'week') {
+        labels.push(`J${i * 7 + 1}`);
+      } else {
+        labels.push(`Mois ${i + 1}`);
+      }
     }
   }
   return labels;
@@ -532,11 +556,6 @@ export function computeFlexibleCohortMatrix(
     allStages = [],
   } = options;
 
-  const intervalHeaderLabels = getIntervalHeaderLabels(
-    intervalGranularity,
-    periodCount
-  );
-
   const stagePositionMap = new Map<string, number>();
   for (const stage of allStages) {
     stagePositionMap.set(stage.id, stage.position);
@@ -572,6 +591,12 @@ export function computeFlexibleCohortMatrix(
     b.cohortId.localeCompare(a.cohortId)
   );
 
+  const intervalHeaderLabels = getIntervalHeaderLabels(
+    intervalGranularity,
+    periodCount,
+    sortedCohorts[0]?.cohortStart
+  );
+
   const rows: FlexibleCohortRow[] = sortedCohorts.map((cohort) => {
     const totalLeads = cohort.leads.length;
 
@@ -583,6 +608,13 @@ export function computeFlexibleCohortMatrix(
         intervalGranularity,
         i
       );
+
+      const cellStartDate = getCellStartDate(
+        cohort.cohortStart,
+        intervalGranularity,
+        i
+      );
+      const cellDateLabel = formatDateShort(cellStartDate);
 
       const reachedLeads = cohort.leads.filter((lead) =>
         hasLeadReachedTargetStage(
@@ -601,6 +633,7 @@ export function computeFlexibleCohortMatrix(
       cells.push({
         intervalIndex: i,
         intervalLabel,
+        cellDateLabel,
         reachedCount,
         totalCount: totalLeads,
         reachPercentage,

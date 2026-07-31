@@ -324,7 +324,7 @@ describe('dashboardCalculations', () => {
       expect(result.rows[0].totalLeads).toBe(2);
       expect(result.rows[0].cells[1].reachedCount).toBe(1);
       expect(result.rows[0].cells[1].reachPercentage).toBe(50);
-      expect(result.intervalHeaderLabels).toEqual(['J1 (S1)', 'J8 (S2)', 'J15 (S3)', 'J22 (S4)']);
+      expect(result.intervalHeaderLabels).toEqual(['01/01', '08/01', '15/01', '22/01']);
     });
 
     it('supports week and fortnight cohort granularities', () => {
@@ -358,7 +358,7 @@ describe('dashboardCalculations', () => {
         targetStageId: 'stage-qual',
         allStages,
       });
-      expect(dayResult.intervalHeaderLabels).toEqual(['Jour 1', 'Jour 2', 'Jour 3']);
+      expect(dayResult.intervalHeaderLabels).toEqual(['01/01', '02/01', '03/01']);
 
       const monthResult = computeFlexibleCohortMatrix(leads, [], {
         cohortGranularity: 'month',
@@ -367,7 +367,7 @@ describe('dashboardCalculations', () => {
         targetStageId: 'stage-qual',
         allStages,
       });
-      expect(monthResult.intervalHeaderLabels).toEqual(['Mois 1', 'Mois 2']);
+      expect(monthResult.intervalHeaderLabels).toEqual(['01/01', '01/02']);
     });
 
     it('excludes disqualified leads from cohorts', () => {

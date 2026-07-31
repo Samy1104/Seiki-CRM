@@ -200,13 +200,14 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
                           aria-label={`${cell.reachPercentage.toFixed(1)}%`}
                           onClick={() =>
                             setDrilldown({
-                              title: `Leads cohorte ${row.cohortLabel} (${cell.intervalLabel}) — ${cell.reachedCount}/${cell.totalCount} qualifiés`,
+                              title: `Leads cohorte ${row.cohortLabel} (${cell.cellDateLabel}) — ${cell.reachedCount}/${cell.totalCount} qualifiés`,
                               leads: cell.reachedLeads,
                             })
                           }
-                          className="w-full py-2 px-1 rounded-md cursor-pointer hover:opacity-85 transition-opacity flex flex-col items-center justify-center gap-0.5"
+                          className="w-full py-1.5 px-1 rounded-md cursor-pointer hover:opacity-85 transition-opacity flex flex-col items-center justify-center gap-0.5"
                           style={{ backgroundColor: bgStyle, color: textColor }}
                         >
+                          <span className="text-[9px] font-semibold opacity-75">{cell.cellDateLabel}</span>
                           <span className="font-bold text-xs">{cell.reachPercentage.toFixed(1)}%</span>
                           <span className="text-[10px] opacity-80 font-normal">
                             {cell.reachedCount} / {cell.totalCount}
