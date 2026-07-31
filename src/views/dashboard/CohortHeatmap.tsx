@@ -87,7 +87,7 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
             <SelectTrigger id="cohort-granularity" aria-label="Cohortes (Y)">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="top">
               <SelectItem value="month">Mois</SelectItem>
               <SelectItem value="fortnight">Quinzaine (15j)</SelectItem>
               <SelectItem value="week">Semaine</SelectItem>
@@ -103,7 +103,7 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
             <SelectTrigger id="interval-granularity" aria-label="Intervalles (X)">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="top">
               <SelectItem value="day">Jours</SelectItem>
               <SelectItem value="week">Semaines</SelectItem>
               <SelectItem value="month">Mois</SelectItem>
@@ -119,7 +119,7 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
             <SelectTrigger id="period-count" aria-label="Nombre de périodes">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="top">
               <SelectItem value="4">4</SelectItem>
               <SelectItem value="6">6</SelectItem>
               <SelectItem value="8">8</SelectItem>
@@ -138,7 +138,7 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
             <SelectTrigger id="target-stage" aria-label="Statut Cible">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent side="top">
               {activeStages.map((stage) => (
                 <SelectItem key={stage.id} value={stage.id}>
                   {stage.name}
