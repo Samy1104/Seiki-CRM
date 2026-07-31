@@ -8,6 +8,13 @@ import {
   type CohortGranularity,
   type IntervalGranularity,
 } from '../../utils/dashboardCalculations';
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from '../../components/ui/Select';
 import { Drawer } from '../../components/ui/Drawer';
 
 export interface CohortHeatmapProps {
@@ -76,73 +83,69 @@ export const CohortHeatmap: React.FC<CohortHeatmapProps> = ({
           <label htmlFor="cohort-granularity" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
             Cohortes (Y)
           </label>
-          <select
-            id="cohort-granularity"
-            aria-label="Cohortes (Y)"
-            value={cohortGranularity}
-            onChange={(e) => setCohortGranularity(e.target.value as CohortGranularity)}
-            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-          >
-            <option value="month">Mois</option>
-            <option value="fortnight">Quinzaine (15j)</option>
-            <option value="week">Semaine</option>
-          </select>
+          <Select value={cohortGranularity} onValueChange={(val) => setCohortGranularity(val as CohortGranularity)}>
+            <SelectTrigger id="cohort-granularity" aria-label="Cohortes (Y)">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="month">Mois</SelectItem>
+              <SelectItem value="fortnight">Quinzaine (15j)</SelectItem>
+              <SelectItem value="week">Semaine</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label htmlFor="interval-granularity" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
             Intervalles (X)
           </label>
-          <select
-            id="interval-granularity"
-            aria-label="Intervalles (X)"
-            value={intervalGranularity}
-            onChange={(e) => setIntervalGranularity(e.target.value as IntervalGranularity)}
-            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-          >
-            <option value="day">Jours</option>
-            <option value="week">Semaines</option>
-            <option value="month">Mois</option>
-          </select>
+          <Select value={intervalGranularity} onValueChange={(val) => setIntervalGranularity(val as IntervalGranularity)}>
+            <SelectTrigger id="interval-granularity" aria-label="Intervalles (X)">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="day">Jours</SelectItem>
+              <SelectItem value="week">Semaines</SelectItem>
+              <SelectItem value="month">Mois</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label htmlFor="period-count" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
             Nombre de périodes
           </label>
-          <select
-            id="period-count"
-            aria-label="Nombre de périodes"
-            value={periodCount}
-            onChange={(e) => setPeriodCount(Number(e.target.value))}
-            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-          >
-            <option value="4">4</option>
-            <option value="6">6</option>
-            <option value="8">8</option>
-            <option value="12">12</option>
-            <option value="16">16</option>
-            <option value="24">24</option>
-          </select>
+          <Select value={String(periodCount)} onValueChange={(val) => setPeriodCount(Number(val))}>
+            <SelectTrigger id="period-count" aria-label="Nombre de périodes">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="4">4</SelectItem>
+              <SelectItem value="6">6</SelectItem>
+              <SelectItem value="8">8</SelectItem>
+              <SelectItem value="12">12</SelectItem>
+              <SelectItem value="16">16</SelectItem>
+              <SelectItem value="24">24</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label htmlFor="target-stage" className="block text-[10px] font-semibold uppercase tracking-wider text-ink-soft mb-1">
             Statut Cible
           </label>
-          <select
-            id="target-stage"
-            aria-label="Statut Cible"
-            value={currentTargetStageId}
-            onChange={(e) => setSelectedTargetStageId(e.target.value)}
-            className="w-full bg-[#141414] border border-line/80 rounded-lg px-2.5 py-1.5 text-xs text-[#f2ede4] focus:outline-none focus:border-[#D4C4A8]"
-          >
-            {activeStages.map((stage) => (
-              <option key={stage.id} value={stage.id}>
-                {stage.name}
-              </option>
-            ))}
-          </select>
+          <Select value={currentTargetStageId} onValueChange={(val) => setSelectedTargetStageId(val)}>
+            <SelectTrigger id="target-stage" aria-label="Statut Cible">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {activeStages.map((stage) => (
+                <SelectItem key={stage.id} value={stage.id}>
+                  {stage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

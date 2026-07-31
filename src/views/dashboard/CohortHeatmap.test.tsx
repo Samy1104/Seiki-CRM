@@ -21,10 +21,10 @@ describe('CohortHeatmap', () => {
   it('renders header controls with default values', () => {
     render(<CohortHeatmap leads={leads as any} stageHistory={stageHistory as any} stages={stages as any} deployedAtIso="2026-01-01T00:00:00.000Z" />);
 
-    expect(screen.getByLabelText(/Cohortes \(Y\)/i)).toHaveValue('month');
-    expect(screen.getByLabelText(/Intervalles \(X\)/i)).toHaveValue('week');
-    expect(screen.getByLabelText(/Nombre de périodes/i)).toHaveValue('8');
-    expect(screen.getByLabelText(/Statut Cible/i)).toHaveValue('s2'); // Default to Qualification
+    expect(screen.getByLabelText(/Cohortes \(Y\)/i)).toHaveTextContent('Mois');
+    expect(screen.getByLabelText(/Intervalles \(X\)/i)).toHaveTextContent('Semaines');
+    expect(screen.getByLabelText(/Nombre de périodes/i)).toHaveTextContent('8');
+    expect(screen.getByLabelText(/Statut Cible/i)).toHaveTextContent('Qualification'); // Default to Qualification
   });
 
   it('renders matrix with direct percentage display and beige background shading', () => {
@@ -46,13 +46,15 @@ describe('CohortHeatmap', () => {
     render(<CohortHeatmap leads={leads as any} stageHistory={stageHistory as any} stages={stages as any} deployedAtIso="2026-01-01T00:00:00.000Z" />);
 
     // Change target stage to Prospect (s1)
-    const stageSelect = screen.getByLabelText(/Statut Cible/i);
-    fireEvent.change(stageSelect, { target: { value: 's1' } });
-    expect(stageSelect).toHaveValue('s1');
+    const stageTrigger = screen.getByLabelText(/Statut Cible/i);
+    fireEvent.click(stageTrigger);
+    fireEvent.click(screen.getByText('Prospect'));
+    expect(stageTrigger).toHaveTextContent('Prospect');
 
     // Change period count to 4
-    const periodSelect = screen.getByLabelText(/Nombre de périodes/i);
-    fireEvent.change(periodSelect, { target: { value: '4' } });
+    const periodTrigger = screen.getByLabelText(/Nombre de périodes/i);
+    fireEvent.click(periodTrigger);
+    fireEvent.click(screen.getByText('4'));
 
     // Verify interval header S+4 exists but S+5 does not
     expect(screen.getByText('S+4')).toBeInTheDocument();
